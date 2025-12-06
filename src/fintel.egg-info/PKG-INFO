@@ -1,0 +1,336 @@
+Metadata-Version: 2.4
+Name: fintel
+Version: 0.1.0
+Summary: Financial Intelligence Platform for SEC analysis and investment research
+Author-email: fintel <fintel@example.com>
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: polars>=0.19.0
+Requires-Dist: pyarrow>=13.0.0
+Requires-Dist: sec-edgar-downloader>=5.0.0
+Requires-Dist: PyPDF2>=3.0.0
+Requires-Dist: selenium>=4.0.0
+Requires-Dist: google-genai>=0.1.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: pydantic-settings>=2.0.0
+Requires-Dist: yfinance>=0.2.0
+Requires-Dist: click>=8.0.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: tqdm>=4.65.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: sqlalchemy>=2.0.0
+Requires-Dist: python-dateutil>=2.8.0
+Requires-Dist: pytz>=2023.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+
+# Fintel - Financial Intelligence Platform
+
+A modular, production-ready Python platform for automated SEC 10-K analysis and investment research.
+
+## Features
+
+### Core Capabilities
+- **SEC 10-K Analysis**: Download, convert, and analyze 10-K filings using AI
+- **Multi-Perspective Analysis**: View companies through three investment lenses:
+  - Warren Buffett (value, moat, management quality)
+  - Nassim Taleb (fragility, tail risks, antifragility)
+  - Contrarian (hidden opportunities, variant perception)
+- **Multi-Year Trend Analysis**: Identify success factors across 30 years of filings
+- **Comparative Benchmarking**: Compare against top performers
+- **Contrarian Scanner**: Find hidden gems with "compounder DNA" scoring
+- **Parallel Processing**: Process 1,000+ companies with 25+ API keys
+
+### Technical Features
+- **Type-Safe**: Pydantic models throughout for guaranteed data validation
+- **Modular Architecture**: Clean separation of concerns, easy to extend
+- **Efficient Storage**: Parquet format for 10-100x compression vs JSON
+- **Production-Ready**: Comprehensive logging, error handling, progress tracking
+- **Extensible**: Plugin architecture for custom analyzers and data sources
+
+## Installation
+
+### Prerequisites
+- Python 3.10 or higher
+- Chrome browser (for PDF conversion)
+- Google Gemini API keys
+
+### Quick Start
+
+```bash
+# Clone the repository
+cd /Users/gkg/PycharmProjects/stock_stuff_06042025/fintel
+
+# Install in development mode
+pip install -e ".[dev]"
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env and add your API keys
+```
+
+## Configuration
+
+### Environment Variables
+
+The platform uses environment variables for configuration. All variables can be prefixed with `FINTEL_` to avoid conflicts.
+
+```bash
+# API Keys (supports multiple keys for parallel processing)
+GOOGLE_API_KEY_1=your_key_1
+GOOGLE_API_KEY_2=your_key_2
+# ... up to GOOGLE_API_KEY_25
+
+# Paths
+FINTEL_DATA_DIR=./data
+FINTEL_CACHE_DIR=./cache
+FINTEL_LOG_DIR=./logs
+
+# Processing
+FINTEL_NUM_WORKERS=25
+FINTEL_NUM_FILINGS_PER_COMPANY=30
+FINTEL_SLEEP_AFTER_REQUEST=65
+
+# SEC Settings
+FINTEL_SEC_COMPANY_NAME="Research Script"
+FINTEL_SEC_USER_EMAIL=your@email.com
+```
+
+## Usage
+
+### Basic Example
+
+```python
+from fintel.data.sources.sec import SECDownloader, SECConverter, PDFExtractor
+from fintel.core import get_config
+
+# Initialize configuration
+config = get_config()
+
+# Download 10-K filings
+downloader = SECDownloader(
+    company_name="Research Script",
+    user_email="you@example.com"
+)
+filing_path = downloader.download("AAPL", num_filings=5)
+
+# Convert to PDF
+converter = SECConverter()
+pdfs = converter.convert("AAPL", filing_path)
+converter.close()
+
+# Extract text
+extractor = PDFExtractor()
+for pdf_info in pdfs:
+    text = extractor.extract_text(pdf_info['pdf_path'])
+    print(f"Extracted {len(text):,} characters from {pdf_info['year']} filing")
+```
+
+### Command-Line Interface (CLI)
+
+Fintel provides a comprehensive CLI for all operations:
+
+```bash
+# Analyze single company
+fintel analyze AAPL --years 10
+
+# Batch process multiple companies
+echo -e "AAPL\nMSFT\nGOOGL" > tickers.txt
+fintel batch tickers.txt --workers 10
+
+# Multi-perspective analysis
+fintel analyze AAPL --analysis-type perspectives
+
+# Scan for contrarian opportunities
+fintel scan-contrarian tickers.csv --min-score 75 --output gems.csv
+
+# Export results to various formats
+fintel export --format csv --output results.csv
+fintel export --format excel --output results.xlsx
+fintel export --format parquet --output results.parquet
+
+# Show help
+fintel --help
+fintel analyze --help
+```
+
+### Multi-Perspective Analysis
+
+```python
+from fintel.analysis.perspectives import PerspectiveAnalyzer
+
+# Analyze through all three lenses
+analyzer = PerspectiveAnalyzer(api_key_manager=key_mgr, rate_limiter=rate_limiter)
+result = analyzer.analyze_multi_perspective(pdf_path, ticker="AAPL", year=2024)
+
+# Each perspective provides deep, structured analysis
+# - Buffett: Economic moat, ROIC, management quality, pricing power
+# - Taleb: Fragility assessment, tail risks, optionality, antifragility
+# - Contrarian: Consensus view, hidden strengths/weaknesses, variant perception
+```
+
+### Using Pydantic Schemas
+
+```python
+from fintel.analysis.fundamental import TenKAnalysis
+
+# All analysis results are validated Pydantic models
+# Guaranteed structure - no JSON parsing errors!
+analysis: TenKAnalysis = analyze_filing(...)
+
+# Type-safe access
+print(analysis.business_model)
+print(analysis.financial_highlights.revenue)
+print(analysis.key_takeaways)
+
+# Easy serialization
+json_data = analysis.model_dump_json(indent=2)
+dict_data = analysis.model_dump()
+```
+
+## Project Structure
+
+```
+fintel/
+├── src/fintel/
+│   ├── core/                 # Configuration, logging, exceptions
+│   ├── data/
+│   │   ├── sources/          # Data source integrations
+│   │   │   └── sec/          # SEC Edgar (download, convert, extract)
+│   │   └── storage/          # Data persistence (JSON, Parquet, DB)
+│   ├── analysis/
+│   │   ├── fundamental/      # 10-K analysis, multi-year trends
+│   │   ├── perspectives/     # Buffett, Taleb, Contrarian lenses
+│   │   ├── comparative/      # Benchmarking, contrarian scanner
+│   │   └── options/          # Options trading analysis
+│   ├── ai/                   # LLM providers, key management, rate limiting
+│   ├── processing/           # Pipeline, parallel execution, progress tracking
+│   └── cli/                  # Command-line interface
+├── tests/                    # Unit and integration tests
+├── docs/                     # Documentation
+└── scripts/                  # Utility scripts
+```
+
+## Architecture
+
+### Modular Design
+Each component is a separate module with clear responsibilities:
+- **Data Sources**: Abstract interfaces make it easy to add new sources (FRED, yfinance)
+- **Analyzers**: Plugin architecture for custom analysis types
+- **Storage**: Swap between JSON, Parquet, SQLite, PostgreSQL
+- **AI Providers**: Support for Gemini, OpenAI, Anthropic
+
+### Type Safety
+Pydantic models throughout ensure:
+- Validated, structured output from AI
+- No JSON parsing errors
+- Clear API contracts
+- IDE autocomplete support
+
+### Scalability
+- **Parallel Processing**: ProcessPoolExecutor with 25 workers
+- **API Key Rotation**: Round-robin distribution across multiple keys
+- **Rate Limiting**: Automatic 65-second sleep between requests
+- **Progress Tracking**: Resume interrupted batch jobs
+- **Efficient Storage**: Parquet compression (10-100x vs JSON)
+
+## Development
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=fintel --cov-report=html
+
+# Run specific test file
+pytest tests/unit/test_config.py
+```
+
+### Code Quality
+
+```bash
+# Format code
+black src/fintel
+
+# Lint code
+ruff check src/fintel
+
+# Type checking
+mypy src/fintel
+```
+
+## Roadmap
+
+### Phase 1: Core Infrastructure ✅ COMPLETE
+- [x] Project setup with modern Python packaging
+- [x] Configuration management (Pydantic Settings)
+- [x] Logging infrastructure
+- [x] Custom exceptions
+- [x] SEC downloader, converter, extractor
+- [x] Pydantic schemas for all analysis types
+
+### Phase 2: Analysis Modules ✅ COMPLETE
+- [x] Fundamental analyzer with AI integration
+- [x] Multi-year trend analysis
+- [x] Success factor identification
+- [x] Multi-perspective analysis synthesizer (Buffett, Taleb, Contrarian)
+
+### Phase 3: Parallel Processing ✅ COMPLETE
+- [x] Parallel processing pipeline
+- [x] API key management and rate limiting
+- [x] Progress tracking and resumption
+- [x] ParallelProcessor with 25 workers
+
+### Phase 4: CLI & Storage ✅ COMPLETE
+- [x] Click-based CLI interface (analyze, batch, export, scan)
+- [x] JSON storage backend
+- [x] Parquet storage backend (10-100x compression)
+- [x] CSV/Excel export
+- [x] Contrarian scanner with alpha scoring
+- [x] Benchmark comparator
+- [x] Example scripts
+- [x] Comprehensive documentation
+
+### Phase 5: Future Enhancements
+- [ ] Integration tests
+- [ ] REST API (FastAPI)
+- [ ] Additional data sources (FRED, yfinance)
+- [ ] Options trading analysis
+- [ ] Interactive dashboard (Streamlit)
+- [ ] Plugin system for custom analyzers
+
+## Contributing
+
+This is a personal project, but suggestions and feedback are welcome!
+
+## License
+
+Private - For personal use only
+
+## Acknowledgments
+
+Built on the shoulders of giants:
+- **SEC Edgar**: Public company filings
+- **Google Gemini**: AI-powered analysis
+- **Pydantic**: Data validation
+- **PyPDF2**: PDF text extraction
+- **Selenium**: Web automation
+
+---
+
+**Note**: This platform is for research and educational purposes. Always conduct your own due diligence before making investment decisions.

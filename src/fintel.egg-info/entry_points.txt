@@ -1,0 +1,2 @@
+[console_scripts]
+fintel = fintel.cli.main:cli

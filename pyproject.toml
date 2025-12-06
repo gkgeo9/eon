@@ -1,0 +1,101 @@
+[project]
+name = "fintel"
+version = "0.1.0"
+description = "Financial Intelligence Platform for SEC analysis and investment research"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "fintel", email = "fintel@example.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    # Data Processing
+    "pandas>=2.0.0",
+    "polars>=0.19.0",
+    "pyarrow>=13.0.0",
+
+    # SEC Data
+    "sec-edgar-downloader>=5.0.0",
+    "PyPDF2>=3.0.0",
+
+    # Web Automation
+    "selenium>=4.0.0",
+
+    # AI/LLM - New unified Google GenAI SDK (GA as of May 2025)
+    "google-genai>=0.1.0",
+
+    # Validation & Config
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+
+    # Market Data
+    "yfinance>=0.2.0",
+
+    # CLI
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "tqdm>=4.65.0",
+
+    # Configuration
+    "python-dotenv>=1.0.0",
+
+    # Database (optional)
+    "sqlalchemy>=2.0.0",
+
+    # Utilities
+    "python-dateutil>=2.8.0",
+    "pytz>=2023.0",
+
+    # Web UI
+    "streamlit>=1.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+
+[project.scripts]
+fintel = "fintel.cli.main:cli"
+
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["fintel"]
+package-dir = {"" = "src"}
+
+[tool.black]
+line-length = 100
+target-version = ['py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=fintel --cov-report=term-missing"
