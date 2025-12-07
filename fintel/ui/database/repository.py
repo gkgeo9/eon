@@ -582,3 +582,33 @@ class DatabaseRepository:
         """
         with sqlite3.connect(self.db_path) as conn:
             return pd.read_sql(query, conn)
+
+    # ==================== Raw Query Helpers (for DB Viewer) ====================
+
+    def _execute_query(self, query: str, params: tuple = ()) -> pd.DataFrame:
+        """
+        Execute a SELECT query and return results as DataFrame.
+
+        Args:
+            query: SQL SELECT query
+            params: Optional query parameters
+
+        Returns:
+            DataFrame with query results
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            return pd.read_sql(query, conn, params=params)
+
+    def _execute_update(self, query: str, params: tuple = ()) -> int:
+        """
+        Execute an UPDATE/DELETE/INSERT query.
+
+        Args:
+            query: SQL query
+            params: Optional query parameters
+
+        Returns:
+            Number of rows affected
+        """
+        cursor = self._execute_with_retry(query, params)
+        return cursor.rowcount

@@ -77,28 +77,32 @@ def main():
         display_df = recent_df.copy()
 
         # Format timestamps
-        display_df['Start Time'] = pd.to_datetime(display_df['started_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        display_df['Start Time'] = pd.to_datetime(display_df['created_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
         display_df['End Time'] = pd.to_datetime(display_df['completed_at'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
         display_df['End Time'] = display_df['End Time'].fillna('-')
 
         # Calculate duration for completed analyses
         def calculate_duration(row):
-            if pd.notna(row['completed_at']) and pd.notna(row['started_at']):
+            if pd.notna(row['completed_at']) and pd.notna(row['created_at']):
                 try:
-                    start = pd.to_datetime(row['started_at'])
+                    start = pd.to_datetime(row['created_at'])
                     end = pd.to_datetime(row['completed_at'])
                     duration = end - start
                     total_seconds = int(duration.total_seconds())
-                    if total_seconds < 60:
+                    # Handle negative durations (shouldn't happen but be safe)
+                    if total_seconds < 60 and total_seconds >= 0:
                         return f"{total_seconds}s"
-                    elif total_seconds < 3600:
+                    elif total_seconds >= 60 and total_seconds < 3600:
                         minutes = total_seconds // 60
                         seconds = total_seconds % 60
                         return f"{minutes}m {seconds}s"
-                    else:
+                    elif total_seconds >= 3600:
                         hours = total_seconds // 3600
                         minutes = (total_seconds % 3600) // 60
                         return f"{hours}h {minutes}m"
+                    else:
+                        # Negative duration - something's wrong
+                        return '-'
                 except:
                     return '-'
             return '-'

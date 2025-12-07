@@ -49,7 +49,8 @@ class AnalysisService:
         self.api_key_manager = APIKeyManager(self.config.google_api_keys)
         self.rate_limiter = RateLimiter()
         self.downloader = SECDownloader()
-        self.converter = SECConverter()
+        # Note: converter is NOT shared - each thread needs its own browser instance
+        # to avoid PDF mixing when running parallel analyses
         self.extractor = PDFExtractor()
 
         self.logger.info("AnalysisService initialized")
@@ -261,12 +262,15 @@ class AnalysisService:
 
             # Convert to PDF - converter extracts year from accession number
             # Organize PDFs by ticker: pdfs/{TICKER}/
+            # IMPORTANT: Create a new converter instance for each analysis to avoid
+            # browser state mixing when running parallel analyses
             ticker_pdf_path = self.config.get_data_path("pdfs") / ticker.upper()
-            pdf_files = self.converter.convert(
-                ticker=ticker,
-                input_path=filing_dir,
-                output_path=ticker_pdf_path
-            )
+            with SECConverter() as converter:
+                pdf_files = converter.convert(
+                    ticker=ticker,
+                    input_path=filing_dir,
+                    output_path=ticker_pdf_path
+                )
 
             if not pdf_files:
                 self.logger.warning(f"No PDFs generated for {ticker}")

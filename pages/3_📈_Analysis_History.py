@@ -93,16 +93,20 @@ else:
                 end = pd.to_datetime(row['completed_at'])
                 duration = end - start
                 total_seconds = int(duration.total_seconds())
-                if total_seconds < 60:
+                # Handle negative durations (shouldn't happen but be safe)
+                if total_seconds < 60 and total_seconds >= 0:
                     return f"{total_seconds}s"
-                elif total_seconds < 3600:
+                elif total_seconds >= 60 and total_seconds < 3600:
                     minutes = total_seconds // 60
                     seconds = total_seconds % 60
                     return f"{minutes}m {seconds}s"
-                else:
+                elif total_seconds >= 3600:
                     hours = total_seconds // 3600
                     minutes = (total_seconds % 3600) // 60
                     return f"{hours}h {minutes}m"
+                else:
+                    # Negative duration - something's wrong
+                    return '-'
             except:
                 return '-'
         return '-'
