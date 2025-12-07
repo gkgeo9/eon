@@ -7,7 +7,8 @@ Get up and running with Fintel in minutes!
 ### 1. Install Dependencies
 
 ```bash
-cd /Users/gkg/PycharmProjects/stock_stuff_06042025/fintel
+cd /Users/gkg/PycharmProjects/Fintel
+source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
@@ -274,10 +275,10 @@ with SECConverter() as converter:
 
 ## Next Steps
 
-1. **Explore the schemas**: Check `src/fintel/analysis/fundamental/schemas.py` and `src/fintel/analysis/perspectives/schemas.py`
-2. **Read the plan**: See `/Users/gkg/.claude/plans/zazzy-hugging-wren.md` for the full architecture
-3. **Check examples**: Browse `docs/examples/` for more use cases
-4. **Run tests**: `pytest tests/` to ensure everything works
+1. **Launch the Web UI**: Run `streamlit run streamlit_app.py` for the easiest experience
+2. **Explore the schemas**: Check `src/fintel/analysis/fundamental/models/` and `src/fintel/analysis/perspectives/models/`
+3. **Check examples**: Browse `examples/` directory for CLI usage examples
+4. **Read the main README**: See `README.md` for comprehensive documentation
 
 ## Common Issues
 

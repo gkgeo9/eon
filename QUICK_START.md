@@ -4,14 +4,14 @@
 
 **FINTEL IS READY TO USE**
 
-All tests passing (14/14). Platform validated and working.
+Platform validated and working. Both CLI and Web UI available.
 
-## Running Your First Analysis
+## Getting Started
 
 ### 1. Activate Virtual Environment
 ```bash
-source /Users/gkg/PycharmProjects/stock_stuff_06042025/.venv/bin/activate
-cd /Users/gkg/PycharmProjects/stock_stuff_06042025/fintel
+cd /Users/gkg/PycharmProjects/Fintel
+source .venv/bin/activate
 ```
 
 ### 2. Set Up Environment Variables
@@ -22,19 +22,29 @@ GOOGLE_API_KEY_2=your_key_here
 # ... up to GOOGLE_API_KEY_25
 ```
 
-### 3. Run a Test Analysis
+### 3. Choose Your Interface
+
+**Option A: Web Interface (Recommended)**
 ```bash
+streamlit run streamlit_app.py
+```
+Opens at `http://localhost:8501`
+
+**Option B: CLI/Examples**
+```bash
+cd examples
+
 # Basic fundamental analysis (single year)
-python examples/01_basic_fundamental_analysis.py
+python 01_basic_fundamental_analysis.py
 
 # Excellent company analysis (multi-year)
-python examples/02_excellent_company_analysis.py
+python 02_excellent_company_analysis.py
 
 # Random company analysis (objective)
-python examples/03_random_company_analysis.py
+python 03_random_company_analysis.py
 
 # Contrarian scanning
-python examples/04_contrarian_scanning.py
+python 04_contrarian_scanning.py
 ```
 
 ## Running Tests
@@ -91,18 +101,12 @@ python test_final.py && python test_all_models.py && python test_perspectives.py
 
 ## Documentation Index
 
-### For Using Fintel Now (CLI)
-1. `QUICK_START.md` - This file
-2. `TEST_RESULTS_SUMMARY.md` - Test validation results
-3. `examples/` - Example scripts
-
-### For Building Web UI
-1. `FRONTEND_GUIDE.md` - Complete frontend specification (START HERE)
-2. `SESSION_COMPLETE.md` - Full session summary
-
-### For Development
-1. `TESTING_REPORT.md` - Testing methodology
-2. `VALIDATION_COMPLETE.md` - Validation summary
+### Essential Documentation
+1. `README.md` - Complete platform overview and reference
+2. `QUICK_START.md` - This file - getting started guide
+3. `docs/quickstart.md` - Additional quick start examples
+4. `examples/README.md` - Example scripts documentation
+5. `src/fintel/ui/README.md` - Web UI documentation
 
 ## File Structure
 
@@ -200,26 +204,12 @@ result = scanner.scan("UNUSUAL_TICKER", year=2023)
 ## Next Steps
 
 ### To Use Fintel Now
-1. Run `python examples/test_final.py` to verify setup
-2. Pick an example script from `examples/`
-3. Modify ticker and year as needed
-4. Run and review results in `data/output/`
-
-### To Build Web UI
-1. Read `FRONTEND_GUIDE.md` (comprehensive 950+ line guide)
-2. Implement PostgreSQL database (schema provided)
-3. Build FastAPI REST API (endpoints specified)
-4. Add Celery task queue (tasks defined)
-5. Build frontend (9 pages designed)
-
-## Support
-
-For issues or questions:
-- Check `TESTING_REPORT.md` for known limitations
-- Review `SESSION_COMPLETE.md` for full context
-- Consult `FRONTEND_GUIDE.md` for architecture details
+1. Launch the web interface: `streamlit run streamlit_app.py`
+2. Or explore the CLI examples in `examples/`
+3. Read the main `README.md` for comprehensive documentation
+4. Check `src/fintel/ui/README.md` for web UI features
 
 ---
-**Last Updated:** 2024-01-15
+**Last Updated:** 2025-12-06
 **Version:** 1.0
-**Status:** Production Ready (CLI)
+**Status:** Production Ready (CLI + Web UI)
