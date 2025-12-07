@@ -124,7 +124,12 @@ class AnalysisService:
             self.db.update_run_status(run_id, 'running')
 
             # Download/retrieve filings
-            pdf_paths = self._get_or_download_filings(ticker, filing_type, years)
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Downloading {filing_type} filings for {ticker}...",
+                progress_percent=10
+            )
+            pdf_paths = self._get_or_download_filings(ticker, filing_type, years, run_id)
 
             # Check if we have any PDFs
             if not pdf_paths:
@@ -135,25 +140,31 @@ class AnalysisService:
 
             self.logger.info(f"Ready to analyze {len(pdf_paths)} years: {list(pdf_paths.keys())}")
 
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} filings...",
+                progress_percent=50
+            )
+
             # Run analysis based on type
             if analysis_type == 'fundamental':
                 results = self._run_fundamental_analysis(
-                    ticker, pdf_paths, custom_prompt
+                    ticker, pdf_paths, custom_prompt, run_id
                 )
             elif analysis_type == 'excellent':
-                results = self._run_excellent_analysis(ticker, pdf_paths)
+                results = self._run_excellent_analysis(ticker, pdf_paths, run_id)
             elif analysis_type == 'objective':
-                results = self._run_objective_analysis(ticker, pdf_paths)
+                results = self._run_objective_analysis(ticker, pdf_paths, run_id)
             elif analysis_type == 'buffett':
-                results = self._run_buffett_analysis(ticker, pdf_paths)
+                results = self._run_buffett_analysis(ticker, pdf_paths, run_id)
             elif analysis_type == 'taleb':
-                results = self._run_taleb_analysis(ticker, pdf_paths)
+                results = self._run_taleb_analysis(ticker, pdf_paths, run_id)
             elif analysis_type == 'contrarian':
-                results = self._run_contrarian_analysis(ticker, pdf_paths)
+                results = self._run_contrarian_analysis(ticker, pdf_paths, run_id)
             elif analysis_type == 'multi':
-                results = self._run_multi_perspective(ticker, pdf_paths)
+                results = self._run_multi_perspective(ticker, pdf_paths, run_id)
             elif analysis_type == 'scanner':
-                results = self._run_contrarian_scanner(ticker, pdf_paths)
+                results = self._run_contrarian_scanner(ticker, pdf_paths, run_id)
             else:
                 raise ValueError(f"Unknown analysis type: {analysis_type}")
 
@@ -184,7 +195,8 @@ class AnalysisService:
         self,
         ticker: str,
         filing_type: str,
-        years: List[int]
+        years: List[int],
+        run_id: str
     ) -> Dict[int, Path]:
         """
         Download filings or retrieve from cache.
@@ -198,52 +210,90 @@ class AnalysisService:
             Dictionary mapping year to PDF path
         """
         pdf_paths = {}
+        years_to_download = []
 
+        # First, check cache for all years
         for year in years:
-            # Check cache first
             cached = self.db.get_cached_file(ticker, year, filing_type)
             if cached and Path(cached).exists():
                 self.logger.info(f"Using cached file for {ticker} {year}: {cached}")
                 pdf_paths[year] = Path(cached)
-                continue
+            else:
+                years_to_download.append(year)
 
-            # Download and convert
-            try:
-                self.logger.info(f"Downloading {ticker} {filing_type} for {year}")
+        # If all years are cached, we're done
+        if not years_to_download:
+            return pdf_paths
 
-                # Download filing (get more than 1 since we can't filter by specific year easily)
-                filing_dir = self.downloader.download(
-                    ticker=ticker,
-                    num_filings=10,  # Download recent filings to find the right year
-                    filing_type=filing_type
-                )
+        # Download and convert once for all uncached years
+        try:
+            self.logger.info(f"Downloading {ticker} {filing_type} for years: {years_to_download}")
 
-                if not filing_dir:
-                    self.logger.error(f"Failed to download filings for {ticker}")
-                    continue
+            # Download enough filings to cover all requested years
+            # Calculate how many filings we need (add buffer for safety)
+            max_year = max(years_to_download)
+            min_year = min(years_to_download)
+            current_year = datetime.now().year
+            years_back = current_year - min_year + 3  # Add 3 year buffer
+            num_filings = min(years_back, 20)  # Cap at 20 filings
 
-                # Convert to PDF
-                pdf_files = self.converter.convert(
-                    ticker=ticker,
-                    input_path=filing_dir,
-                    output_path=self.config.get_data_path("pdfs")
-                )
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Downloading {num_filings} {filing_type} filings from SEC...",
+                progress_percent=15
+            )
 
-                if pdf_files:
-                    # Find the PDF for the requested year (use most recent for now)
-                    # TODO: Better year matching logic
-                    pdf_path = pdf_files[0]['pdf_path']
+            filing_dir = self.downloader.download(
+                ticker=ticker,
+                num_filings=num_filings,
+                filing_type=filing_type
+            )
+
+            if not filing_dir:
+                self.logger.error(f"Failed to download filings for {ticker}")
+                return pdf_paths
+
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Converting HTML filings to PDF...",
+                progress_percent=30
+            )
+
+            # Convert to PDF - converter extracts year from accession number
+            # Organize PDFs by ticker: pdfs/{TICKER}/
+            ticker_pdf_path = self.config.get_data_path("pdfs") / ticker.upper()
+            pdf_files = self.converter.convert(
+                ticker=ticker,
+                input_path=filing_dir,
+                output_path=ticker_pdf_path
+            )
+
+            if not pdf_files:
+                self.logger.warning(f"No PDFs generated for {ticker}")
+                return pdf_paths
+
+            # Build year->pdf mapping from converted files
+            available_pdfs = {pdf_info['year']: pdf_info for pdf_info in pdf_files}
+            self.logger.info(f"Converted {len(pdf_files)} filings for {ticker}. Available years: {sorted(available_pdfs.keys())}")
+
+            # Match requested years with available PDFs
+            for year in years_to_download:
+                if year in available_pdfs:
+                    pdf_info = available_pdfs[year]
+                    pdf_path = pdf_info['pdf_path']
                     pdf_paths[year] = Path(pdf_path)
 
                     # Cache it
                     self.db.cache_file(ticker, year, filing_type, str(pdf_path))
-                    self.logger.info(f"Cached file for {ticker} {year}: {pdf_path}")
+                    self.logger.info(f"Matched and cached {ticker} {year}: {pdf_path}")
                 else:
-                    self.logger.warning(f"No PDF generated for {ticker} {year}")
+                    self.logger.warning(
+                        f"No PDF found for {ticker} year {year}. "
+                        f"Available years: {sorted(available_pdfs.keys())}"
+                    )
 
-            except Exception as e:
-                self.logger.error(f"Failed to download/convert {ticker} {year}: {e}", exc_info=True)
-                # Continue with other years
+        except Exception as e:
+            self.logger.error(f"Failed to download/convert {ticker}: {e}", exc_info=True)
 
         return pdf_paths
 
@@ -251,7 +301,8 @@ class AnalysisService:
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
-        custom_prompt: Optional[str]
+        custom_prompt: Optional[str],
+        run_id: str
     ) -> Dict[int, Any]:
         """Run fundamental analyzer for each year."""
         analyzer = FundamentalAnalyzer(
@@ -260,8 +311,20 @@ class AnalysisService:
         )
 
         results = {}
-        for year, pdf_path in pdf_paths.items():
+        total_years = len(pdf_paths)
+        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
             self.logger.info(f"Analyzing {ticker} {year} (Fundamental)")
+
+            # Update progress for this specific year
+            progress_pct = 50 + int((idx / total_years) * 40)  # 50-90% range
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} (Fundamental)",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+
             result = analyzer.analyze_filing(
                 pdf_path=pdf_path,
                 ticker=ticker,
@@ -276,7 +339,8 @@ class AnalysisService:
     def _run_excellent_analysis(
         self,
         ticker: str,
-        pdf_paths: Dict[int, Path]
+        pdf_paths: Dict[int, Path],
+        run_id: str
     ) -> Dict[int, Any]:
         """Run excellent company analyzer (multi-year, success-focused)."""
         # First, run fundamental analysis for each year
@@ -286,8 +350,20 @@ class AnalysisService:
         )
 
         fundamental_analyses = {}
-        for year, pdf_path in pdf_paths.items():
+        total_years = len(pdf_paths)
+        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
             self.logger.info(f"Analyzing {ticker} {year} (Fundamental for Excellent)")
+
+            # Update progress for this specific year
+            progress_pct = 50 + int((idx / total_years) * 30)  # 50-80% range
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} (Fundamental for Excellent)",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+
             result = fundamental_analyzer.analyze_filing(
                 pdf_path=pdf_path,
                 ticker=ticker,
@@ -298,6 +374,12 @@ class AnalysisService:
 
         # Now run excellent company analysis on all years together
         if fundamental_analyses:
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Synthesizing Excellent Company analysis for {ticker}",
+                progress_percent=85
+            )
+
             excellent_analyzer = ExcellentCompanyAnalyzer(
                 api_key_manager=self.api_key_manager,
                 rate_limiter=self.rate_limiter
@@ -317,7 +399,8 @@ class AnalysisService:
     def _run_objective_analysis(
         self,
         ticker: str,
-        pdf_paths: Dict[int, Path]
+        pdf_paths: Dict[int, Path],
+        run_id: str
     ) -> Dict[int, Any]:
         """Run objective company analyzer (multi-year, unbiased)."""
         # First, run fundamental analysis for each year
@@ -327,8 +410,19 @@ class AnalysisService:
         )
 
         fundamental_analyses = {}
-        for year, pdf_path in pdf_paths.items():
+        total_years = len(pdf_paths)
+        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
             self.logger.info(f"Analyzing {ticker} {year} (Fundamental for Objective)")
+
+            progress_pct = 50 + int((idx / total_years) * 30)
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} (Fundamental for Objective)",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+
             result = fundamental_analyzer.analyze_filing(
                 pdf_path=pdf_path,
                 ticker=ticker,
@@ -339,6 +433,12 @@ class AnalysisService:
 
         # Now run objective company analysis on all years together
         if fundamental_analyses:
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Synthesizing Objective Company analysis for {ticker}",
+                progress_percent=85
+            )
+
             objective_analyzer = ObjectiveCompanyAnalyzer(
                 api_key_manager=self.api_key_manager,
                 rate_limiter=self.rate_limiter
@@ -358,7 +458,8 @@ class AnalysisService:
     def _run_buffett_analysis(
         self,
         ticker: str,
-        pdf_paths: Dict[int, Path]
+        pdf_paths: Dict[int, Path],
+        run_id: str
     ) -> Dict[int, Any]:
         """Run Buffett perspective analyzer."""
         analyzer = PerspectiveAnalyzer(
@@ -367,8 +468,19 @@ class AnalysisService:
         )
 
         results = {}
-        for year, pdf_path in pdf_paths.items():
+        total_years = len(pdf_paths)
+        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
             self.logger.info(f"Analyzing {ticker} {year} (Buffett Lens)")
+
+            progress_pct = 50 + int((idx / total_years) * 40)
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} (Buffett Lens)",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+
             result = analyzer.analyze_buffett(
                 pdf_path=pdf_path,
                 ticker=ticker,
@@ -382,7 +494,8 @@ class AnalysisService:
     def _run_taleb_analysis(
         self,
         ticker: str,
-        pdf_paths: Dict[int, Path]
+        pdf_paths: Dict[int, Path],
+        run_id: str
     ) -> Dict[int, Any]:
         """Run Taleb perspective analyzer."""
         analyzer = PerspectiveAnalyzer(
@@ -391,8 +504,19 @@ class AnalysisService:
         )
 
         results = {}
-        for year, pdf_path in pdf_paths.items():
+        total_years = len(pdf_paths)
+        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
             self.logger.info(f"Analyzing {ticker} {year} (Taleb Lens)")
+
+            progress_pct = 50 + int((idx / total_years) * 40)
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} (Taleb Lens)",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+
             result = analyzer.analyze_taleb(
                 pdf_path=pdf_path,
                 ticker=ticker,
@@ -406,7 +530,8 @@ class AnalysisService:
     def _run_contrarian_analysis(
         self,
         ticker: str,
-        pdf_paths: Dict[int, Path]
+        pdf_paths: Dict[int, Path],
+        run_id: str
     ) -> Dict[int, Any]:
         """Run Contrarian perspective analyzer."""
         analyzer = PerspectiveAnalyzer(
@@ -415,8 +540,19 @@ class AnalysisService:
         )
 
         results = {}
-        for year, pdf_path in pdf_paths.items():
+        total_years = len(pdf_paths)
+        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
             self.logger.info(f"Analyzing {ticker} {year} (Contrarian Lens)")
+
+            progress_pct = 50 + int((idx / total_years) * 40)
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} (Contrarian Lens)",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+
             result = analyzer.analyze_contrarian(
                 pdf_path=pdf_path,
                 ticker=ticker,
@@ -430,7 +566,8 @@ class AnalysisService:
     def _run_multi_perspective(
         self,
         ticker: str,
-        pdf_paths: Dict[int, Path]
+        pdf_paths: Dict[int, Path],
+        run_id: str
     ) -> Dict[int, Any]:
         """Run multi-perspective analyzer (Buffett + Taleb + Contrarian)."""
         analyzer = PerspectiveAnalyzer(
@@ -439,8 +576,19 @@ class AnalysisService:
         )
 
         results = {}
-        for year, pdf_path in pdf_paths.items():
+        total_years = len(pdf_paths)
+        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
             self.logger.info(f"Analyzing {ticker} {year} (Multi-Perspective)")
+
+            progress_pct = 50 + int((idx / total_years) * 40)
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} (Multi-Perspective)",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+
             result = analyzer.analyze_multi_perspective(
                 pdf_path=pdf_path,
                 ticker=ticker,
@@ -454,7 +602,8 @@ class AnalysisService:
     def _run_contrarian_scanner(
         self,
         ticker: str,
-        pdf_paths: Dict[int, Path]
+        pdf_paths: Dict[int, Path],
+        run_id: str
     ) -> Dict[int, Any]:
         """Run contrarian scanner (multi-year, hidden gems detection)."""
         # First, run fundamental analysis for each year
@@ -464,8 +613,19 @@ class AnalysisService:
         )
 
         fundamental_analyses = {}
-        for year, pdf_path in pdf_paths.items():
+        total_years = len(pdf_paths)
+        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
             self.logger.info(f"Analyzing {ticker} {year} (Fundamental for Scanner)")
+
+            progress_pct = 50 + int((idx / total_years) * 25)
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} (Fundamental for Scanner)",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+
             result = fundamental_analyzer.analyze_filing(
                 pdf_path=pdf_path,
                 ticker=ticker,
@@ -476,6 +636,12 @@ class AnalysisService:
 
         # Now run objective analysis first (scanner needs this)
         if fundamental_analyses:
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Running Objective analysis for {ticker}",
+                progress_percent=80
+            )
+
             objective_analyzer = ObjectiveCompanyAnalyzer(
                 api_key_manager=self.api_key_manager,
                 rate_limiter=self.rate_limiter
@@ -497,6 +663,12 @@ class AnalysisService:
                     temp_path = Path(f.name)
 
                 try:
+                    self.db.update_run_progress(
+                        run_id,
+                        progress_message=f"Running Contrarian Scanner for {ticker}",
+                        progress_percent=90
+                    )
+
                     # Now run contrarian scanner
                     scanner = ContrarianScanner(
                         api_key_manager=self.api_key_manager,

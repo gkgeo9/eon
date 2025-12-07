@@ -71,26 +71,70 @@ def main():
     recent_df = db.get_recent_analyses(limit=10)
 
     if not recent_df.empty:
-        # Format the dataframe for display
-        recent_df['started_at'] = recent_df['started_at'].str[:19]  # Trim timestamp
+        import pandas as pd
 
-        # Add status indicator
-        status_emojis = {
-            'completed': '✅',
-            'running': '🔄',
-            'pending': '⏳',
-            'failed': '❌'
+        # Create display dataframe
+        display_df = recent_df.copy()
+
+        # Format timestamps
+        display_df['Start Time'] = pd.to_datetime(display_df['started_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        display_df['End Time'] = pd.to_datetime(display_df['completed_at'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
+        display_df['End Time'] = display_df['End Time'].fillna('-')
+
+        # Calculate duration for completed analyses
+        def calculate_duration(row):
+            if pd.notna(row['completed_at']) and pd.notna(row['started_at']):
+                try:
+                    start = pd.to_datetime(row['started_at'])
+                    end = pd.to_datetime(row['completed_at'])
+                    duration = end - start
+                    total_seconds = int(duration.total_seconds())
+                    if total_seconds < 60:
+                        return f"{total_seconds}s"
+                    elif total_seconds < 3600:
+                        minutes = total_seconds // 60
+                        seconds = total_seconds % 60
+                        return f"{minutes}m {seconds}s"
+                    else:
+                        hours = total_seconds // 3600
+                        minutes = (total_seconds % 3600) // 60
+                        return f"{hours}h {minutes}m"
+                except:
+                    return '-'
+            return '-'
+
+        display_df['Duration'] = display_df.apply(calculate_duration, axis=1)
+
+        # Enhanced status indicator with better labels
+        status_display = {
+            'completed': ('✅', 'Completed', '#28a745'),
+            'running': ('🔄', 'Running', '#17a2b8'),
+            'pending': ('⏳', 'Queued', '#ffc107'),
+            'failed': ('❌', 'Failed', '#dc3545')
         }
-        recent_df['status'] = recent_df['status'].apply(
-            lambda x: f"{status_emojis.get(x, '❓')} {x.capitalize()}"
+
+        display_df['Status'] = display_df['status'].apply(
+            lambda x: f"{status_display.get(x, ('❓', 'Unknown', '#6c757d'))[0]} {status_display.get(x, ('❓', 'Unknown', '#6c757d'))[1]}"
         )
 
+        # Clean up analysis type names
+        display_df['Analysis'] = display_df['analysis_type'].str.capitalize()
+        display_df['Ticker'] = display_df['ticker'].str.upper()
+
         st.dataframe(
-            recent_df[[
-                'ticker', 'analysis_type', 'status', 'started_at', 'completed_at'
+            display_df[[
+                'Ticker', 'Analysis', 'Status', 'Start Time', 'End Time', 'Duration'
             ]],
             use_container_width=True,
-            hide_index=True
+            hide_index=True,
+            column_config={
+                "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+                "Analysis": st.column_config.TextColumn("Analysis Type", width="medium"),
+                "Status": st.column_config.TextColumn("Status", width="small"),
+                "Start Time": st.column_config.TextColumn("Started", width="medium"),
+                "End Time": st.column_config.TextColumn("Completed", width="medium"),
+                "Duration": st.column_config.TextColumn("Duration", width="small"),
+            }
         )
     else:
         st.info("No analyses yet. Start your first analysis!")
@@ -108,21 +152,21 @@ def main():
 
     with col2:
         if st.button("📦 Batch Analysis", use_container_width=True, type="primary"):
-            st.switch_page("pages/5_📦_Batch_Analysis.py")
+            st.switch_page("pages/2_📦_Batch_Analysis.py")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
         if st.button("📜 View History", use_container_width=True):
-            st.switch_page("pages/2_📈_Analysis_History.py")
+            st.switch_page("pages/3_📈_Analysis_History.py")
 
     with col2:
         if st.button("🔍 View Results", use_container_width=True):
-            st.switch_page("pages/3_🔍_Results_Viewer.py")
+            st.switch_page("pages/4_🔍_Results_Viewer.py")
 
     with col3:
         if st.button("⚙️ Settings", use_container_width=True):
-            st.switch_page("pages/4_⚙️_Settings.py")
+            st.switch_page("pages/5_⚙️_Settings.py")
 
     # Footer
     st.markdown("---")

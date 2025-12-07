@@ -224,4 +224,4 @@ with tab2:
 # Navigation
 st.markdown("---")
 if st.button("🏠 Back to Home"):
-    st.switch_page("app.py")
+    st.switch_page("streamlit_app.py")

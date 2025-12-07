@@ -79,12 +79,12 @@ if run_id:
             with col1:
                 if st.button("🏠 Home"):
                     st.session_state.view_run_id = None
-                    st.switch_page("app.py")
+                    st.switch_page("streamlit_app.py")
 
             with col2:
                 if st.button("📜 View History"):
                     st.session_state.view_run_id = None
-                    st.switch_page("pages/2_📈_Analysis_History.py")
+                    st.switch_page("pages/3_📈_Analysis_History.py")
 
             with col3:
                 if st.button("📊 New Analysis"):

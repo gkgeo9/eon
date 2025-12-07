@@ -29,16 +29,23 @@ class DatabaseRepository:
         self._init_database()
 
     def _init_database(self):
-        """Initialize database schema from migration script."""
+        """Initialize database schema from migration scripts."""
         # Ensure data directory exists
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        # Load schema
-        schema_path = Path(__file__).parent / "migrations" / "v001_initial_schema.sql"
+        migrations_dir = Path(__file__).parent / "migrations"
 
         with sqlite3.connect(self.db_path) as conn:
-            with open(schema_path, 'r') as f:
-                conn.executescript(f.read())
+            # Apply migrations in order
+            migration_files = sorted(migrations_dir.glob("v*.sql"))
+            for migration_file in migration_files:
+                try:
+                    with open(migration_file, 'r') as f:
+                        conn.executescript(f.read())
+                except sqlite3.OperationalError as e:
+                    # Ignore "duplicate column" errors (migration already applied)
+                    if "duplicate column" not in str(e).lower():
+                        raise
             conn.commit()
 
     def _execute_with_retry(self, query: str, params: tuple = (), max_retries: int = 3):
@@ -140,6 +147,40 @@ class DatabaseRepository:
                 WHERE run_id = ?
             """
             self._execute_with_retry(query, (status, error_message, run_id))
+
+    def update_run_progress(
+        self,
+        run_id: str,
+        progress_message: str,
+        progress_percent: Optional[int] = None,
+        current_step: Optional[str] = None,
+        total_steps: Optional[int] = None
+    ) -> None:
+        """
+        Update progress tracking for an analysis run.
+
+        Args:
+            run_id: Run UUID
+            progress_message: Human-readable progress message
+            progress_percent: Optional progress percentage (0-100)
+            current_step: Optional current step description
+            total_steps: Optional total number of steps
+        """
+        query = """
+            UPDATE analysis_runs
+            SET progress_message = ?,
+                progress_percent = ?,
+                current_step = ?,
+                total_steps = ?
+            WHERE run_id = ?
+        """
+        self._execute_with_retry(query, (
+            progress_message,
+            progress_percent,
+            current_step,
+            total_steps,
+            run_id
+        ))
 
     def get_run_status(self, run_id: str) -> Optional[str]:
         """Get status of an analysis run."""
