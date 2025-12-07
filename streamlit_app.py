@@ -7,6 +7,10 @@ Main Streamlit application - Home page with dashboard.
 import streamlit as st
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService
+from fintel.ui.theme import apply_theme
+
+# Apply global theme
+apply_theme()
 
 # Configure page
 st.set_page_config(

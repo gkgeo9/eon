@@ -1,15 +1,17 @@
 [theme]
-primaryColor = "#1f77b4"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f0f2f6"
-textColor = "#262730"
+# Fintel theme configuration
+# Can be changed from Settings page
+
+primaryColor = "#3b82f6"  # Blue
+backgroundColor = "#ffffff"  # White (light mode)
+secondaryBackgroundColor = "#f0f2f6"  # Light gray
+textColor = "#262730"  # Dark text
 font = "sans serif"
+
+# Dark mode colors (toggle from Settings page):
+# backgroundColor = "#0e1117"
+# secondaryBackgroundColor = "#262730"
+# textColor = "#fafafa"
 
 [server]
 headless = true
-port = 8501
-enableCORS = false
-enableXsrfProtection = true
-
-[browser]
-gatherUsageStats = false

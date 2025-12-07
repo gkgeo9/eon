@@ -7,7 +7,10 @@ Analysis History Page - View and manage past analyses.
 import streamlit as st
 from datetime import date, timedelta
 from fintel.ui.database import DatabaseRepository
+from fintel.ui.theme import apply_theme
 
+# Apply global theme
+apply_theme()
 
 # Initialize session state
 if 'db' not in st.session_state:

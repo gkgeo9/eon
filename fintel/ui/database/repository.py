@@ -612,3 +612,38 @@ class DatabaseRepository:
         """
         cursor = self._execute_with_retry(query, params)
         return cursor.rowcount
+
+    # ==================== User Settings ====================
+
+    def get_setting(self, key: str, default: Any = None) -> Any:
+        """
+        Get a user setting value.
+
+        Args:
+            key: Setting key
+            default: Default value if not found
+
+        Returns:
+            Setting value or default
+        """
+        query = "SELECT value FROM user_settings WHERE key = ?"
+        cursor = self._execute_with_retry(query, (key,))
+        row = cursor.fetchone()
+        return row[0] if row else default
+
+    def save_setting(self, key: str, value: str) -> None:
+        """
+        Save a user setting.
+
+        Args:
+            key: Setting key
+            value: Setting value
+        """
+        query = """
+            INSERT INTO user_settings (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = CURRENT_TIMESTAMP
+        """
+        self._execute_with_retry(query, (key, str(value)))

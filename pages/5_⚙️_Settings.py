@@ -7,6 +7,10 @@ Settings Page - Manage custom prompts and preferences.
 import streamlit as st
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.utils.validators import validate_prompt_template, validate_prompt_name
+from fintel.ui.theme import apply_theme
+
+# Apply global theme
+apply_theme()
 
 
 # Initialize session state
@@ -27,7 +31,7 @@ st.markdown("Manage custom prompts and preferences")
 st.markdown("---")
 
 # Tabs for different settings
-tab1, tab2 = st.tabs(["📝 Custom Prompts", "🗂️ File Cache"])
+tab1, tab2, tab3 = st.tabs(["📝 Custom Prompts", "🗂️ File Cache", "🎨 Theme"])
 
 with tab1:
     st.subheader("Custom Prompt Library")
@@ -220,6 +224,84 @@ with tab2:
             deleted = db.clear_file_cache(older_than_days=30)
             st.success(f"✅ Cleared {deleted} old cached files")
             st.rerun()
+
+with tab3:
+    st.subheader("🎨 Theme Settings")
+    st.markdown("Customize the appearance of Fintel")
+
+    # Get current theme preference from user settings
+    current_theme = db.get_setting("theme", default="light")
+
+    # Dark mode toggle
+    dark_mode = st.toggle(
+        "🌙 Dark Mode",
+        value=(current_theme == "dark"),
+        help="Toggle between light and dark themes"
+    )
+
+    # Save preference
+    new_theme = "dark" if dark_mode else "light"
+    if new_theme != current_theme:
+        db.save_setting("theme", new_theme)
+        st.rerun()
+
+    # Apply dark mode CSS if enabled
+    if dark_mode:
+        st.markdown("""
+        <style>
+        /* Dark mode override */
+        .stApp {
+            background-color: #0e1117;
+            color: #fafafa;
+        }
+        .stApp header {
+            background-color: #0e1117;
+        }
+        .stMarkdown, .stText, p, span, div {
+            color: #fafafa !important;
+        }
+        .stSelectbox, .stTextInput, .stTextArea, .stNumberInput {
+            color: #fafafa;
+        }
+        .stButton button {
+            color: #fafafa;
+            background-color: #262730;
+            border: 1px solid #3b82f6;
+        }
+        .stButton button:hover {
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+        }
+        div[data-baseweb="select"] > div {
+            background-color: #262730 !important;
+            color: #fafafa !important;
+        }
+        div[data-baseweb="input"] > div {
+            background-color: #262730 !important;
+            color: #fafafa !important;
+        }
+        .stDataFrame, .stTable {
+            background-color: #262730;
+            color: #fafafa;
+        }
+        .stExpander {
+            background-color: #262730;
+            border: 1px solid #3b82f6;
+        }
+        section[data-testid="stSidebar"] {
+            background-color: #262730;
+        }
+        .stRadio label, .stCheckbox label {
+            color: #fafafa !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        st.success("🌙 **Dark Mode Active**")
+    else:
+        st.info("☀️ **Light Mode Active**")
+
+    st.markdown("---")
+    st.caption("💡 Theme preference is saved automatically")
 
 # Navigation
 st.markdown("---")

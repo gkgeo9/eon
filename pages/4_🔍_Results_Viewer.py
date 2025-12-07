@@ -7,6 +7,10 @@ Results Viewer Page - View analysis results.
 import streamlit as st
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.components.results_display import display_results
+from fintel.ui.theme import apply_theme
+
+# Apply global theme
+apply_theme()
 
 
 # Initialize session state

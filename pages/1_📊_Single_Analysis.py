@@ -11,7 +11,10 @@ from datetime import datetime
 
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService
+from fintel.ui.theme import apply_theme
 
+# Apply global theme
+apply_theme()
 
 # Initialize session state
 if 'db' not in st.session_state:
@@ -195,9 +198,14 @@ if not st.session_state.check_status:
     # Filing type
     filing_type = st.selectbox(
         "Filing Type",
-        options=["10-K"],
+        options=["10-K", "10-Q", "8-K", "4", "DEF 14A"],
         index=0,
-        help="Type of SEC filing to analyze (10-K is annual report)"
+        help="""Type of SEC filing to analyze:
+• 10-K: Annual report (comprehensive)
+• 10-Q: Quarterly report (3x per year)
+• 8-K: Current report (material events)
+• 4: Insider trading report
+• DEF 14A: Proxy statement (voting/governance)"""
     )
 
     # Year selection

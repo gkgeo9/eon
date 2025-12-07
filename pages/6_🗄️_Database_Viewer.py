@@ -8,6 +8,10 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 from fintel.ui.database import DatabaseRepository
+from fintel.ui.theme import apply_theme
+
+# Apply global theme
+apply_theme()
 
 # Initialize session state
 if 'db' not in st.session_state:

@@ -13,6 +13,10 @@ from datetime import datetime
 
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService
+from fintel.ui.theme import apply_theme
+
+# Apply global theme
+apply_theme()
 
 
 # Initialize session state
@@ -190,9 +194,9 @@ if not st.session_state.batch_monitoring:
                 with col2:
                     default_filing_type = st.selectbox(
                         "Filing Type",
-                        options=["10-K"],
+                        options=["10-K", "10-Q", "8-K", "4", "DEF 14A"],
                         index=0,
-                        help="Type of SEC filing to analyze"
+                        help="• 10-K: Annual | • 10-Q: Quarterly | • 8-K: Events | • 4: Insider | • DEF 14A: Proxy"
                     )
 
                 # Process and validate
@@ -316,8 +320,9 @@ with st.expander("Enter Tickers Manually", expanded=False):
     # Filing type
     manual_filing_type = st.selectbox(
         "Filing Type",
-        options=["10-K"],
+        options=["10-K", "10-Q", "8-K", "4", "DEF 14A"],
         index=0,
+        help="• 10-K: Annual | • 10-Q: Quarterly | • 8-K: Events | • 4: Insider | • DEF 14A: Proxy",
         key="manual_filing_type"
     )
 
