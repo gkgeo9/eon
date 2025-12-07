@@ -1,9 +1,0 @@
-README.md
-pyproject.toml
-src/fintel/__init__.py
-src/fintel.egg-info/PKG-INFO
-src/fintel.egg-info/SOURCES.txt
-src/fintel.egg-info/dependency_links.txt
-src/fintel.egg-info/entry_points.txt
-src/fintel.egg-info/requires.txt
-src/fintel.egg-info/top_level.txt

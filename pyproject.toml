@@ -77,7 +77,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["fintel"]
-package-dir = {"" = "src"}
 
 [tool.black]
 line-length = 100

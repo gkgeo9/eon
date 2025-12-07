@@ -112,10 +112,13 @@ if not st.session_state.check_status:
             "Analysis Type",
             options=[
                 "Fundamental (Single Year)",
+                "Success Factors - Excellent Company (Multi-Year)",
+                "Success Factors - Objective Analysis (Multi-Year)",
                 "Buffett Lens (Value Investing)",
                 "Taleb Lens (Antifragility & Risks)",
                 "Contrarian Lens (Variant Perception)",
-                "Multi-Perspective (All Three Lenses)"
+                "Multi-Perspective (All Three Lenses)",
+                "Contrarian Scanner (Hidden Gems)"
             ],
             help="Select the type of analysis to perform"
         )
@@ -123,20 +126,26 @@ if not st.session_state.check_status:
         # Map display name to internal type
         analysis_type_map = {
             "Fundamental (Single Year)": "fundamental",
+            "Success Factors - Excellent Company (Multi-Year)": "excellent",
+            "Success Factors - Objective Analysis (Multi-Year)": "objective",
             "Buffett Lens (Value Investing)": "buffett",
             "Taleb Lens (Antifragility & Risks)": "taleb",
             "Contrarian Lens (Variant Perception)": "contrarian",
-            "Multi-Perspective (All Three Lenses)": "multi"
+            "Multi-Perspective (All Three Lenses)": "multi",
+            "Contrarian Scanner (Hidden Gems)": "scanner"
         }
         analysis_type = analysis_type_map[analysis_type_display]
 
         # Show analysis type description
         analysis_descriptions = {
             "fundamental": "📋 Analyzes business model, financials, risks, and key strategies for a single year.",
+            "excellent": "⭐ Multi-year analysis for proven winners - Identifies what made excellent companies succeed. Best for studying top performers (AAPL, MSFT, GOOGL). Requires multiple years.",
+            "objective": "🎯 Multi-year unbiased analysis - Objective assessment of any company's distinguishing characteristics, strengths, and weaknesses. Best for screening unknown companies. Requires multiple years.",
             "buffett": "💰 Warren Buffett perspective - Economic moat, management quality, pricing power, and intrinsic value.",
             "taleb": "🛡️ Nassim Taleb perspective - Fragility assessment, tail risks, and antifragility.",
             "contrarian": "🔍 Contrarian perspective - Variant perception, hidden opportunities, market mispricings.",
-            "multi": "🎭 Combined analysis through all three investment lenses (Buffett, Taleb, Contrarian)."
+            "multi": "🎭 Combined analysis through all three investment lenses (Buffett, Taleb, Contrarian).",
+            "scanner": "💎 Contrarian Scanner - 6-dimension scoring (0-600) to identify companies with hidden compounder potential through strategic anomalies and asymmetric resources."
         }
         st.info(analysis_descriptions[analysis_type])
 
@@ -151,28 +160,55 @@ if not st.session_state.check_status:
         # Year selection
         st.subheader("Years to Analyze")
 
-        year_mode = st.radio(
-            "Selection Method",
-            options=["Most Recent Year", "Number of Years"],
-            horizontal=True
-        )
+        # Check if multi-year analysis is required
+        multi_year_required = analysis_type in ['excellent', 'objective', 'scanner']
 
-        current_year = datetime.now().year
-
-        if year_mode == "Most Recent Year":
-            num_years = 1
-            years = None
-            st.info(f"Will analyze the most recent {filing_type} filing (likely {current_year} or {current_year-1})")
-        else:
+        if multi_year_required:
+            st.warning("⚠️ This analysis type requires multiple years of data for meaningful insights.")
             num_years = st.slider(
                 "Number of recent years",
-                min_value=1,
-                max_value=5,
-                value=1,
-                help="Analyze this many most recent years"
+                min_value=3,
+                max_value=15,
+                value=5,
+                help="Multi-year analyses require at least 3 years. 5-10 years recommended for best insights."
             )
             years = None
             st.info(f"Will analyze the last {num_years} {filing_type} filings")
+        else:
+            year_mode = st.radio(
+                "Selection Method",
+                options=["Most Recent Year", "Number of Years", "Specific Year"],
+                horizontal=True
+            )
+
+            current_year = datetime.now().year
+
+            if year_mode == "Most Recent Year":
+                num_years = 1
+                years = None
+                st.info(f"Will analyze the most recent {filing_type} filing (likely {current_year} or {current_year-1})")
+            elif year_mode == "Number of Years":
+                num_years = st.slider(
+                    "Number of recent years",
+                    min_value=2,
+                    max_value=10,
+                    value=3,
+                    help="Analyze this many most recent years"
+                )
+                years = None
+                st.info(f"Will analyze the last {num_years} {filing_type} filings")
+            else:  # Specific Year
+                specific_year = st.number_input(
+                    "Select Year",
+                    min_value=1995,
+                    max_value=current_year,
+                    value=current_year,
+                    step=1,
+                    help="Select a specific fiscal year to analyze"
+                )
+                years = [specific_year]
+                num_years = None
+                st.info(f"Will analyze {filing_type} for fiscal year {specific_year}")
 
         # Custom prompt (basic version)
         st.subheader("Custom Prompt (Optional)")

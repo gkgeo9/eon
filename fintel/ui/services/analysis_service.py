@@ -17,7 +17,9 @@ from fintel.core import get_config, get_logger
 from fintel.ai import APIKeyManager, RateLimiter
 from fintel.data.sources.sec import SECDownloader, SECConverter, PDFExtractor
 from fintel.analysis.fundamental import FundamentalAnalyzer
+from fintel.analysis.fundamental.success_factors import ExcellentCompanyAnalyzer, ObjectiveCompanyAnalyzer
 from fintel.analysis.perspectives import PerspectiveAnalyzer
+from fintel.analysis.comparative.contrarian_scanner import ContrarianScanner
 from fintel.ui.database import DatabaseRepository
 
 
@@ -150,6 +152,8 @@ class AnalysisService:
                 results = self._run_contrarian_analysis(ticker, pdf_paths)
             elif analysis_type == 'multi':
                 results = self._run_multi_perspective(ticker, pdf_paths)
+            elif analysis_type == 'scanner':
+                results = self._run_contrarian_scanner(ticker, pdf_paths)
             else:
                 raise ValueError(f"Unknown analysis type: {analysis_type}")
 
@@ -275,24 +279,40 @@ class AnalysisService:
         pdf_paths: Dict[int, Path]
     ) -> Dict[int, Any]:
         """Run excellent company analyzer (multi-year, success-focused)."""
-        # For excellent company analysis, we typically analyze all years together
-        # But we'll store per-year for consistency
-        # This is a placeholder - you may need to implement ExcellentCompanyAnalyzer wrapper
-
-        # Note: Excellent company analysis typically works on aggregated data
-        # For now, we'll treat it similarly to fundamental but with a different prompt
-        from fintel.analysis.fundamental.success_factors import ExcellentCompanyAnalyzer
-
-        analyzer = ExcellentCompanyAnalyzer(
+        # First, run fundamental analysis for each year
+        fundamental_analyzer = FundamentalAnalyzer(
             api_key_manager=self.api_key_manager,
             rate_limiter=self.rate_limiter
         )
 
-        # This analyzer may work differently - adjust as needed
-        results = {}
-        # Implementation depends on how ExcellentCompanyAnalyzer works
-        # Placeholder for now
-        return results
+        fundamental_analyses = {}
+        for year, pdf_path in pdf_paths.items():
+            self.logger.info(f"Analyzing {ticker} {year} (Fundamental for Excellent)")
+            result = fundamental_analyzer.analyze_filing(
+                pdf_path=pdf_path,
+                ticker=ticker,
+                year=year
+            )
+            if result:
+                fundamental_analyses[year] = result
+
+        # Now run excellent company analysis on all years together
+        if fundamental_analyses:
+            excellent_analyzer = ExcellentCompanyAnalyzer(
+                api_key_manager=self.api_key_manager,
+                rate_limiter=self.rate_limiter
+            )
+
+            self.logger.info(f"Running Excellent Company analysis for {ticker}")
+            excellent_result = excellent_analyzer.analyze_success_factors(
+                ticker=ticker,
+                analyses=fundamental_analyses
+            )
+
+            # Return as a special year key (0 means multi-year aggregated)
+            return {0: excellent_result} if excellent_result else {}
+
+        return {}
 
     def _run_objective_analysis(
         self,
@@ -300,10 +320,40 @@ class AnalysisService:
         pdf_paths: Dict[int, Path]
     ) -> Dict[int, Any]:
         """Run objective company analyzer (multi-year, unbiased)."""
-        # Similar to excellent but with objective prompt
-        # Placeholder for now
-        results = {}
-        return results
+        # First, run fundamental analysis for each year
+        fundamental_analyzer = FundamentalAnalyzer(
+            api_key_manager=self.api_key_manager,
+            rate_limiter=self.rate_limiter
+        )
+
+        fundamental_analyses = {}
+        for year, pdf_path in pdf_paths.items():
+            self.logger.info(f"Analyzing {ticker} {year} (Fundamental for Objective)")
+            result = fundamental_analyzer.analyze_filing(
+                pdf_path=pdf_path,
+                ticker=ticker,
+                year=year
+            )
+            if result:
+                fundamental_analyses[year] = result
+
+        # Now run objective company analysis on all years together
+        if fundamental_analyses:
+            objective_analyzer = ObjectiveCompanyAnalyzer(
+                api_key_manager=self.api_key_manager,
+                rate_limiter=self.rate_limiter
+            )
+
+            self.logger.info(f"Running Objective Company analysis for {ticker}")
+            objective_result = objective_analyzer.analyze_success_factors(
+                ticker=ticker,
+                analyses=fundamental_analyses
+            )
+
+            # Return as a special year key (0 means multi-year aggregated)
+            return {0: objective_result} if objective_result else {}
+
+        return {}
 
     def _run_buffett_analysis(
         self,
@@ -400,6 +450,74 @@ class AnalysisService:
                 results[year] = result
 
         return results
+
+    def _run_contrarian_scanner(
+        self,
+        ticker: str,
+        pdf_paths: Dict[int, Path]
+    ) -> Dict[int, Any]:
+        """Run contrarian scanner (multi-year, hidden gems detection)."""
+        # First, run fundamental analysis for each year
+        fundamental_analyzer = FundamentalAnalyzer(
+            api_key_manager=self.api_key_manager,
+            rate_limiter=self.rate_limiter
+        )
+
+        fundamental_analyses = {}
+        for year, pdf_path in pdf_paths.items():
+            self.logger.info(f"Analyzing {ticker} {year} (Fundamental for Scanner)")
+            result = fundamental_analyzer.analyze_filing(
+                pdf_path=pdf_path,
+                ticker=ticker,
+                year=year
+            )
+            if result:
+                fundamental_analyses[year] = result
+
+        # Now run objective analysis first (scanner needs this)
+        if fundamental_analyses:
+            objective_analyzer = ObjectiveCompanyAnalyzer(
+                api_key_manager=self.api_key_manager,
+                rate_limiter=self.rate_limiter
+            )
+
+            self.logger.info(f"Running Objective analysis for scanner: {ticker}")
+            objective_result = objective_analyzer.analyze_success_factors(
+                ticker=ticker,
+                analyses=fundamental_analyses
+            )
+
+            if objective_result:
+                # Save objective result to a temp file for scanner to load
+                import tempfile
+                import json
+
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                    json.dump(objective_result.model_dump(), f, indent=2)
+                    temp_path = Path(f.name)
+
+                try:
+                    # Now run contrarian scanner
+                    scanner = ContrarianScanner(
+                        api_key_manager=self.api_key_manager,
+                        rate_limiter=self.rate_limiter
+                    )
+
+                    self.logger.info(f"Running Contrarian Scanner for {ticker}")
+                    scanner_result = scanner.scan_company(
+                        ticker=ticker,
+                        success_factors_path=temp_path,
+                        years=len(fundamental_analyses)
+                    )
+
+                    # Return as a special year key (0 means multi-year aggregated)
+                    return {0: scanner_result} if scanner_result else {}
+                finally:
+                    # Clean up temp file
+                    if temp_path.exists():
+                        temp_path.unlink()
+
+        return {}
 
     def get_analysis_status(self, run_id: str) -> Dict[str, Any]:
         """

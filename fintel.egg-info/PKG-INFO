@@ -45,17 +45,17 @@ Synthesizes functionality from `standardized_sec_ai` and `10K_automator` into a 
 
 ---
 
-## 🚀 Quick Start (When You Come Back)
+## 🚀 Quick Start
 
 ### 1. Setup Environment
 
 ```bash
-cd /Users/gkg/PycharmProjects/stock_stuff_06042025/fintel
+cd /Users/gkg/PycharmProjects/Fintel
 
-# Activate your virtual environment
-source /path/to/venv/bin/activate
+# Use the project virtual environment
+source .venv/bin/activate
 
-# Install (if not already installed)
+# Install dependencies
 pip install -e ".[dev]"
 ```
 
@@ -74,7 +74,16 @@ FINTEL_SEC_USER_EMAIL=your@email.com
 FINTEL_SEC_COMPANY_NAME="Research Script"
 ```
 
-### 3. Run Your First Analysis
+### 3. Run the Web Interface
+
+```bash
+# Launch Streamlit application
+streamlit run streamlit_app.py
+```
+
+The app will open at `http://localhost:8501`
+
+### 4. Or Run CLI Examples
 
 ```bash
 cd examples
