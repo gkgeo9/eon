@@ -12,6 +12,7 @@ from datetime import datetime
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService
 from fintel.ui.theme import apply_theme
+from fintel.data.sources.sec import SECDownloader
 
 # Apply global theme
 apply_theme()
@@ -31,6 +32,53 @@ if 'check_status' not in st.session_state:
 
 if 'start_wait_count' not in st.session_state:
     st.session_state.start_wait_count = 0
+
+if 'available_filing_types' not in st.session_state:
+    st.session_state.available_filing_types = None
+
+if 'last_queried_ticker' not in st.session_state:
+    st.session_state.last_queried_ticker = None
+
+if 'filing_types_loading' not in st.session_state:
+    st.session_state.filing_types_loading = False
+
+
+def get_available_filing_types(ticker: str, db: DatabaseRepository) -> list:
+    """
+    Get available filing types for a ticker, using cache when possible.
+
+    Args:
+        ticker: Stock ticker symbol
+        db: Database repository for caching
+
+    Returns:
+        List of available filing types, or default list if query fails
+    """
+    if not ticker:
+        return ["10-K", "10-Q", "8-K", "4", "DEF 14A"]
+
+    ticker = ticker.upper().strip()
+
+    # Check cache first
+    cached_types = db.get_cached_filing_types(ticker, max_age_hours=24)
+    if cached_types:
+        return cached_types
+
+    # Query SEC API
+    try:
+        downloader = SECDownloader()
+        filing_types = downloader.get_available_filing_types(ticker)
+
+        if filing_types:
+            # Cache the result
+            db.cache_filing_types(ticker, filing_types)
+            return filing_types
+        else:
+            # Return default if no types found
+            return ["10-K", "10-Q", "8-K", "4", "DEF 14A"]
+    except Exception as e:
+        st.warning(f"Could not fetch filing types for {ticker}: {str(e)}")
+        return ["10-K", "10-Q", "8-K", "4", "DEF 14A"]
 
 
 def run_analysis_background(service, params, run_id_key='current_run_id'):
@@ -135,7 +183,7 @@ if not st.session_state.check_status:
     st.subheader("Analysis Configuration")
 
     # Ticker input
-    col1, col2 = st.columns([2, 1])
+    col1, col2, col3 = st.columns([2, 1, 1])
 
     with col1:
         ticker = st.text_input(
@@ -152,6 +200,19 @@ if not st.session_state.check_status:
             help="Optional - for display purposes",
             key="company_name_input"
         )
+
+    with col3:
+        st.write("")  # Spacer to align button
+        st.write("")  # Spacer to align button
+        if st.button("📋 Get Filing Types", help="Query SEC to find available filing types for this ticker"):
+            if ticker:
+                with st.spinner(f"Querying SEC for {ticker}..."):
+                    filing_types = get_available_filing_types(ticker, st.session_state.db)
+                    st.session_state.available_filing_types = filing_types
+                    st.session_state.last_queried_ticker = ticker
+                    st.success(f"Found {len(filing_types)} filing types")
+            else:
+                st.warning("Please enter a ticker first")
 
     # Analysis type selector - Clean names without single/multi labels
     analysis_type_display = st.selectbox(
@@ -195,17 +256,32 @@ if not st.session_state.check_status:
     }
     st.info(analysis_descriptions[analysis_type])
 
-    # Filing type
-    filing_type = st.selectbox(
-        "Filing Type",
-        options=["10-K", "10-Q", "8-K", "4", "DEF 14A"],
-        index=0,
-        help="""Type of SEC filing to analyze:
+    # Filing type - Dynamic based on SEC query or default
+    # Auto-query filing types if ticker changed
+    if ticker and ticker != st.session_state.last_queried_ticker:
+        with st.spinner(f"Fetching available filing types for {ticker}..."):
+            filing_types = get_available_filing_types(ticker, st.session_state.db)
+            st.session_state.available_filing_types = filing_types
+            st.session_state.last_queried_ticker = ticker
+
+    # Determine filing type options
+    if st.session_state.available_filing_types:
+        filing_options = st.session_state.available_filing_types
+        help_text = f"Available SEC filings for {st.session_state.last_queried_ticker or ticker} (sorted by frequency)"
+    else:
+        filing_options = ["10-K", "10-Q", "8-K", "4", "DEF 14A"]
+        help_text = """Common SEC filing types:
 • 10-K: Annual report (comprehensive)
 • 10-Q: Quarterly report (3x per year)
 • 8-K: Current report (material events)
 • 4: Insider trading report
 • DEF 14A: Proxy statement (voting/governance)"""
+
+    filing_type = st.selectbox(
+        "Filing Type",
+        options=filing_options,
+        index=0,
+        help=help_text
     )
 
     # Year selection

@@ -527,6 +527,81 @@ class DatabaseRepository:
 
         return cursor.rowcount
 
+    def cache_filing_types(self, ticker: str, filing_types: List[str]) -> None:
+        """
+        Cache available filing types for a ticker.
+
+        Args:
+            ticker: Company ticker symbol
+            filing_types: List of available filing types
+        """
+        query = """
+            INSERT OR REPLACE INTO filing_types_cache
+            (ticker, filing_types, cached_at)
+            VALUES (?, ?, ?)
+        """
+        self._execute_with_retry(query, (
+            ticker.upper(),
+            json.dumps(filing_types),
+            datetime.now().isoformat()
+        ))
+
+    def get_cached_filing_types(
+        self,
+        ticker: str,
+        max_age_hours: int = 24
+    ) -> Optional[List[str]]:
+        """
+        Get cached filing types for a ticker if cache is fresh.
+
+        Args:
+            ticker: Company ticker symbol
+            max_age_hours: Maximum cache age in hours (default: 24)
+
+        Returns:
+            List of filing types if cache exists and is fresh, None otherwise
+        """
+        query = """
+            SELECT filing_types, cached_at
+            FROM filing_types_cache
+            WHERE ticker = ?
+        """
+        cursor = self._execute_with_retry(query, (ticker.upper(),))
+        row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        filing_types_json, cached_at_str = row[0], row[1]
+
+        # Check if cache is still fresh
+        cached_at = datetime.fromisoformat(cached_at_str)
+        age_hours = (datetime.now() - cached_at).total_seconds() / 3600
+
+        if age_hours > max_age_hours:
+            return None
+
+        return json.loads(filing_types_json)
+
+    def clear_filing_types_cache(self, ticker: Optional[str] = None) -> int:
+        """
+        Clear filing types cache.
+
+        Args:
+            ticker: Clear cache for specific ticker (None = all)
+
+        Returns:
+            Number of records deleted
+        """
+        if ticker:
+            query = "DELETE FROM filing_types_cache WHERE ticker = ?"
+            cursor = self._execute_with_retry(query, (ticker.upper(),))
+        else:
+            query = "DELETE FROM filing_types_cache"
+            cursor = self._execute_with_retry(query)
+
+        return cursor.rowcount
+
     # ==================== User Settings ====================
 
     def set_setting(self, key: str, value: str) -> None:

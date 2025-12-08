@@ -124,6 +124,8 @@ if not st.session_state.batch_monitoring:
     - **ticker** (required): Stock ticker symbol (e.g., AAPL, MSFT)
     - **analysis_type** (optional): Type of analysis (defaults to fundamental)
       - Options: fundamental, excellent, objective, buffett, taleb, contrarian, multi, scanner
+    - **filing_type** (optional): SEC filing type (defaults to selection below)
+      - Common: 10-K, 10-Q, 8-K, 4, DEF 14A, or any SEC filing type
     - **company_name** (optional): Company name for display
     - **year_mode** (optional): How to select years (defaults to last_n)
       - Options: last_n, specific_years, year_range, single_year
@@ -139,6 +141,7 @@ if not st.session_state.batch_monitoring:
         example_df = pd.DataFrame({
             'ticker': ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'NVDA'],
             'analysis_type': ['fundamental', 'excellent', 'objective', 'scanner', 'buffett'],
+            'filing_type': ['10-K', '10-Q', '10-K', '8-K', '10-K'],
             'company_name': ['Apple Inc.', 'Microsoft Corp.', 'Alphabet Inc.', 'Tesla Inc.', 'NVIDIA Corp.'],
             'year_mode': ['single_year', 'last_n', 'specific_years', 'year_range', 'last_n'],
             'years_value': ['2023', '10', '2023,2022,2020,2019', '2018-2023', '5']
@@ -196,7 +199,9 @@ if not st.session_state.batch_monitoring:
                         "Filing Type",
                         options=["10-K", "10-Q", "8-K", "4", "DEF 14A"],
                         index=0,
-                        help="• 10-K: Annual | • 10-Q: Quarterly | • 8-K: Events | • 4: Insider | • DEF 14A: Proxy"
+                        help="""Default filing type for all companies (unless overridden in CSV).
+• 10-K: Annual | • 10-Q: Quarterly | • 8-K: Events | • 4: Insider | • DEF 14A: Proxy
+Optional: Add 'filing_type' column to CSV to specify per company"""
                     )
 
                 # Process and validate
@@ -222,6 +227,11 @@ if not st.session_state.batch_monitoring:
                         company_name = None
                         if 'company_name' in df.columns and pd.notna(row['company_name']):
                             company_name = str(row['company_name']).strip()
+
+                        # Get filing type (from CSV or default)
+                        filing_type = default_filing_type
+                        if 'filing_type' in df.columns and pd.notna(row['filing_type']):
+                            filing_type = str(row['filing_type']).strip()
 
                         # Process year selection
                         years = None
@@ -262,7 +272,7 @@ if not st.session_state.batch_monitoring:
                         config = {
                             'ticker': ticker,
                             'analysis_type': analysis_type,
-                            'filing_type': default_filing_type,
+                            'filing_type': filing_type,
                             'years': years,
                             'num_years': num_years,
                             'custom_prompt': None,

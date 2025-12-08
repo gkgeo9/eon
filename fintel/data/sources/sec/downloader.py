@@ -6,8 +6,10 @@ Extracted and refactored from standardized_sec_ai/tenk_processor.py
 """
 
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 from sec_edgar_downloader import Downloader
+import requests
+import time
 
 from fintel.core import get_logger, DownloadError
 
@@ -134,6 +136,125 @@ class SECDownloader:
         )
 
         return results
+
+    def get_available_filing_types(self, ticker: str) -> List[str]:
+        """
+        Query SEC API to get all available filing types for a ticker.
+
+        This queries the SEC EDGAR company submissions endpoint to retrieve
+        all filing types that have been filed by the company.
+
+        Args:
+            ticker: Stock ticker symbol
+
+        Returns:
+            List of available filing types (e.g., ['10-K', '10-Q', '8-K', ...])
+            Sorted by frequency (most common first)
+
+        Raises:
+            DownloadError: If unable to query SEC API or ticker not found
+        """
+        ticker = ticker.upper()
+        self.logger.info(f"Querying available filing types for {ticker}")
+
+        try:
+            # First, get the CIK (Central Index Key) for the ticker
+            # SEC provides a ticker-to-CIK mapping file
+            cik = self._get_cik_from_ticker(ticker)
+
+            if not cik:
+                raise DownloadError(f"Could not find CIK for ticker {ticker}")
+
+            # Query the company submissions endpoint
+            headers = {
+                'User-Agent': f'{self.company_name} {self.user_email}',
+                'Accept-Encoding': 'gzip, deflate',
+                'Host': 'data.sec.gov'
+            }
+
+            url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+            self.logger.debug(f"Fetching submissions from {url}")
+
+            # SEC requires a delay between requests
+            time.sleep(0.1)
+
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Extract filing types from recent filings
+            filing_types: Dict[str, int] = {}
+
+            if 'filings' in data and 'recent' in data['filings']:
+                recent = data['filings']['recent']
+                if 'form' in recent:
+                    for form in recent['form']:
+                        filing_types[form] = filing_types.get(form, 0) + 1
+
+            if not filing_types:
+                self.logger.warning(f"No filings found for {ticker}")
+                return []
+
+            # Sort by frequency (most common first)
+            sorted_types = sorted(filing_types.items(), key=lambda x: x[1], reverse=True)
+            result = [form for form, _ in sorted_types]
+
+            self.logger.info(f"Found {len(result)} filing types for {ticker}: {result[:10]}")
+            return result
+
+        except requests.RequestException as e:
+            error_msg = f"Error querying SEC API for {ticker}: {str(e)}"
+            self.logger.error(error_msg)
+            raise DownloadError(error_msg) from e
+        except Exception as e:
+            error_msg = f"Unexpected error getting filing types for {ticker}: {str(e)}"
+            self.logger.error(error_msg)
+            raise DownloadError(error_msg) from e
+
+    def _get_cik_from_ticker(self, ticker: str) -> Optional[str]:
+        """
+        Get CIK (Central Index Key) from ticker symbol.
+
+        Args:
+            ticker: Stock ticker symbol
+
+        Returns:
+            CIK string padded to 10 digits, or None if not found
+        """
+        ticker = ticker.upper()
+
+        try:
+            headers = {
+                'User-Agent': f'{self.company_name} {self.user_email}',
+                'Accept-Encoding': 'gzip, deflate',
+                'Host': 'www.sec.gov'
+            }
+
+            # Use the company tickers endpoint
+            url = "https://www.sec.gov/files/company_tickers.json"
+
+            # SEC requires a delay between requests
+            time.sleep(0.1)
+
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Search for the ticker in the data
+            for key, company in data.items():
+                if company.get('ticker', '').upper() == ticker:
+                    cik = str(company.get('cik_str', ''))
+                    # Pad CIK to 10 digits
+                    return cik.zfill(10)
+
+            self.logger.warning(f"Ticker {ticker} not found in SEC database")
+            return None
+
+        except Exception as e:
+            self.logger.error(f"Error getting CIK for {ticker}: {str(e)}")
+            return None
 
     def get_filing_path(self, ticker: str, filing_type: str = "10-K") -> Path:
         """
