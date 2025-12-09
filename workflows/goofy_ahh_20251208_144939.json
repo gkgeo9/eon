@@ -1,0 +1,59 @@
+{
+  "name": "Goofy Ahh",
+  "description": "",
+  "steps": [
+    {
+      "step_id": "step_1",
+      "name": "Step 1",
+      "type": "input",
+      "config": {
+        "type": "input",
+        "tickers": [
+          "AAPL",
+          "MSFT"
+        ],
+        "num_years": 1,
+        "filing_type": "10-K"
+      }
+    },
+    {
+      "step_id": "step_2",
+      "name": "Step 2",
+      "type": "fundamental_analysis",
+      "config": {
+        "type": "fundamental_analysis",
+        "run_mode": "per_filing",
+        "custom_prompt": null
+      }
+    },
+    {
+      "step_id": "step_3",
+      "name": "Step 3",
+      "type": "aggregate",
+      "config": {
+        "type": "aggregate",
+        "operation": "merge"
+      }
+    },
+    {
+      "step_id": "step_4",
+      "name": "Step 4",
+      "type": "aggregate",
+      "config": {
+        "type": "aggregate",
+        "operation": "group"
+      }
+    },
+    {
+      "step_id": "step_5",
+      "name": "Step 5",
+      "type": "custom_analysis",
+      "config": {
+        "type": "custom_analysis",
+        "prompt": "Make a joke about this analysis",
+        "output_format": "free_text"
+      }
+    }
+  ],
+  "created_at": "2025-12-08T14:49:39.933836"
+}

@@ -20,10 +20,24 @@ import json
 from datetime import datetime
 from typing import List, Dict, Any
 from pathlib import Path
+import time
 from fintel.ui.theme import apply_theme
+from fintel.ui.database import DatabaseRepository
+from fintel.ui.services.analysis_service import AnalysisService
+from fintel.ui.services.workflow_service import WorkflowService
 
 # Apply global theme
 apply_theme()
+
+# Initialize services
+@st.cache_resource
+def get_services():
+    db = DatabaseRepository()
+    analysis_service = AnalysisService(db)
+    workflow_service = WorkflowService(db, analysis_service)
+    return db, analysis_service, workflow_service
+
+db, analysis_service, workflow_service = get_services()
 
 # Initialize session state
 if 'workflow_steps' not in st.session_state:
@@ -34,6 +48,12 @@ if 'workflow_name' not in st.session_state:
 
 if 'workflow_description' not in st.session_state:
     st.session_state.workflow_description = ""
+
+if 'monitoring_run_id' not in st.session_state:
+    st.session_state.monitoring_run_id = None
+
+if 'current_workflow_id' not in st.session_state:
+    st.session_state.current_workflow_id = None
 
 st.set_page_config(page_title="Workflow Builder", layout="wide")
 
@@ -72,13 +92,160 @@ st.markdown("---")
 if st.session_state.workflow_steps:
     st.subheader("📊 Workflow Pipeline")
 
-    # Create visual flowchart
-    workflow_viz = " → ".join([
-        f"**{i+1}. {step['name']}**"
-        for i, step in enumerate(st.session_state.workflow_steps)
-    ])
+    # Calculate shapes for each step
+    def calculate_shape(step, prev_shape):
+        """Calculate output shape based on step type and config."""
+        step_type = step.get('type', '')
+        config = step.get('config', {})
 
-    st.info(workflow_viz)
+        if step_type == 'input':
+            num_tickers = len(config.get('tickers', []))
+            if 'years' in config:
+                num_years = len(config.get('years', []))
+            else:
+                num_years = config.get('num_years', 1)
+            return (num_tickers, num_years)
+
+        elif step_type == 'fundamental_analysis' or step_type == 'perspective_analysis':
+            return prev_shape  # Same shape
+
+        elif step_type == 'success_factors':
+            agg_by = config.get('aggregate_by', 'company')
+            if agg_by == 'company':
+                return (prev_shape[0], 1) if prev_shape else (0, 1)
+            elif agg_by == 'year':
+                return (1, prev_shape[1]) if prev_shape else (1, 0)
+            else:
+                return prev_shape
+
+        elif step_type == 'aggregate':
+            operation = config.get('operation', 'merge_all')
+            if operation == 'merge_all':
+                return (1, 1)
+            elif 'company' in operation:
+                return (prev_shape[0], 1) if prev_shape else (0, 1)
+            elif 'year' in operation:
+                return (1, prev_shape[1]) if prev_shape else (1, 0)
+            elif operation == 'top_n':
+                n = config.get('n', 10)
+                return (min(n, prev_shape[0]), prev_shape[1]) if prev_shape else (n, 0)
+            else:
+                return prev_shape
+
+        elif step_type == 'filter':
+            return prev_shape  # Unknown reduction
+
+        elif step_type == 'custom_analysis':
+            return (1, 1)  # Usually aggregates to single result
+
+        elif step_type == 'export':
+            return prev_shape  # Pass-through
+
+        return prev_shape
+
+    # Step type colors and icons
+    step_styles = {
+        'input': {'color': '#4CAF50', 'icon': '📥', 'label': 'Input'},
+        'fundamental_analysis': {'color': '#2196F3', 'icon': '📊', 'label': 'Analysis'},
+        'success_factors': {'color': '#9C27B0', 'icon': '⭐', 'label': 'Success Factors'},
+        'perspective_analysis': {'color': '#FF9800', 'icon': '🔍', 'label': 'Perspective'},
+        'custom_analysis': {'color': '#E91E63', 'icon': '✨', 'label': 'Custom'},
+        'filter': {'color': '#F44336', 'icon': '🔎', 'label': 'Filter'},
+        'aggregate': {'color': '#00BCD4', 'icon': '📦', 'label': 'Aggregate'},
+        'export': {'color': '#795548', 'icon': '💾', 'label': 'Export'}
+    }
+
+    # Build visual pipeline with shapes
+    current_shape = None
+    pipeline_html = '<div style="display: flex; flex-direction: column; gap: 15px; margin: 20px 0;">'
+
+    for i, step in enumerate(st.session_state.workflow_steps):
+        step_type = step.get('type', 'unknown')
+        style = step_styles.get(step_type, {'color': '#757575', 'icon': '❓', 'label': 'Unknown'})
+
+        # Calculate shape
+        new_shape = calculate_shape(step, current_shape)
+
+        # Create step card with shape visualization
+        shape_str = f"({new_shape[0]} × {new_shape[1]})" if new_shape else "(? × ?)"
+
+        pipeline_html += f'''
+        <div style="
+            background: linear-gradient(135deg, {style['color']}22 0%, {style['color']}11 100%);
+            border-left: 4px solid {style['color']};
+            border-radius: 8px;
+            padding: 15px;
+            position: relative;
+        ">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 24px;">{style['icon']}</span>
+                    <div>
+                        <div style="font-weight: 600; font-size: 14px; color: #333;">
+                            Step {i+1}: {step['name']}
+                        </div>
+                        <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                            {style['label']}
+                        </div>
+                    </div>
+                </div>
+                <div style="
+                    background: {style['color']};
+                    color: white;
+                    padding: 6px 16px;
+                    border-radius: 20px;
+                    font-weight: 600;
+                    font-size: 13px;
+                    font-family: monospace;
+                ">
+                    {shape_str}
+                </div>
+            </div>
+        '''
+
+        # Show shape transformation if changed
+        if current_shape and current_shape != new_shape:
+            old_shape_str = f"({current_shape[0]} × {current_shape[1]})"
+            pipeline_html += f'''
+            <div style="
+                margin-top: 8px;
+                padding: 8px 12px;
+                background: rgba(0,0,0,0.03);
+                border-radius: 4px;
+                font-size: 11px;
+                color: #666;
+                font-family: monospace;
+            ">
+                ⚡ Shape change: {old_shape_str} → {shape_str}
+            </div>
+            '''
+
+        pipeline_html += '</div>'
+
+        # Add arrow between steps
+        if i < len(st.session_state.workflow_steps) - 1:
+            pipeline_html += '''
+            <div style="text-align: center; color: #999; font-size: 20px; margin: -5px 0;">
+                ↓
+            </div>
+            '''
+
+        current_shape = new_shape
+
+    pipeline_html += '</div>'
+
+    # Display the pipeline
+    st.markdown(pipeline_html, unsafe_allow_html=True)
+
+    # Show final output summary
+    if current_shape:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Final Companies", current_shape[0])
+        with col2:
+            st.metric("Final Years/Items", current_shape[1])
+        with col3:
+            st.metric("Total Items", current_shape[0] * current_shape[1])
 
     st.markdown("---")
 
@@ -357,10 +524,24 @@ with col1:
 with col2:
     if st.button("➕ Add Step", type="primary", use_container_width=True):
         if step_config:
+            # Map display names to internal step types
+            step_type_map = {
+                "Input (Companies & Years)": "input",
+                "Fundamental Analysis": "fundamental_analysis",
+                "Success Factors Extraction": "success_factors",
+                "Perspective Analysis (Buffett/Taleb/Contrarian)": "perspective_analysis",
+                "Custom Prompt Analysis": "custom_analysis",
+                "Filter Results": "filter",
+                "Aggregate/Combine": "aggregate",
+                "Export": "export"
+            }
+
+            internal_type = step_type_map.get(step_type, step_config.get('type', 'unknown'))
+
             new_step = {
                 "step_id": f"step_{len(st.session_state.workflow_steps) + 1}",
                 "name": step_name or f"Step {len(st.session_state.workflow_steps) + 1}",
-                "type": step_type,
+                "type": internal_type,
                 "config": step_config
             }
             st.session_state.workflow_steps.append(new_step)
@@ -371,30 +552,102 @@ with col2:
 
 st.markdown("---")
 
-# Display current steps
+# Display current steps with controls
 if st.session_state.workflow_steps:
-    st.subheader("📋 Current Steps")
+    st.subheader("📋 Step Configuration Details")
+
+    # Step type colors and icons (reuse from above)
+    step_styles = {
+        'input': {'color': '#4CAF50', 'icon': '📥', 'label': 'Input'},
+        'fundamental_analysis': {'color': '#2196F3', 'icon': '📊', 'label': 'Analysis'},
+        'success_factors': {'color': '#9C27B0', 'icon': '⭐', 'label': 'Success Factors'},
+        'perspective_analysis': {'color': '#FF9800', 'icon': '🔍', 'label': 'Perspective'},
+        'custom_analysis': {'color': '#E91E63', 'icon': '✨', 'label': 'Custom'},
+        'filter': {'color': '#F44336', 'icon': '🔎', 'label': 'Filter'},
+        'aggregate': {'color': '#00BCD4', 'icon': '📦', 'label': 'Aggregate'},
+        'export': {'color': '#795548', 'icon': '💾', 'label': 'Export'}
+    }
 
     for i, step in enumerate(st.session_state.workflow_steps):
-        with st.expander(f"{i+1}. {step['name']} ({step['type']})", expanded=False):
-            st.json(step['config'])
+        step_type = step.get('type', 'unknown')
+        style = step_styles.get(step_type, {'color': '#757575', 'icon': '❓', 'label': 'Unknown'})
 
+        # Create colored header for expander
+        header = f"{style['icon']} Step {i+1}: {step['name']} - {style['label']}"
+
+        with st.expander(header, expanded=False):
+            # Show configuration in a nice format
+            st.markdown("**Configuration:**")
+            config = step.get('config', {})
+
+            # Format config nicely
+            if step_type == 'input':
+                st.write(f"• **Tickers:** {', '.join(config.get('tickers', []))}")
+                if 'years' in config:
+                    st.write(f"• **Years:** {', '.join(map(str, config.get('years', [])))}")
+                else:
+                    st.write(f"• **Number of Years:** {config.get('num_years', 1)}")
+                st.write(f"• **Filing Type:** {config.get('filing_type', '10-K')}")
+
+            elif step_type == 'fundamental_analysis':
+                st.write(f"• **Run Mode:** {config.get('run_mode', 'per_filing')}")
+                if config.get('custom_prompt'):
+                    st.write(f"• **Custom Prompt:** Yes ({len(config.get('custom_prompt', ''))} characters)")
+
+            elif step_type == 'success_factors':
+                st.write(f"• **Analyzer Type:** {config.get('analyzer_type', 'objective')}")
+                st.write(f"• **Aggregate By:** {config.get('aggregate_by', 'company')}")
+
+            elif step_type == 'perspective_analysis':
+                st.write(f"• **Perspectives:** {', '.join(config.get('perspectives', []))}")
+                st.write(f"• **Run Parallel:** {config.get('run_parallel', True)}")
+
+            elif step_type == 'custom_analysis':
+                st.write(f"• **Output Format:** {config.get('output_format', 'free_text')}")
+                if config.get('prompt'):
+                    st.write(f"• **Prompt Length:** {len(config.get('prompt', ''))} characters")
+
+            elif step_type == 'filter':
+                st.write(f"• **Field:** {config.get('field', '')}")
+                st.write(f"• **Operator:** {config.get('operator', '==')}")
+                st.write(f"• **Value:** {config.get('value', '')}")
+
+            elif step_type == 'aggregate':
+                st.write(f"• **Operation:** {config.get('operation', 'merge_all')}")
+                if config.get('n'):
+                    st.write(f"• **Top N:** {config.get('n')}")
+                if config.get('score_field'):
+                    st.write(f"• **Score Field:** {config.get('score_field')}")
+
+            elif step_type == 'export':
+                st.write(f"• **Formats:** {', '.join(config.get('formats', []))}")
+                st.write(f"• **Include Metadata:** {config.get('include_metadata', True)}")
+                st.write(f"• **Include Raw Data:** {config.get('include_raw_data', True)}")
+
+            # Show raw JSON in collapsed section
+            with st.expander("🔧 View Raw JSON", expanded=False):
+                st.json(step['config'])
+
+            # Action buttons
+            st.markdown("---")
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                if i > 0 and st.button(f"⬆️ Move Up", key=f"up_{i}"):
-                    st.session_state.workflow_steps[i], st.session_state.workflow_steps[i-1] = \
-                        st.session_state.workflow_steps[i-1], st.session_state.workflow_steps[i]
-                    st.rerun()
+                if i > 0:
+                    if st.button(f"⬆️ Move Up", key=f"up_{i}", use_container_width=True):
+                        st.session_state.workflow_steps[i], st.session_state.workflow_steps[i-1] = \
+                            st.session_state.workflow_steps[i-1], st.session_state.workflow_steps[i]
+                        st.rerun()
 
             with col2:
-                if i < len(st.session_state.workflow_steps) - 1 and st.button(f"⬇️ Move Down", key=f"down_{i}"):
-                    st.session_state.workflow_steps[i], st.session_state.workflow_steps[i+1] = \
-                        st.session_state.workflow_steps[i+1], st.session_state.workflow_steps[i]
-                    st.rerun()
+                if i < len(st.session_state.workflow_steps) - 1:
+                    if st.button(f"⬇️ Move Down", key=f"down_{i}", use_container_width=True):
+                        st.session_state.workflow_steps[i], st.session_state.workflow_steps[i+1] = \
+                            st.session_state.workflow_steps[i+1], st.session_state.workflow_steps[i]
+                        st.rerun()
 
             with col3:
-                if st.button(f"🗑️ Remove", key=f"remove_{i}", type="secondary"):
+                if st.button(f"🗑️ Remove", key=f"remove_{i}", type="secondary", use_container_width=True):
                     st.session_state.workflow_steps.pop(i)
                     st.rerun()
 
@@ -409,37 +662,80 @@ if st.session_state.workflow_steps:
         if st.button("💾 Save Workflow", use_container_width=True, type="primary"):
             if workflow_name:
                 workflow_data = {
-                    "name": workflow_name,
-                    "description": workflow_description,
-                    "steps": st.session_state.workflow_steps,
-                    "created_at": datetime.now().isoformat()
+                    "steps": st.session_state.workflow_steps
                 }
 
-                # Save to file
-                workflows_dir = Path("workflows")
-                workflows_dir.mkdir(exist_ok=True)
+                # Save to database
+                try:
+                    workflow_id = workflow_service.save_workflow(
+                        name=workflow_name,
+                        description=workflow_description,
+                        workflow_definition=workflow_data
+                    )
+                    st.session_state.current_workflow_id = workflow_id
+                    st.success(f"✅ Saved workflow to database (ID: {workflow_id})")
 
-                filename = f"{workflow_name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-                filepath = workflows_dir / filename
+                    # Also save to file
+                    workflows_dir = Path("workflows")
+                    workflows_dir.mkdir(exist_ok=True)
 
-                with open(filepath, 'w') as f:
-                    json.dump(workflow_data, f, indent=2)
+                    filename = f"{workflow_name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                    filepath = workflows_dir / filename
 
-                st.success(f"✅ Saved workflow to: {filepath}")
+                    full_workflow = {
+                        "name": workflow_name,
+                        "description": workflow_description,
+                        "steps": st.session_state.workflow_steps,
+                        "created_at": datetime.now().isoformat()
+                    }
 
-                # Also offer download
-                st.download_button(
-                    label="📥 Download Workflow JSON",
-                    data=json.dumps(workflow_data, indent=2),
-                    file_name=f"{workflow_name.replace(' ', '_')}.json",
-                    mime="application/json"
-                )
+                    with open(filepath, 'w') as f:
+                        json.dump(full_workflow, f, indent=2)
+
+                    # Offer download
+                    st.download_button(
+                        label="📥 Download Workflow JSON",
+                        data=json.dumps(full_workflow, indent=2),
+                        file_name=f"{workflow_name.replace(' ', '_')}.json",
+                        mime="application/json"
+                    )
+
+                except Exception as e:
+                    st.error(f"Failed to save workflow: {e}")
             else:
                 st.error("Please enter a workflow name")
 
     with col2:
-        if st.button("▶️ Run Workflow", use_container_width=True, type="primary"):
-            st.info("🚧 **Workflow Execution Coming Soon!**\n\nFor now, workflows are saved as templates. Execution engine will be added in the next update.")
+        # Run Workflow button
+        run_disabled = not (workflow_name and st.session_state.workflow_steps)
+        if st.button("▶️ Run Workflow", use_container_width=True, type="primary", disabled=run_disabled):
+            # Save workflow first if not saved
+            if not st.session_state.current_workflow_id:
+                workflow_data = {
+                    "steps": st.session_state.workflow_steps
+                }
+                try:
+                    workflow_id = workflow_service.save_workflow(
+                        name=workflow_name,
+                        description=workflow_description,
+                        workflow_definition=workflow_data
+                    )
+                    st.session_state.current_workflow_id = workflow_id
+                except Exception as e:
+                    st.error(f"Failed to save workflow: {e}")
+                    st.stop()
+
+            # Start execution
+            try:
+                with st.spinner("Starting workflow execution..."):
+                    run_id = workflow_service.execute_workflow(
+                        workflow_id=st.session_state.current_workflow_id
+                    )
+                    st.session_state.monitoring_run_id = run_id
+                    st.success(f"✅ Workflow started! Run ID: {run_id}")
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Failed to start workflow: {e}")
 
     with col3:
         if st.button("🗑️ Clear All Steps", use_container_width=True, type="secondary"):
@@ -455,6 +751,114 @@ if st.session_state.workflow_steps:
                 st.warning("⚠️ Click again to confirm")
 
 st.markdown("---")
+
+# Workflow Execution Monitoring
+if st.session_state.monitoring_run_id:
+    st.subheader("🔄 Workflow Execution Monitor")
+
+    run_id = st.session_state.monitoring_run_id
+
+    # Get current status
+    try:
+        status = workflow_service.get_run_status(run_id)
+
+        if status:
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                st.metric("Status", status['status'].upper())
+
+            with col2:
+                st.metric("Progress", f"{status['progress_percent']}%")
+
+            with col3:
+                st.metric("Step", f"{status['current_step']}/{status['total_steps']}")
+
+            with col4:
+                if status['status'] in ['running', 'pending']:
+                    if st.button("🔄 Refresh", key="refresh_status"):
+                        st.rerun()
+
+            # Progress bar
+            st.progress(status['progress_percent'] / 100)
+
+            # Show current step
+            if status['last_successful_step']:
+                st.write(f"**Last completed step:** {status['last_successful_step']}")
+
+            # Show logs
+            with st.expander("📋 Execution Logs", expanded=False):
+                logs = workflow_service.get_step_logs(run_id)
+                if logs:
+                    for log in logs[-20:]:  # Show last 20 logs
+                        level_icon = {
+                            'INFO': '  ℹ️',
+                            'WARNING': '⚠️',
+                            'ERROR': '❌'
+                        }.get(log['log_level'], '📝')
+
+                        st.text(f"{level_icon} [{log['step_id']}] {log['message']}")
+                else:
+                    st.info("No logs yet")
+
+            # Show errors if any
+            if status.get('errors'):
+                st.error(f"**Errors:** {len(status['errors'])}")
+                for error in status['errors']:
+                    with st.expander(f"❌ Error in {error.get('step_id', 'unknown')}", expanded=False):
+                        st.code(error.get('message', 'Unknown error'))
+
+            # Show results if completed
+            if status['status'] == 'completed':
+                st.success("✅ Workflow completed successfully!")
+
+                try:
+                    results = workflow_service.get_run_results(run_id)
+                    if results:
+                        st.write(f"**Final Results:** Shape={results.shape}, Items={results.total_items}")
+
+                        # Show exported files if available
+                        if 'exported_files' in results.metadata:
+                            st.write("**Exported Files:**")
+                            for file in results.metadata['exported_files']:
+                                st.write(f"- {file}")
+
+                        # Show results data
+                        with st.expander("📊 View Results", expanded=False):
+                            st.json(results.to_dict())
+
+                except Exception as e:
+                    st.error(f"Failed to load results: {e}")
+
+                # Clear monitoring
+                if st.button("Clear Monitoring"):
+                    st.session_state.monitoring_run_id = None
+                    st.rerun()
+
+            elif status['status'] == 'failed':
+                st.error("❌ Workflow execution failed")
+
+                # Clear monitoring
+                if st.button("Clear Monitoring"):
+                    st.session_state.monitoring_run_id = None
+                    st.rerun()
+
+            # Auto-refresh for running workflows
+            if status['status'] in ['running', 'pending']:
+                time.sleep(3)
+                st.rerun()
+
+        else:
+            st.warning(f"Run {run_id} not found")
+            st.session_state.monitoring_run_id = None
+
+    except Exception as e:
+        st.error(f"Failed to get workflow status: {e}")
+        if st.button("Clear Monitoring"):
+            st.session_state.monitoring_run_id = None
+            st.rerun()
+
+    st.markdown("---")
 
 # Load saved workflows
 st.subheader("📁 Saved Workflows")

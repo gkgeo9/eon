@@ -81,15 +81,16 @@ def main():
         display_df = recent_df.copy()
 
         # Format timestamps
-        display_df['Start Time'] = pd.to_datetime(display_df['created_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+        display_df['Start Time'] = pd.to_datetime(display_df['started_at'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
+        display_df['Start Time'] = display_df['Start Time'].fillna('-')
         display_df['End Time'] = pd.to_datetime(display_df['completed_at'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
         display_df['End Time'] = display_df['End Time'].fillna('-')
 
         # Calculate duration for completed analyses
         def calculate_duration(row):
-            if pd.notna(row['completed_at']) and pd.notna(row['created_at']):
+            if pd.notna(row['completed_at']) and pd.notna(row['started_at']):
                 try:
-                    start = pd.to_datetime(row['created_at'])
+                    start = pd.to_datetime(row['started_at'])
                     end = pd.to_datetime(row['completed_at'])
                     duration = end - start
                     total_seconds = int(duration.total_seconds())

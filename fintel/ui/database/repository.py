@@ -116,7 +116,7 @@ class DatabaseRepository:
             filing_type,
             json.dumps(years),
             json.dumps(config),
-            datetime.now().isoformat()
+            datetime.utcnow().isoformat()
         ))
 
     def update_run_status(
@@ -139,7 +139,7 @@ class DatabaseRepository:
                 SET status = ?, completed_at = ?, error_message = ?
                 WHERE run_id = ?
             """
-            self._execute_with_retry(query, (status, datetime.now().isoformat(), error_message, run_id))
+            self._execute_with_retry(query, (status, datetime.utcnow().isoformat(), error_message, run_id))
         else:
             query = """
                 UPDATE analysis_runs
@@ -217,6 +217,7 @@ class DatabaseRepository:
                 status,
                 started_at,
                 completed_at,
+                created_at,
                 run_id
             FROM analysis_runs
             ORDER BY started_at DESC
@@ -453,7 +454,7 @@ class DatabaseRepository:
 
         if updates:
             updates.append("updated_at = ?")
-            params.append(datetime.now().isoformat())
+            params.append(datetime.utcnow().isoformat())
             params.append(prompt_id)
 
             query = f"UPDATE custom_prompts SET {', '.join(updates)} WHERE id = ?"
@@ -486,7 +487,7 @@ class DatabaseRepository:
             filing_type,
             file_path,
             file_hash,
-            datetime.now().isoformat()
+            datetime.utcnow().isoformat()
         ))
 
     def get_cached_file(
@@ -543,7 +544,7 @@ class DatabaseRepository:
         self._execute_with_retry(query, (
             ticker.upper(),
             json.dumps(filing_types),
-            datetime.now().isoformat()
+            datetime.utcnow().isoformat()
         ))
 
     def get_cached_filing_types(
@@ -576,7 +577,7 @@ class DatabaseRepository:
 
         # Check if cache is still fresh
         cached_at = datetime.fromisoformat(cached_at_str)
-        age_hours = (datetime.now() - cached_at).total_seconds() / 3600
+        age_hours = (datetime.utcnow() - cached_at).total_seconds() / 3600
 
         if age_hours > max_age_hours:
             return None
@@ -610,7 +611,7 @@ class DatabaseRepository:
             INSERT OR REPLACE INTO user_settings (key, value, updated_at)
             VALUES (?, ?, ?)
         """
-        self._execute_with_retry(query, (key, value, datetime.now().isoformat()))
+        self._execute_with_retry(query, (key, value, datetime.utcnow().isoformat()))
 
     def get_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
         """Get user setting."""
