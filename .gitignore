@@ -1,5 +1,38 @@
+# Environment variables
 .env
-/**/__pycache__
-/**/**pdfs
-.idea
-/data/raw
+
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# Project specific
+/data/raw/
+**/pdfs/
+cache/
+logs/

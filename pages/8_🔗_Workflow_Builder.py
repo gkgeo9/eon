@@ -484,9 +484,16 @@ elif step_type == "Aggregate/Combine":
             "score_field": score_field
         }
     else:
+        # Map display names to operation values
+        operation_map = {
+            "Merge All (combine into single dataset)": "merge_all",
+            "Group By Company": "group_by_company",
+            "Group By Year": "group_by_year",
+            "Average Metrics": "average_metrics"
+        }
         step_config = {
             "type": "aggregate",
-            "operation": agg_operation.split(" ")[0].lower().replace("by", "by_")
+            "operation": operation_map.get(agg_operation, "merge_all")
         }
 
 elif step_type == "Export":
