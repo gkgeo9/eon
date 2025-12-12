@@ -446,3 +446,83 @@ def apply_theme():
 
         </style>
         """, unsafe_allow_html=True)
+    else:
+        # Explicit light mode CSS for consistency
+        st.markdown("""
+        <style>
+        /* ========================================
+           FINTEL LIGHT MODE - Clean & Professional
+           ======================================== */
+
+        /* Reset any dark mode remnants */
+        .stApp {
+            background-color: #ffffff;
+            color: #262730;
+        }
+
+        /* Ensure text readability */
+        h1, h2, h3, h4, h5, h6 {
+            color: #262730 !important;
+        }
+
+        p, span, div {
+            color: #555555;
+        }
+
+        /* Links */
+        a {
+            color: #1f77b4;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+            color: #155a8a;
+        }
+
+        /* Buttons - consistent styling */
+        .stButton button {
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .stButton button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Forms */
+        .stForm {
+            border: 1px solid #e0e0e0;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            background-color: #fafafa;
+        }
+
+        /* Metrics */
+        .stMetric {
+            background-color: #f5f5f5;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e0e0e0;
+        }
+
+        /* DataFrames */
+        .stDataFrame {
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        /* Expanders */
+        .stExpander {
+            border: 1px solid #e0e0e0;
+            border-radius: 0.5rem;
+        }
+
+        /* Sidebar */
+        section[data-testid="stSidebar"] {
+            background-color: #f8f9fa;
+        }
+
+        </style>
+        """, unsafe_allow_html=True)

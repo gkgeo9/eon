@@ -40,7 +40,7 @@ class FundamentalAnalyzer:
         )
 
         result = analyzer.analyze_filing(
-            pdf_path=Path("./AAPL_10-K_2024.pdf"),
+            pdf_path=Path("./AAPL_10-K_2024.pdf"),  # or any filing type
             ticker="AAPL",
             year=2024,
             schema=TenKAnalysis
@@ -174,7 +174,7 @@ class FundamentalAnalyzer:
         results = {}
 
         for pdf_path in pdf_paths:
-            # Extract year from filename (assumes format: TICKER_10-K_YEAR.pdf)
+            # Extract year from filename (assumes format: TICKER_FILING-TYPE_YEAR.pdf)
             try:
                 year = int(pdf_path.stem.split('_')[-1])
             except (ValueError, IndexError):

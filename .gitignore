@@ -33,6 +33,7 @@ Thumbs.db
 
 # Project specific
 /data/raw/
+/data/workflows/exports/
 **/pdfs/
 cache/
 logs/

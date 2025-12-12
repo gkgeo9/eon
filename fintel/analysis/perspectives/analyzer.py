@@ -45,14 +45,14 @@ class PerspectiveAnalyzer:
 
         # Analyze with all perspectives
         result = analyzer.analyze_multi_perspective(
-            pdf_path=Path("AAPL_10-K_2024.pdf"),
+            pdf_path=Path("AAPL_10-K_2024.pdf"),  # or "AAPL_DEF_14A_2024.pdf", etc.
             ticker="AAPL",
             year=2024
         )
 
         # Or analyze single perspective
         buffett_view = analyzer.analyze_buffett(
-            pdf_path=Path("AAPL_10-K_2024.pdf"),
+            pdf_path=Path("AAPL_10-K_2024.pdf"),  # or any filing type
             ticker="AAPL",
             year=2024
         )

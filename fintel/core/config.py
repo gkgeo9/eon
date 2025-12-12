@@ -152,10 +152,50 @@ class FintelConfig(BaseSettings):
                 keys.append(single_key)
             self.google_api_keys = keys
 
+        # Validate configuration
+        self._validate_config()
+
         # Create directories
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir.mkdir(parents=True, exist_ok=True)
+
+    def _validate_config(self):
+        """Validate configuration and provide helpful error messages."""
+        errors = []
+
+        # Check API keys
+        if not self.google_api_keys or len(self.google_api_keys) == 0:
+            errors.append(
+                "No Google API keys found. Please set GOOGLE_API_KEY or "
+                "GOOGLE_API_KEY_1, GOOGLE_API_KEY_2, etc. in your .env file."
+            )
+
+        # Check for empty API keys
+        empty_keys = [i for i, key in enumerate(self.google_api_keys, 1) if not key or key.strip() == ""]
+        if empty_keys:
+            errors.append(f"Empty API keys found at positions: {empty_keys}")
+
+        # Check SEC settings
+        if self.sec_user_email == "user@example.com":
+            errors.append(
+                "Please set a valid FINTEL_SEC_USER_EMAIL in your .env file. "
+                "SEC requires this for API access."
+            )
+
+        # Log warnings for non-critical issues
+        if self.num_workers > len(self.google_api_keys):
+            from fintel.core import get_logger
+            logger = get_logger(__name__)
+            logger.warning(
+                f"num_workers ({self.num_workers}) exceeds number of API keys "
+                f"({len(self.google_api_keys)}). Some workers will share keys."
+            )
+
+        # Raise error if critical issues found
+        if errors:
+            error_msg = "\n\nConfiguration Errors:\n" + "\n".join(f"  - {err}" for err in errors)
+            raise ValueError(error_msg)
 
     @property
     def num_api_keys(self) -> int:

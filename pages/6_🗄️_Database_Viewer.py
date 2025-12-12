@@ -174,8 +174,8 @@ with tab2:
         result_id = st.number_input("Enter Result ID to view", min_value=1, step=1, key="view_result_id")
 
         if st.button("Load Result JSON", key="load_result"):
-            query = f"SELECT result_json FROM analysis_results WHERE id = {result_id}"
-            result_row = db._execute_query(query)
+            query = "SELECT result_json FROM analysis_results WHERE id = ?"
+            result_row = db._execute_query(query, params=(int(result_id),))
             if not result_row.empty:
                 import json
                 result_json = result_row.iloc[0]['result_json']
@@ -255,8 +255,8 @@ with tab3:
                 for idx, row in cache_df.iterrows():
                     if not Path(row['file_path']).exists():
                         # Delete from cache
-                        delete_query = f"DELETE FROM file_cache WHERE id = {row['id']}"
-                        db._execute_update(delete_query)
+                        delete_query = "DELETE FROM file_cache WHERE id = ?"
+                        db._execute_update(delete_query, params=(int(row['id']),))
                 st.success(f"Removed {missing} missing cache entries")
                 st.rerun()
     else:

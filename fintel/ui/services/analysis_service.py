@@ -269,7 +269,8 @@ class AnalysisService:
                 pdf_files = converter.convert(
                     ticker=ticker,
                     input_path=filing_dir,
-                    output_path=ticker_pdf_path
+                    output_path=ticker_pdf_path,
+                    filing_type=filing_type
                 )
 
             if not pdf_files:

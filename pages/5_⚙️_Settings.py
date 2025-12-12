@@ -103,9 +103,21 @@ with tab1:
         edit_mode = st.session_state.edit_prompt_id is not None
 
         if edit_mode:
-            existing_prompt = db.get_prompt_by_name(
-                next(p['name'] for p in prompts if p['id'] == st.session_state.edit_prompt_id)
-            )
+            # Safely find the prompt - handle case where it may have been deleted
+            matching_prompts = [p for p in prompts if p['id'] == st.session_state.edit_prompt_id]
+            if not matching_prompts:
+                st.error("Prompt not found. It may have been deleted.")
+                st.session_state.show_prompt_editor = False
+                st.session_state.edit_prompt_id = None
+                st.rerun()
+
+            existing_prompt = db.get_prompt_by_name(matching_prompts[0]['name'])
+            if not existing_prompt:
+                st.error("Failed to load prompt details.")
+                st.session_state.show_prompt_editor = False
+                st.session_state.edit_prompt_id = None
+                st.rerun()
+
             st.subheader(f"✏️ Edit Prompt: {existing_prompt['name']}")
         else:
             st.subheader("➕ Create New Prompt")
@@ -127,7 +139,7 @@ with tab1:
 
             template = st.text_area(
                 "Prompt Template",
-                value=existing_prompt['prompt_template'] if edit_mode else "",
+                value=existing_prompt.get('prompt_template', existing_prompt.get('template', '')) if edit_mode else "",
                 placeholder="Enter your prompt template here. Use {ticker} and {year} as placeholders.",
                 height=300,
                 help="Use {ticker} and {year} as placeholders that will be replaced during analysis"
@@ -180,7 +192,7 @@ with tab1:
                             db.save_prompt(
                                 name=name,
                                 description=description,
-                                template=template,
+                                prompt_template=template,
                                 analysis_type=analysis_type
                             )
                             st.success(f"✅ Created prompt: {name}")
@@ -200,7 +212,7 @@ with tab2:
     st.markdown("Manage cached SEC filings to free up disk space.")
 
     # Get cache statistics
-    cache_count = db._execute_with_retry("SELECT COUNT(*) FROM file_cache").fetchone()[0]
+    cache_count = db.get_cache_count()
 
     st.metric("Cached Files", cache_count)
 
@@ -245,57 +257,8 @@ with tab3:
         db.save_setting("theme", new_theme)
         st.rerun()
 
-    # Apply dark mode CSS if enabled
+    # Theme status message (CSS applied via theme.py)
     if dark_mode:
-        st.markdown("""
-        <style>
-        /* Dark mode override */
-        .stApp {
-            background-color: #0e1117;
-            color: #fafafa;
-        }
-        .stApp header {
-            background-color: #0e1117;
-        }
-        .stMarkdown, .stText, p, span, div {
-            color: #fafafa !important;
-        }
-        .stSelectbox, .stTextInput, .stTextArea, .stNumberInput {
-            color: #fafafa;
-        }
-        .stButton button {
-            color: #fafafa;
-            background-color: #262730;
-            border: 1px solid #3b82f6;
-        }
-        .stButton button:hover {
-            background-color: #3b82f6;
-            border-color: #3b82f6;
-        }
-        div[data-baseweb="select"] > div {
-            background-color: #262730 !important;
-            color: #fafafa !important;
-        }
-        div[data-baseweb="input"] > div {
-            background-color: #262730 !important;
-            color: #fafafa !important;
-        }
-        .stDataFrame, .stTable {
-            background-color: #262730;
-            color: #fafafa;
-        }
-        .stExpander {
-            background-color: #262730;
-            border: 1px solid #3b82f6;
-        }
-        section[data-testid="stSidebar"] {
-            background-color: #262730;
-        }
-        .stRadio label, .stCheckbox label {
-            color: #fafafa !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
         st.success("🌙 **Dark Mode Active**")
     else:
         st.info("☀️ **Light Mode Active**")

@@ -36,6 +36,9 @@ class DatabaseRepository:
         migrations_dir = Path(__file__).parent / "migrations"
 
         with sqlite3.connect(self.db_path) as conn:
+            # Enable WAL mode for better concurrency
+            conn.execute("PRAGMA journal_mode=WAL")
+
             # Apply migrations in order
             migration_files = sorted(migrations_dir.glob("v*.sql"))
             for migration_file in migration_files:
@@ -48,14 +51,14 @@ class DatabaseRepository:
                         raise
             conn.commit()
 
-    def _execute_with_retry(self, query: str, params: tuple = (), max_retries: int = 3):
+    def _execute_with_retry(self, query: str, params: tuple = (), max_retries: int = 5):
         """
         Execute query with retry logic for database locks.
 
         Args:
             query: SQL query string
             params: Query parameters
-            max_retries: Maximum number of retry attempts
+            max_retries: Maximum number of retry attempts (default: 5, increased from 3)
 
         Returns:
             Cursor object
@@ -67,7 +70,9 @@ class DatabaseRepository:
 
         for attempt in range(max_retries):
             try:
-                with sqlite3.connect(self.db_path) as conn:
+                with sqlite3.connect(self.db_path, timeout=10.0) as conn:  # Add 10s timeout
+                    # Enable WAL mode for better concurrency
+                    conn.execute("PRAGMA journal_mode=WAL")
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
                     cursor.execute(query, params)
@@ -75,7 +80,9 @@ class DatabaseRepository:
                     return cursor
             except sqlite3.OperationalError as e:
                 if "locked" in str(e) and attempt < max_retries - 1:
-                    time.sleep(0.5 * (2 ** attempt))  # Exponential backoff
+                    wait_time = 0.5 * (2 ** attempt)  # Exponential backoff: 0.5s, 1s, 2s, 4s, 8s
+                    self.logger.warning(f"Database locked, retry {attempt + 1}/{max_retries} in {wait_time}s")
+                    time.sleep(wait_time)
                 else:
                     raise
 
@@ -527,6 +534,17 @@ class DatabaseRepository:
             cursor = self._execute_with_retry(query)
 
         return cursor.rowcount
+
+    def get_cache_count(self) -> int:
+        """
+        Get count of cached files.
+
+        Returns:
+            Number of cached files in the database
+        """
+        query = "SELECT COUNT(*) FROM file_cache"
+        cursor = self._execute_with_retry(query)
+        return cursor.fetchone()[0]
 
     def cache_filing_types(self, ticker: str, filing_types: List[str]) -> None:
         """

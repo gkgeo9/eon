@@ -40,6 +40,9 @@ FINTEL_SEC_COMPANY_NAME="Research Script"
 ```bash
 # Launch Streamlit application
 streamlit run streamlit_app.py
+# Or use the following:
+.venv/bin/python -m streamlit run streamlit_app.py
+
 ```
 
 The app will open at `http://localhost:8501`
@@ -71,6 +74,7 @@ python 04_contrarian_scanning.py
 Fintel provides **TWO DIFFERENT** analysis approaches:
 
 #### 1. **Excellent Company Analysis** → For Known Winners
+
 - **Use when**: Analyzing proven compounders, top 50 performers, companies you want to learn from
 - **Prompt bias**: SUCCESS-FOCUSED - assumes company was successful
 - **Output**: `ExcellentCompanyFactors` - identifies what made them succeed
@@ -93,6 +97,7 @@ print(result.success_factors)     # Key success drivers
 ```
 
 #### 2. **Objective Company Analysis** → For Unknown Companies
+
 - **Use when**: Researching random companies, unbiased screening
 - **Prompt bias**: OBJECTIVE/BALANCED - no assumption of success or failure
 - **Output**: `CompanySuccessFactors` - identifies both strengths AND weaknesses
@@ -149,24 +154,28 @@ print(f"Category: {comparison.compounder_potential.category}")
 ### Core Capabilities
 
 1. **SEC 10-K Analysis**
+
    - Download filings from SEC Edgar
    - Convert HTML to markdown
    - AI-powered extraction and analysis
    - Pydantic-validated outputs
 
 2. **Multi-Year Success Factor Analysis**
+
    - Analyze 10+ years of filings
    - Identify business model evolution
    - Track performance patterns
    - TWO analysis paths (excellent vs objective)
 
 3. **Comparative Benchmarking**
+
    - Compare against top 50 proven winners
    - COMPOUNDER DNA SCORING SYSTEM
    - Detailed factor-by-factor alignment
    - Investment considerations and risks
 
 4. **Contrarian Scanner**
+
    - Identify hidden gems
    - Six contrarian dimensions
    - Evidence-based scoring (0-600 scale)
@@ -526,6 +535,7 @@ FINTEL_LOG_DIR=./logs
 ## 🎓 Learning Resources
 
 ### Start Here
+
 1. Read this README fully
 2. Run examples/01_basic_fundamental_analysis.py
 3. Run examples/02_excellent_company_analysis.py
@@ -533,6 +543,7 @@ FINTEL_LOG_DIR=./logs
 5. Explore the models in `src/fintel/analysis/fundamental/models/`
 
 ### Key Concepts
+
 - **Dual Analysis Paths**: Understand when to use excellent vs objective
 - **Compounder DNA**: Learn the 90-100 scoring framework
 - **Contrarian Signals**: Six dimensions of hidden potential
@@ -545,12 +556,14 @@ FINTEL_LOG_DIR=./logs
 ### When to Use Each Analyzer
 
 ✅ **Use ExcellentCompanyAnalyzer** when:
+
 - Analyzing top 50 compounders
 - Studying known successful companies
 - Learning success patterns
 - You want SUCCESS-FOCUSED insights
 
 ✅ **Use ObjectiveCompanyAnalyzer** when:
+
 - Screening unknown companies
 - Researching random stocks
 - You want BALANCED assessment
@@ -574,6 +587,7 @@ FINTEL_LOG_DIR=./logs
 ## 🚧 Troubleshooting
 
 ### "No API key found"
+
 ```bash
 # Check .env file exists
 cat .env
@@ -583,6 +597,7 @@ echo $GOOGLE_API_KEY_1
 ```
 
 ### "Baseline file not found"
+
 ```bash
 # Ensure you have the top 50 meta-analysis
 ls top_50_meta_analysis.json
@@ -595,6 +610,7 @@ comparator = BenchmarkComparator(
 ```
 
 ### "No analyses found"
+
 ```bash
 # Check analyses directory exists
 ls analyzed_10k/AAPL/
@@ -607,6 +623,7 @@ ls analyzed_10k/AAPL/
 ## 📝 Changelog
 
 ### Latest Updates (Current)
+
 - ✅ Restored dual analysis paths (excellent vs random)
 - ✅ Complete benchmark comparator with COMPOUNDER DNA SCORING
 - ✅ Comprehensive workflows module
@@ -614,6 +631,7 @@ ls analyzed_10k/AAPL/
 - ✅ This excellent README!
 
 ### Previous
+
 - ✅ Multi-perspective analysis (Buffett, Taleb, Contrarian)
 - ✅ Contrarian scanner with 6-dimension scoring
 - ✅ Parallel processing with 25 workers

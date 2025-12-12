@@ -21,11 +21,12 @@ from fintel.core import get_logger, get_config, ConversionError
 
 class SECConverter:
     """
-    Handles conversion of HTML 10-K filings to PDF using headless Chrome.
+    Handles conversion of HTML SEC filings to PDF using headless Chrome.
+    Supports all filing types (10-K, 10-Q, DEF 14A, 8-K, etc.)
 
     Example:
         converter = SECConverter()
-        pdfs = converter.convert("AAPL", input_path, output_path)
+        pdfs = converter.convert("AAPL", input_path, output_path, filing_type="10-K")
         converter.close()
     """
 
@@ -151,16 +152,18 @@ class SECConverter:
         ticker: str,
         input_path: Path,
         output_path: Optional[Path] = None,
-        cleanup_originals: bool = True
+        cleanup_originals: bool = True,
+        filing_type: str = "10-K"
     ) -> List[Dict[str, Any]]:
         """
-        Convert downloaded 10-K filings to PDF.
+        Convert downloaded SEC filings to PDF.
 
         Args:
             ticker: Stock ticker symbol
             input_path: Path to downloaded filings (contains accession dirs)
             output_path: Optional custom output path for PDFs
             cleanup_originals: Whether to delete original HTML files after conversion
+            filing_type: Type of SEC filing (e.g., '10-K', '10-Q', 'DEF 14A')
 
         Returns:
             List of dicts with 'pdf_path', 'year', and 'ticker' for each converted filing
@@ -172,7 +175,7 @@ class SECConverter:
 
         output_path.mkdir(parents=True, exist_ok=True)
 
-        self.logger.info(f"Converting 10-K filings for {ticker} to PDF")
+        self.logger.info(f"Converting {filing_type} filings for {ticker} to PDF")
         self.logger.info(f"Input: {input_path}")
         self.logger.info(f"Output: {output_path}")
 
@@ -216,7 +219,9 @@ class SECConverter:
                 continue
 
             # Convert to PDF
-            pdf_filename = f"{ticker}_10-K_{year}.pdf"
+            # Replace spaces with underscores for filesystem compatibility
+            safe_filing_type = filing_type.replace(" ", "_")
+            pdf_filename = f"{ticker}_{safe_filing_type}_{year}.pdf"
             pdf_path = output_path / pdf_filename
 
             self.logger.info(f"Converting {year} filing to PDF...")
@@ -243,7 +248,8 @@ class SECConverter:
         self,
         ticker_paths: Dict[str, Path],
         output_base: Optional[Path] = None,
-        cleanup_originals: bool = True
+        cleanup_originals: bool = True,
+        filing_type: str = "10-K"
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Convert multiple tickers' filings to PDF.
@@ -252,6 +258,7 @@ class SECConverter:
             ticker_paths: Dict mapping ticker to input path
             output_base: Base path for PDF output
             cleanup_originals: Whether to delete original HTML files
+            filing_type: Type of SEC filing (e.g., '10-K', '10-Q', 'DEF 14A')
 
         Returns:
             Dict mapping ticker to list of converted PDFs
@@ -260,7 +267,7 @@ class SECConverter:
         for ticker, input_path in ticker_paths.items():
             if input_path:
                 output_path = output_base / ticker if output_base else None
-                pdfs = self.convert(ticker, input_path, output_path, cleanup_originals)
+                pdfs = self.convert(ticker, input_path, output_path, cleanup_originals, filing_type)
                 results[ticker] = pdfs
 
         return results

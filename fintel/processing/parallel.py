@@ -123,7 +123,7 @@ def _process_single_company(
 
         analyses = {}
         for pdf_path in pdf_paths:
-            # Extract year from filename (assumes format like "AAPL_10-K_2024.pdf")
+            # Extract year from filename (assumes format like "AAPL_FILING-TYPE_2024.pdf")
             try:
                 year = int(pdf_path.stem.split("_")[-1])
             except (ValueError, IndexError):
