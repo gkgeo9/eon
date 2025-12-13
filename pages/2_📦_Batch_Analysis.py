@@ -283,7 +283,7 @@ Optional: Add 'filing_type' column to CSV to specify per company"""
                             'filing_type': filing_type,
                             'years': years,
                             'num_years': num_years,
-                            'custom_prompt': None,
+                            'custom_prompt': None,  # Batch doesn't support custom prompts
                             'company_name': company_name
                         }
 
@@ -318,9 +318,7 @@ Optional: Add 'filing_type' column to CSV to specify per company"""
 
                         # Rerun to show progress
                         st.rerun()
-                    else:
-                        st.error("No valid companies found in CSV")
-
+                    
         except Exception as e:
             st.error(f"Error reading CSV: {e}")
 
