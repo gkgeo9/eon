@@ -12,6 +12,7 @@ from datetime import datetime
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService
 from fintel.ui.theme import apply_theme
+from fintel.ui.utils.validators import validate_ticker
 from fintel.data.sources.sec import SECDownloader
 
 # Apply global theme
@@ -497,34 +498,39 @@ if not st.session_state.check_status:
         # Validation
         if not ticker:
             st.error("❌ Please enter a ticker symbol")
-        elif years is None and num_years is None:
-            st.error("❌ Please select a valid time period")
         else:
-            # Prepare parameters
-            params = {
-                'ticker': ticker,
-                'analysis_type': analysis_type,
-                'filing_type': filing_type,
-                'years': years,
-                'num_years': num_years,
-                'custom_prompt': custom_prompt_template,
-                'company_name': company_name if company_name else None
-            }
+            # Validate ticker format
+            is_valid, error_msg = validate_ticker(ticker)
+            if not is_valid:
+                st.error(f"❌ Invalid ticker: {error_msg}")
+            elif years is None and num_years is None:
+                st.error("❌ Please select a valid time period")
+            else:
+                # Prepare parameters
+                params = {
+                    'ticker': ticker,
+                    'analysis_type': analysis_type,
+                    'filing_type': filing_type,
+                    'years': years,
+                    'num_years': num_years,
+                    'custom_prompt': custom_prompt_template,
+                    'company_name': company_name if company_name else None
+                }
 
-            # Start analysis in background thread
-            thread = threading.Thread(
-                target=run_analysis_background,
-                args=(st.session_state.analysis_service, params),
-                daemon=True
-            )
-            thread.start()
+                # Start analysis in background thread
+                thread = threading.Thread(
+                    target=run_analysis_background,
+                    args=(st.session_state.analysis_service, params),
+                    daemon=True
+                )
+                thread.start()
 
-            # Mark that we should check status
-            st.session_state.check_status = True
-            st.session_state.start_wait_count = 0
+                # Mark that we should check status
+                st.session_state.check_status = True
+                st.session_state.start_wait_count = 0
 
-            # Small delay to let thread start
-            time.sleep(0.5)
+                # Small delay to let thread start
+                time.sleep(0.5)
 
-            # Rerun to show progress
-            st.rerun()
+                # Rerun to show progress
+                st.rerun()

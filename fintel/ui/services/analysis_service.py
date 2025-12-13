@@ -310,6 +310,11 @@ class AnalysisService:
         run_id: str
     ) -> Dict[int, Any]:
         """Run fundamental analyzer for each year."""
+        # Validate PDF paths
+        if not pdf_paths or len(pdf_paths) == 0:
+            self.logger.warning(f"No PDF files provided for fundamental analysis of {ticker}")
+            return {}
+
         analyzer = FundamentalAnalyzer(
             api_key_manager=self.api_key_manager,
             rate_limiter=self.rate_limiter
@@ -348,6 +353,11 @@ class AnalysisService:
         run_id: str
     ) -> Dict[int, Any]:
         """Run excellent company analyzer (multi-year, success-focused)."""
+        # Validate PDF paths
+        if not pdf_paths or len(pdf_paths) == 0:
+            self.logger.warning(f"No PDF files provided for excellent analysis of {ticker}")
+            return {}
+
         # First, run fundamental analysis for each year
         fundamental_analyzer = FundamentalAnalyzer(
             api_key_manager=self.api_key_manager,
@@ -408,6 +418,11 @@ class AnalysisService:
         run_id: str
     ) -> Dict[int, Any]:
         """Run objective company analyzer (multi-year, unbiased)."""
+        # Validate PDF paths
+        if not pdf_paths or len(pdf_paths) == 0:
+            self.logger.warning(f"No PDF files provided for objective analysis of {ticker}")
+            return {}
+
         # First, run fundamental analysis for each year
         fundamental_analyzer = FundamentalAnalyzer(
             api_key_manager=self.api_key_manager,
@@ -467,6 +482,11 @@ class AnalysisService:
         run_id: str
     ) -> Dict[int, Any]:
         """Run Buffett perspective analyzer."""
+        # Validate PDF paths
+        if not pdf_paths or len(pdf_paths) == 0:
+            self.logger.warning(f"No PDF files provided for Buffett analysis of {ticker}")
+            return {}
+
         analyzer = PerspectiveAnalyzer(
             api_key_manager=self.api_key_manager,
             rate_limiter=self.rate_limiter
@@ -503,6 +523,11 @@ class AnalysisService:
         run_id: str
     ) -> Dict[int, Any]:
         """Run Taleb perspective analyzer."""
+        # Validate PDF paths
+        if not pdf_paths or len(pdf_paths) == 0:
+            self.logger.warning(f"No PDF files provided for Taleb analysis of {ticker}")
+            return {}
+
         analyzer = PerspectiveAnalyzer(
             api_key_manager=self.api_key_manager,
             rate_limiter=self.rate_limiter
@@ -539,6 +564,11 @@ class AnalysisService:
         run_id: str
     ) -> Dict[int, Any]:
         """Run Contrarian perspective analyzer."""
+        # Validate PDF paths
+        if not pdf_paths or len(pdf_paths) == 0:
+            self.logger.warning(f"No PDF files provided for Contrarian analysis of {ticker}")
+            return {}
+
         analyzer = PerspectiveAnalyzer(
             api_key_manager=self.api_key_manager,
             rate_limiter=self.rate_limiter
@@ -575,6 +605,11 @@ class AnalysisService:
         run_id: str
     ) -> Dict[int, Any]:
         """Run multi-perspective analyzer (Buffett + Taleb + Contrarian)."""
+        # Validate PDF paths
+        if not pdf_paths or len(pdf_paths) == 0:
+            self.logger.warning(f"No PDF files provided for multi-perspective analysis of {ticker}")
+            return {}
+
         analyzer = PerspectiveAnalyzer(
             api_key_manager=self.api_key_manager,
             rate_limiter=self.rate_limiter

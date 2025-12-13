@@ -526,3 +526,171 @@ def apply_theme():
 
         </style>
         """, unsafe_allow_html=True)
+
+    # Responsive Design CSS (applies to both themes)
+    st.markdown("""
+    <style>
+    /* ========================================
+       RESPONSIVE DESIGN - Mobile, Tablet, Desktop
+       ======================================== */
+
+    /* Mobile devices (< 768px) */
+    @media (max-width: 768px) {
+        /* Stack columns vertically on mobile */
+        .stColumns {
+            flex-direction: column !important;
+        }
+
+        .stColumns > div {
+            width: 100% !important;
+            margin-bottom: 1rem;
+        }
+
+        /* Full-width buttons on mobile */
+        .stButton button {
+            width: 100% !important;
+        }
+
+        /* Reduce heading sizes */
+        h1 {
+            font-size: 1.5rem !important;
+        }
+
+        h2 {
+            font-size: 1.3rem !important;
+        }
+
+        h3 {
+            font-size: 1.1rem !important;
+        }
+
+        /* Reduce padding/margins */
+        .stMarkdown, .stText {
+            padding: 0.5rem 0 !important;
+        }
+
+        /* Stack metrics vertically */
+        .stMetric {
+            margin-bottom: 0.5rem;
+            padding: 0.75rem !important;
+        }
+
+        /* Sidebar auto-hide on mobile */
+        section[data-testid="stSidebar"] {
+            width: 0 !important;
+            min-width: 0 !important;
+        }
+
+        section[data-testid="stSidebar"][aria-expanded="true"] {
+            width: 80% !important;
+        }
+
+        /* Adjust form spacing */
+        .stForm {
+            padding: 1rem !important;
+        }
+
+        /* Make data frames scrollable */
+        .stDataFrame {
+            overflow-x: auto !important;
+        }
+
+        /* Hide non-essential elements on very small screens */
+        .mobile-hide {
+            display: none !important;
+        }
+    }
+
+    /* Tablet devices (768px - 1024px) */
+    @media (min-width: 769px) and (max-width: 1024px) {
+        /* Adjust column gaps */
+        .stColumns {
+            gap: 1rem !important;
+        }
+
+        /* 2-column layouts instead of 3 for medium screens */
+        .stColumns.three-cols {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+        }
+
+        /* Adjust heading sizes */
+        h1 {
+            font-size: 2rem !important;
+        }
+
+        h2 {
+            font-size: 1.5rem !important;
+        }
+
+        /* Responsive metrics */
+        .stMetric {
+            padding: 1rem !important;
+        }
+
+        /* Sidebar */
+        section[data-testid="stSidebar"] {
+            width: 250px !important;
+        }
+    }
+
+    /* Desktop (> 1024px) */
+    @media (min-width: 1025px) {
+        /* Full layouts with sidebars */
+        .stColumns {
+            gap: 1.5rem !important;
+        }
+
+        /* Optimal reading width */
+        .main .block-container {
+            max-width: 1200px !important;
+        }
+    }
+
+    /* Touch-friendly elements for all mobile devices */
+    @media (hover: none) and (pointer: coarse) {
+        /* Increase touch target sizes */
+        .stButton button,
+        .stDownloadButton button,
+        a {
+            min-height: 44px !important;
+            min-width: 44px !important;
+        }
+
+        /* Larger form inputs */
+        input, textarea, select {
+            font-size: 16px !important; /* Prevents zoom on iOS */
+            padding: 0.75rem !important;
+        }
+
+        /* Better spacing for touch */
+        .stCheckbox, .stRadio {
+            margin: 0.75rem 0 !important;
+        }
+    }
+
+    /* Print styles */
+    @media print {
+        /* Hide navigation and interactive elements */
+        section[data-testid="stSidebar"],
+        .stButton,
+        .stDownloadButton,
+        header {
+            display: none !important;
+        }
+
+        /* Optimize for print */
+        .main .block-container {
+            max-width: 100% !important;
+            padding: 0 !important;
+        }
+
+        /* Black text for print */
+        * {
+            color: #000 !important;
+            background: #fff !important;
+        }
+    }
+
+    </style>
+    """, unsafe_allow_html=True)

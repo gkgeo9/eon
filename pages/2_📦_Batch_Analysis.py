@@ -14,6 +14,7 @@ from datetime import datetime
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService
 from fintel.ui.theme import apply_theme
+from fintel.ui.utils.validators import validate_ticker
 
 # Apply global theme
 apply_theme()
@@ -210,12 +211,19 @@ Optional: Add 'filing_type' column to CSV to specify per company"""
                 if st.button("🚀 Start Batch Analysis", type="primary", use_container_width=True):
                     # Prepare configs
                     configs = []
+                    invalid_tickers = []
                     current_year = datetime.now().year
 
                     for idx, row in df.iterrows():
                         ticker = str(row['ticker']).strip().upper()
 
                         if not ticker:
+                            continue
+
+                        # Validate ticker format
+                        is_valid, error_msg = validate_ticker(ticker)
+                        if not is_valid:
+                            invalid_tickers.append((ticker, error_msg))
                             continue
 
                         # Get analysis type (from CSV or default)
@@ -281,7 +289,17 @@ Optional: Add 'filing_type' column to CSV to specify per company"""
 
                         configs.append(config)
 
-                    if configs:
+                    # Show validation warnings
+                    if invalid_tickers:
+                        st.warning(f"⚠️ Skipped {len(invalid_tickers)} invalid ticker(s):")
+                        for ticker, msg in invalid_tickers[:10]:  # Show first 10
+                            st.caption(f"  - {ticker}: {msg}")
+                        if len(invalid_tickers) > 10:
+                            st.caption(f"  ... and {len(invalid_tickers) - 10} more")
+
+                    if not configs:
+                        st.error("❌ No valid companies found in CSV. Please correct the ticker symbols.")
+                    else:
                         st.info(f"Starting batch analysis for {len(configs)} companies...")
 
                         # Start batch in background
@@ -452,29 +470,50 @@ with st.expander("Enter Tickers Manually", expanded=False):
             tickers = [t.strip().upper() for t in ticker_input.replace(',', '\n').split('\n') if t.strip()]
 
             if tickers:
-                # Prepare configs
-                configs = []
+                # Validate all tickers first
+                invalid_tickers = []
+                valid_tickers = []
                 for ticker in tickers:
-                    config = {
-                        'ticker': ticker,
-                        'analysis_type': manual_analysis_type,
-                        'filing_type': manual_filing_type,
-                        'years': manual_years,
-                        'num_years': manual_num_years,
-                        'custom_prompt': None,
-                        'company_name': None
-                    }
-                    configs.append(config)
+                    is_valid, error_msg = validate_ticker(ticker)
+                    if is_valid:
+                        valid_tickers.append(ticker)
+                    else:
+                        invalid_tickers.append((ticker, error_msg))
 
-                st.info(f"Starting batch analysis for {len(configs)} companies...")
+                # Show validation warnings
+                if invalid_tickers:
+                    st.warning(f"⚠️ Found {len(invalid_tickers)} invalid ticker(s):")
+                    for ticker, msg in invalid_tickers[:10]:  # Show first 10
+                        st.caption(f"  - {ticker}: {msg}")
+                    if len(invalid_tickers) > 10:
+                        st.caption(f"  ... and {len(invalid_tickers) - 10} more")
 
-                # Start batch in background
-                thread = threading.Thread(
-                    target=run_batch_analysis_background,
-                    args=(st.session_state.analysis_service, configs),
-                    daemon=True
-                )
-                thread.start()
+                if not valid_tickers:
+                    st.error("❌ No valid tickers found. Please correct the ticker symbols.")
+                else:
+                    # Prepare configs for valid tickers only
+                    configs = []
+                    for ticker in valid_tickers:
+                        config = {
+                            'ticker': ticker,
+                            'analysis_type': manual_analysis_type,
+                            'filing_type': manual_filing_type,
+                            'years': manual_years,
+                            'num_years': manual_num_years,
+                            'custom_prompt': None,
+                            'company_name': None
+                        }
+                        configs.append(config)
+
+                    st.info(f"Starting batch analysis for {len(configs)} companies...")
+
+                    # Start batch in background
+                    thread = threading.Thread(
+                        target=run_batch_analysis_background,
+                        args=(st.session_state.analysis_service, configs),
+                        daemon=True
+                    )
+                    thread.start()
 
                 # Mark that we should monitor
                 st.session_state.batch_monitoring = True
