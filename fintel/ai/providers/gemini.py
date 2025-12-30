@@ -41,7 +41,9 @@ class GeminiProvider(LLMProvider):
         self,
         api_key: str,
         model: str = "gemini-2.5-flash",
-        thinking_budget: int = 4096,
+        thinking_budget: Optional[int] = None,
+        thinking_level: Optional[str] = None,
+        use_google_search: bool = False,
         rate_limiter: Optional[RateLimiter] = None,
         **kwargs
     ):
@@ -50,18 +52,27 @@ class GeminiProvider(LLMProvider):
 
         Args:
             api_key: Google AI API key
-            model: Model name (default: gemini-2.5-flash)
-            thinking_budget: Thinking budget for the model
+            model: Model name (default: gemini-2.5-flash, or use gemini-3-pro-preview)
+            thinking_budget: Thinking budget for Gemini 2.x models (default: 4096)
+            thinking_level: Thinking level for Gemini 3 models ("LOW", "MEDIUM", "HIGH")
+            use_google_search: Enable Google Search tool for real-time web search
             rate_limiter: Optional rate limiter for API calls
             **kwargs: Additional configuration
         """
         super().__init__(api_key, model, **kwargs)
-        self.thinking_budget = thinking_budget
+
+        # Support both Gemini 2 (thinking_budget) and Gemini 3 (thinking_level)
+        self.thinking_budget = thinking_budget if thinking_budget is not None else 4096
+        self.thinking_level = thinking_level  # For Gemini 3 models
+        self.use_google_search = use_google_search
         self.rate_limiter = rate_limiter
 
         # Initialize Gemini client
         self.client = genai.Client(api_key=api_key)
-        self.logger.info(f"Initialized Gemini provider with model {model}")
+
+        search_info = " with Google Search" if use_google_search else ""
+        thinking_info = f" (thinking_level={thinking_level})" if thinking_level else f" (thinking_budget={self.thinking_budget})"
+        self.logger.info(f"Initialized Gemini provider with model {model}{thinking_info}{search_info}")
 
     def generate(
         self,
@@ -85,18 +96,41 @@ class GeminiProvider(LLMProvider):
             AIProviderError: If generation fails
         """
         try:
+            # Build configuration
+            config_params = {}
+
+            # Add thinking configuration (Gemini 2 vs Gemini 3)
+            if self.thinking_level:
+                # Gemini 3 style (thinkingConfig with thinkingLevel)
+                config_params['thinkingConfig'] = {
+                    'thinkingLevel': self.thinking_level
+                }
+            elif not schema:
+                # Gemini 2 style (ThinkingConfig with thinking_budget)
+                # Only for unstructured output
+                config_params['thinking_config'] = types.ThinkingConfig(
+                    thinking_budget=self.thinking_budget
+                )
+
+            # Add Google Search tool if enabled
+            tools = []
+            if self.use_google_search:
+                tools.append(types.Tool(googleSearch=types.GoogleSearch()))
+                config_params['tools'] = tools
+                self.logger.debug("Google Search tool enabled")
+
+            # Add response format
+            config_params['response_mime_type'] = "application/json"
+
             if schema:
                 # Structured output with Pydantic validation
                 self.logger.debug(f"Generating with schema: {schema.__name__}")
+                config_params['response_schema'] = schema
 
                 response = self.client.models.generate_content(
                     model=self.model,
                     contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_schema=schema,
-                        **kwargs
-                    ),
+                    config=types.GenerateContentConfig(**config_params, **kwargs),
                 )
 
                 # Parse and validate with Pydantic
@@ -116,12 +150,7 @@ class GeminiProvider(LLMProvider):
                 response = self.client.models.generate_content(
                     model=self.model,
                     contents=prompt,
-                    config=types.GenerateContentConfig(
-                        thinking_config=types.ThinkingConfig(
-                            thinking_budget=self.thinking_budget
-                        ),
-                        **kwargs
-                    ),
+                    config=types.GenerateContentConfig(**config_params, **kwargs),
                 )
 
                 # Clean and parse JSON
