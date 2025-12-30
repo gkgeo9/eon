@@ -163,7 +163,7 @@ def main():
         if st.button("📜 View History", width="stretch", type="primary"):
             st.switch_page("pages/2_📈_Analysis_History.py")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
         if st.button("🔍 View Results", width="stretch"):
@@ -172,10 +172,6 @@ def main():
     with col2:
         if st.button("⚙️ Settings", width="stretch"):
             st.switch_page("pages/4_⚙️_Settings.py")
-
-    with col3:
-        if st.button("🗄️ Database", width="stretch"):
-            st.switch_page("pages/5_🗄️_Database_Viewer.py")
 
     # Footer
     st.markdown("---")

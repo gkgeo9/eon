@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Results Viewer Page - View analysis results.
+Results Viewer Page - View and export analysis results.
 """
 
+import json
 import streamlit as st
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.components.results_display import display_results
@@ -34,7 +35,7 @@ if not run_id:
 
     if completed_analyses.empty:
         st.info("No completed analyses found. Run an analysis first!")
-        if st.button("➕ New Analysis"):
+        if st.button("New Analysis"):
             st.switch_page("pages/1_📊_Analysis.py")
     else:
         # Group by ticker for selection
@@ -72,8 +73,63 @@ if run_id:
         if not results:
             st.warning("No results available for this analysis.")
         else:
+            # Quick info bar
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Ticker", run_details.get('ticker', 'N/A'))
+            with col2:
+                st.metric("Type", run_details.get('analysis_type', 'N/A').title())
+            with col3:
+                years = run_details.get('years', [])
+                if years:
+                    year_range = f"{min(years)}-{max(years)}" if len(years) > 1 else str(years[0])
+                else:
+                    year_range = "N/A"
+                st.metric("Years", year_range)
+            with col4:
+                st.metric("Results", len(results))
+
+            st.markdown("---")
+
             # Display results
             display_results(run_details, results)
+
+            st.markdown("---")
+
+            # Export section
+            st.subheader("Export")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                # Export as JSON
+                export_data = {
+                    "run_id": run_id,
+                    "ticker": run_details.get('ticker'),
+                    "analysis_type": run_details.get('analysis_type'),
+                    "years": run_details.get('years'),
+                    "completed_at": run_details.get('completed_at'),
+                    "results": results
+                }
+                json_str = json.dumps(export_data, indent=2, default=str)
+                st.download_button(
+                    "Download JSON",
+                    data=json_str,
+                    file_name=f"{run_details.get('ticker', 'analysis')}_{run_details.get('analysis_type', 'results')}.json",
+                    mime="application/json"
+                )
+
+            with col2:
+                # Re-run same analysis
+                if st.button("Re-run Analysis", type="secondary"):
+                    # Store config for re-run
+                    st.session_state.rerun_config = {
+                        'ticker': run_details.get('ticker'),
+                        'analysis_type': run_details.get('analysis_type'),
+                        'years': run_details.get('years'),
+                        'filing_type': run_details.get('filing_type', '10-K')
+                    }
+                    st.session_state.view_run_id = None
+                    st.switch_page("pages/1_📊_Analysis.py")
 
             st.markdown("---")
 
@@ -81,16 +137,16 @@ if run_id:
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                if st.button("🏠 Home"):
+                if st.button("Home"):
                     st.session_state.view_run_id = None
                     st.switch_page("streamlit_app.py")
 
             with col2:
-                if st.button("📜 View History"):
+                if st.button("View History"):
                     st.session_state.view_run_id = None
                     st.switch_page("pages/2_📈_Analysis_History.py")
 
             with col3:
-                if st.button("📊 New Analysis"):
+                if st.button("New Analysis"):
                     st.session_state.view_run_id = None
                     st.switch_page("pages/1_📊_Analysis.py")

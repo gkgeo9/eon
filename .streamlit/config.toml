@@ -1,17 +1,23 @@
 [theme]
-# Fintel theme configuration
-# Can be changed from Settings page
+# Fintel uses Streamlit's native theming
+# Dark/light mode follows your system preference automatically
+# To force a specific theme, uncomment one of these:
 
-primaryColor = "#3b82f6"  # Blue
-backgroundColor = "#ffffff"  # White (light mode)
-secondaryBackgroundColor = "#f0f2f6"  # Light gray
-textColor = "#262730"  # Dark text
-font = "sans serif"
+# Light mode (default)
+primaryColor = "#3b82f6"
+# backgroundColor = "#ffffff"
+# secondaryBackgroundColor = "#f0f2f6"
+# textColor = "#262730"
 
-# Dark mode colors (toggle from Settings page):
+# Dark mode - uncomment these and comment out light mode above:
 # backgroundColor = "#0e1117"
 # secondaryBackgroundColor = "#262730"
 # textColor = "#fafafa"
 
+font = "sans serif"
+
 [server]
 headless = true
+
+[browser]
+gatherUsageStats = false

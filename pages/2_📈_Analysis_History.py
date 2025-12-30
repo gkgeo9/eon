@@ -210,12 +210,12 @@ else:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if '✅' in selected_status:  # Completed
-            if st.button("📊 View Results", type="primary", width="stretch"):
+        if selected_status == 'completed':
+            if st.button("View Results", type="primary", width="stretch"):
                 st.session_state.view_run_id = selected_run_id
                 st.switch_page("pages/3_🔍_Results_Viewer.py")
         else:
-            st.button("📊 View Results", disabled=True, width="stretch")
+            st.button("View Results", disabled=True, width="stretch")
 
     with col2:
         if st.button("🔄 Re-run", width="stretch"):
