@@ -476,7 +476,7 @@ def display_export_options(data: Dict[str, Any], result_type: str, ticker: str, 
             data=json_str,
             file_name=f"{ticker}_{year}_{result_type}.json",
             mime="application/json",
-            use_container_width=True
+            width="stretch"
         )
 
     with col2:
@@ -488,7 +488,7 @@ def display_export_options(data: Dict[str, Any], result_type: str, ticker: str, 
             data=csv,
             file_name=f"{ticker}_{year}_{result_type}.csv",
             mime="text/csv",
-            use_container_width=True
+            width="stretch"
         )
 
     with col3:
@@ -499,5 +499,5 @@ def display_export_options(data: Dict[str, Any], result_type: str, ticker: str, 
             data=md,
             file_name=f"{ticker}_{year}_{result_type}.md",
             mime="text/markdown",
-            use_container_width=True
+            width="stretch"
         )

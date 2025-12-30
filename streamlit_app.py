@@ -134,7 +134,7 @@ def main():
             display_df[[
                 'Ticker', 'Analysis', 'Status', 'Start Time', 'End Time', 'Duration'
             ]],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "Ticker": st.column_config.TextColumn("Ticker", width="small"),
@@ -156,26 +156,26 @@ def main():
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("📊 Single Analysis", use_container_width=True, type="primary"):
-            st.switch_page("pages/1_📊_Single_Analysis.py")
+        if st.button("📊 New Analysis", width="stretch", type="primary"):
+            st.switch_page("pages/1_📊_Analysis.py")
 
     with col2:
-        if st.button("📦 Batch Analysis", use_container_width=True, type="primary"):
-            st.switch_page("pages/2_📦_Batch_Analysis.py")
+        if st.button("📜 View History", width="stretch", type="primary"):
+            st.switch_page("pages/2_📈_Analysis_History.py")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("📜 View History", use_container_width=True):
-            st.switch_page("pages/3_📈_Analysis_History.py")
+        if st.button("🔍 View Results", width="stretch"):
+            st.switch_page("pages/3_🔍_Results_Viewer.py")
 
     with col2:
-        if st.button("🔍 View Results", use_container_width=True):
-            st.switch_page("pages/4_🔍_Results_Viewer.py")
+        if st.button("⚙️ Settings", width="stretch"):
+            st.switch_page("pages/4_⚙️_Settings.py")
 
     with col3:
-        if st.button("⚙️ Settings", use_container_width=True):
-            st.switch_page("pages/5_⚙️_Settings.py")
+        if st.button("🗄️ Database", width="stretch"):
+            st.switch_page("pages/5_🗄️_Database_Viewer.py")
 
     # Footer
     st.markdown("---")

@@ -153,13 +153,13 @@ with tab1:
                 submitted = st.form_submit_button(
                     "💾 Save" if edit_mode else "➕ Create",
                     type="primary",
-                    use_container_width=True
+                    width="stretch"
                 )
 
             with col2:
                 cancelled = st.form_submit_button(
                     "❌ Cancel",
-                    use_container_width=True
+                    width="stretch"
                 )
 
             if cancelled:
@@ -221,7 +221,7 @@ with tab2:
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("🗑️ Clear All Cache", type="secondary", use_container_width=True):
+        if st.button("🗑️ Clear All Cache", type="secondary", width="stretch"):
             if st.session_state.get('confirm_clear_cache', False):
                 deleted = db.clear_file_cache()
                 st.success(f"✅ Cleared {deleted} cached files")
@@ -232,7 +232,7 @@ with tab2:
                 st.warning("⚠️ Click again to confirm")
 
     with col2:
-        if st.button("🧹 Clear Old Cache (30+ days)", use_container_width=True):
+        if st.button("🧹 Clear Old Cache (30+ days)", width="stretch"):
             deleted = db.clear_file_cache(older_than_days=30)
             st.success(f"✅ Cleared {deleted} old cached files")
             st.rerun()

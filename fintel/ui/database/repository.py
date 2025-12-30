@@ -6,10 +6,13 @@ Database repository for Fintel UI - handles all database operations.
 
 import sqlite3
 import json
+import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class DatabaseRepository:
@@ -81,7 +84,7 @@ class DatabaseRepository:
             except sqlite3.OperationalError as e:
                 if "locked" in str(e) and attempt < max_retries - 1:
                     wait_time = 0.5 * (2 ** attempt)  # Exponential backoff: 0.5s, 1s, 2s, 4s, 8s
-                    self.logger.warning(f"Database locked, retry {attempt + 1}/{max_retries} in {wait_time}s")
+                    logger.warning(f"Database locked, retry {attempt + 1}/{max_retries} in {wait_time}s")
                     time.sleep(wait_time)
                 else:
                     raise

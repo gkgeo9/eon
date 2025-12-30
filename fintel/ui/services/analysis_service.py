@@ -166,6 +166,11 @@ class AnalysisService:
                 results = self._run_multi_perspective(ticker, pdf_paths, run_id)
             elif analysis_type == 'scanner':
                 results = self._run_contrarian_scanner(ticker, pdf_paths, run_id)
+            elif analysis_type.startswith('custom:'):
+                workflow_id = analysis_type.replace('custom:', '')
+                results = self._run_custom_workflow(
+                    ticker, pdf_paths, workflow_id, run_id
+                )
             else:
                 raise ValueError(f"Unknown analysis type: {analysis_type}")
 
@@ -730,6 +735,100 @@ class AnalysisService:
                         temp_path.unlink()
 
         return {}
+
+    def _run_custom_workflow(
+        self,
+        ticker: str,
+        pdf_paths: Dict[int, Path],
+        workflow_id: str,
+        run_id: str
+    ) -> Dict[int, Any]:
+        """
+        Run a custom workflow analysis.
+
+        Args:
+            ticker: Company ticker
+            pdf_paths: Dictionary mapping year to PDF path
+            workflow_id: Custom workflow identifier
+            run_id: Analysis run ID
+
+        Returns:
+            Dictionary mapping year to analysis result
+        """
+        # Import custom workflows
+        try:
+            from custom_workflows import get_workflow
+        except ImportError:
+            raise ValueError("Custom workflows module not available")
+
+        # Get the workflow class
+        workflow_class = get_workflow(workflow_id)
+        if not workflow_class:
+            raise ValueError(f"Unknown custom workflow: {workflow_id}")
+
+        workflow = workflow_class()
+
+        # Validate years
+        workflow.validate_config(len(pdf_paths))
+
+        self.logger.info(f"Running custom workflow '{workflow.name}' for {ticker}")
+
+        # Import AI provider
+        from fintel.ai.providers.gemini import GeminiProvider
+
+        results = {}
+        total_years = len(pdf_paths)
+
+        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
+            self.logger.info(f"Analyzing {ticker} {year} ({workflow.name})")
+
+            progress_pct = 50 + int((idx / total_years) * 40)
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} ({workflow.name})",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+
+            try:
+                # Extract text from PDF
+                text = self.extractor.extract_text(pdf_path)
+
+                # Format prompt
+                prompt = workflow.prompt_template.format(
+                    ticker=ticker,
+                    year=year
+                )
+                full_prompt = f"{prompt}\n\nHere's the filing content:\n\n{text}"
+
+                # Run analysis via Gemini
+                api_key = self.api_key_manager.get_least_used_key()
+                provider = GeminiProvider(
+                    api_key=api_key,
+                    model=self.config.default_model,
+                    thinking_budget=self.config.thinking_budget,
+                    rate_limiter=self.rate_limiter
+                )
+
+                result = provider.generate_with_retry(
+                    prompt=full_prompt,
+                    schema=workflow.schema,
+                    max_retries=3,
+                    retry_delay=10
+                )
+
+                self.api_key_manager.record_usage(api_key)
+
+                if result:
+                    results[year] = result
+                    self.logger.info(f"Completed {workflow.name} analysis for {ticker} {year}")
+
+            except Exception as e:
+                self.logger.error(f"Failed to analyze {ticker} {year} with {workflow.name}: {e}")
+                continue
+
+        return results
 
     def get_analysis_status(self, run_id: str) -> Dict[str, Any]:
         """

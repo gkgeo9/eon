@@ -147,7 +147,7 @@ else:
         display_df[[
             'Ticker', 'Analysis', 'Status', 'Start Time', 'End Time', 'Duration'
         ]],
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
@@ -186,7 +186,7 @@ else:
 
                     st.caption(f"Started: {pd.to_datetime(run_details['started_at']).strftime('%Y-%m-%d %H:%M:%S') if run_details.get('started_at') else 'N/A'}")
 
-        if st.button("🔄 Refresh Progress", use_container_width=True):
+        if st.button("🔄 Refresh Progress", width="stretch"):
             st.rerun()
 
         st.markdown("---")
@@ -211,14 +211,14 @@ else:
 
     with col1:
         if '✅' in selected_status:  # Completed
-            if st.button("📊 View Results", type="primary", use_container_width=True):
+            if st.button("📊 View Results", type="primary", width="stretch"):
                 st.session_state.view_run_id = selected_run_id
-                st.switch_page("pages/4_🔍_Results_Viewer.py")
+                st.switch_page("pages/3_🔍_Results_Viewer.py")
         else:
-            st.button("📊 View Results", disabled=True, use_container_width=True)
+            st.button("📊 View Results", disabled=True, width="stretch")
 
     with col2:
-        if st.button("🔄 Re-run", use_container_width=True):
+        if st.button("🔄 Re-run", width="stretch"):
             # Get original config
             run_details = db.get_run_details(selected_run_id)
             if run_details:
@@ -226,7 +226,7 @@ else:
                 st.info("Re-run feature: Navigate to Analysis page and configure manually for now")
 
     with col3:
-        if st.button("🗑️ Delete", use_container_width=True, type="secondary"):
+        if st.button("🗑️ Delete", width="stretch", type="secondary"):
             try:
                 db.delete_analysis_run(selected_run_id)
                 st.success("Analysis deleted successfully!")
@@ -243,16 +243,16 @@ stats_df = db.get_stats_by_type()
 if not stats_df.empty:
     # Pivot for better display
     stats_pivot = stats_df.pivot(index='analysis_type', columns='status', values='count').fillna(0)
-    st.dataframe(stats_pivot, use_container_width=True)
+    st.dataframe(stats_pivot, width="stretch")
 
 # Navigation
 st.markdown("---")
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("🏠 Home", use_container_width=True):
+    if st.button("🏠 Home", width="stretch"):
         st.switch_page("streamlit_app.py")
 
 with col2:
-    if st.button("📊 New Analysis", use_container_width=True):
-        st.switch_page("pages/1_📊_Single_Analysis.py")
+    if st.button("📊 New Analysis", width="stretch"):
+        st.switch_page("pages/1_📊_Analysis.py")

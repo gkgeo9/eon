@@ -90,7 +90,7 @@ with tab1:
 
         st.dataframe(
             filtered_df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "run_id": st.column_config.TextColumn("Run ID", width="small"),
@@ -154,7 +154,7 @@ with tab2:
 
         st.dataframe(
             filtered_results,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "id": st.column_config.NumberColumn("ID", width="small"),
@@ -221,7 +221,7 @@ with tab3:
 
         st.dataframe(
             filtered_cache,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "id": st.column_config.NumberColumn("ID", width="small"),
@@ -273,7 +273,7 @@ with tab4:
     if not settings_df.empty:
         st.dataframe(
             settings_df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "key": st.column_config.TextColumn("Key", width="medium"),
@@ -300,7 +300,7 @@ with tab5:
         status_df = db._execute_query(status_query)
         if not status_df.empty:
             st.bar_chart(status_df.set_index('status'))
-            st.dataframe(status_df, use_container_width=True, hide_index=True)
+            st.dataframe(status_df, width="stretch", hide_index=True)
 
         st.markdown("---")
 
@@ -313,7 +313,7 @@ with tab5:
         type_df = db._execute_query(type_query)
         if not type_df.empty:
             st.bar_chart(type_df.set_index('analysis_type'))
-            st.dataframe(type_df, use_container_width=True, hide_index=True)
+            st.dataframe(type_df, width="stretch", hide_index=True)
 
     with col2:
         st.markdown("#### Top 10 Most Analyzed Tickers")
@@ -327,7 +327,7 @@ with tab5:
         ticker_df = db._execute_query(ticker_query)
         if not ticker_df.empty:
             st.bar_chart(ticker_df.set_index('ticker'))
-            st.dataframe(ticker_df, use_container_width=True, hide_index=True)
+            st.dataframe(ticker_df, width="stretch", hide_index=True)
 
         st.markdown("---")
 
@@ -351,16 +351,16 @@ with tab5:
                 counts[table] = count_df.iloc[0]['count']
 
         counts_df = pd.DataFrame(list(counts.items()), columns=['Table', 'Rows'])
-        st.dataframe(counts_df, use_container_width=True, hide_index=True)
+        st.dataframe(counts_df, width="stretch", hide_index=True)
 
 # Navigation
 st.markdown("---")
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("🏠 Home", use_container_width=True):
+    if st.button("🏠 Home", width="stretch"):
         st.switch_page("streamlit_app.py")
 
 with col2:
-    if st.button("📜 View History", use_container_width=True):
-        st.switch_page("pages/3_📈_Analysis_History.py")
+    if st.button("📜 View History", width="stretch"):
+        st.switch_page("pages/2_📈_Analysis_History.py")

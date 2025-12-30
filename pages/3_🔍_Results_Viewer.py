@@ -35,7 +35,7 @@ if not run_id:
     if completed_analyses.empty:
         st.info("No completed analyses found. Run an analysis first!")
         if st.button("➕ New Analysis"):
-            st.switch_page("pages/1_📊_Single_Analysis.py")
+            st.switch_page("pages/1_📊_Analysis.py")
     else:
         # Group by ticker for selection
         completed_analyses['display_name'] = (
@@ -88,9 +88,9 @@ if run_id:
             with col2:
                 if st.button("📜 View History"):
                     st.session_state.view_run_id = None
-                    st.switch_page("pages/3_📈_Analysis_History.py")
+                    st.switch_page("pages/2_📈_Analysis_History.py")
 
             with col3:
                 if st.button("📊 New Analysis"):
                     st.session_state.view_run_id = None
-                    st.switch_page("pages/1_📊_Single_Analysis.py")
+                    st.switch_page("pages/1_📊_Analysis.py")

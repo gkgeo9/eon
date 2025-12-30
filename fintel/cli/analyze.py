@@ -101,7 +101,7 @@ def analyze(
                 console.print(f" Downloaded to {filing_path}", style="green")
             else:
                 filing_path = config.data_dir / "sec-edgar-filings" / ticker / "10-K"
-                console.print(f"˜ Skipped download, using {filing_path}", style="yellow")
+                console.print(f"ï¿½ Skipped download, using {filing_path}", style="yellow")
 
             # Step 2: Convert HTML to PDF
             if not skip_convert:
@@ -114,7 +114,7 @@ def analyze(
                 console.print(f" Converted {len(pdf_paths)} filings to PDF", style="green")
             else:
                 pdf_paths = list(filing_path.rglob("*.pdf"))
-                console.print(f"˜ Skipped conversion, found {len(pdf_paths)} PDFs", style="yellow")
+                console.print(f"ï¿½ Skipped conversion, found {len(pdf_paths)} PDFs", style="yellow")
 
             if not pdf_paths:
                 console.print(" No PDF files found. Cannot proceed with analysis.", style="bold red")
@@ -141,7 +141,7 @@ def analyze(
                     # Extract year from filename if possible
                     try:
                         year = int(pdf_path.stem.split("-")[0])
-                    except:
+                    except (ValueError, IndexError):
                         year = 2024 - i
 
                     result = analyzer.analyze_filing(
@@ -172,7 +172,7 @@ def analyze(
                 for i, pdf_path in enumerate(sorted(pdf_paths)[:years]):
                     try:
                         year = int(pdf_path.stem.split("-")[0])
-                    except:
+                    except (ValueError, IndexError):
                         year = 2024 - i
 
                     result = perspective_analyzer.analyze_multi_perspective(

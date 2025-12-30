@@ -6,17 +6,17 @@ Provides consistent navigation patterns across all pages.
 """
 
 import streamlit as st
-from typing import Dict
+from typing import Dict, Literal
 
 
-def render_home_button(use_container_width: bool = False):
+def render_home_button(width: Literal["stretch", "content"] = "content"):
     """
     Render consistent home button.
 
     Args:
-        use_container_width: If True, button spans full width
+        width: Button width - "stretch" for full width, "content" for auto
     """
-    if st.button("🏠 Back to Home", use_container_width=use_container_width):
+    if st.button("🏠 Back to Home", width=width):
         st.switch_page("streamlit_app.py")
 
 
@@ -30,7 +30,7 @@ def render_page_navigation(show_divider: bool = True):
     if show_divider:
         st.markdown("---")
 
-    render_home_button(use_container_width=False)
+    render_home_button(width="content")
 
 
 def render_multi_button_navigation(buttons: Dict[str, str], show_divider: bool = True):
@@ -52,7 +52,7 @@ def render_multi_button_navigation(buttons: Dict[str, str], show_divider: bool =
 
     for col, (label, page) in zip(cols, buttons.items()):
         with col:
-            if st.button(label, use_container_width=True):
+            if st.button(label, width="stretch"):
                 st.switch_page(page)
 
 
