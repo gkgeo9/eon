@@ -268,3 +268,222 @@ class SECDownloader:
             Path to filing directory
         """
         return self.base_path / "sec-edgar-filings" / ticker.upper() / filing_type
+
+    def get_filing_periodicity(self, filing_type: str) -> str:
+        """
+        Determine the periodicity of a filing type.
+
+        Args:
+            filing_type: SEC filing type (e.g., 10-K, 10-Q, 8-K)
+
+        Returns:
+            One of: 'annual', 'quarterly', 'event'
+        """
+        filing_type = filing_type.upper().replace("/A", "")  # Remove amendment suffix
+
+        annual_types = {'10-K', '20-F', 'DEF 14A', '40-F', 'N-CSR', 'N-CSRS', 'ARS'}
+        quarterly_types = {'10-Q', '6-K'}
+        # Everything else (8-K, etc.) is event-based
+
+        if filing_type in annual_types:
+            return 'annual'
+        elif filing_type in quarterly_types:
+            return 'quarterly'
+        else:
+            return 'event'
+
+    def get_available_filings(
+        self,
+        ticker: str,
+        filing_type: str,
+        limit: int = 20
+    ) -> List[Dict]:
+        """
+        Get list of available filings with their metadata.
+
+        This is useful for selecting specific filings to download,
+        especially for quarterly or event-based filings.
+
+        Args:
+            ticker: Stock ticker symbol
+            filing_type: Type of filing (e.g., 10-K, 10-Q, 8-K)
+            limit: Maximum number of filings to return
+
+        Returns:
+            List of filing metadata dicts with keys:
+            - accession_number: Unique filing identifier
+            - filing_date: When filed with SEC
+            - report_date: Period end date (fiscal period covered)
+            - fiscal_year: Fiscal year (derived from report_date)
+            - fiscal_quarter: Quarter for 10-Q (1, 2, or 3), None for others
+            - primary_document: Main document filename
+        """
+        ticker = ticker.upper()
+        filing_type_upper = filing_type.upper()
+
+        try:
+            cik = self._get_cik_from_ticker(ticker)
+            if not cik:
+                raise DownloadError(f"Could not find CIK for ticker {ticker}")
+
+            headers = {
+                'User-Agent': f'{self.company_name} {self.user_email}',
+                'Accept-Encoding': 'gzip, deflate',
+                'Host': 'data.sec.gov'
+            }
+
+            url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+            time.sleep(0.1)  # SEC rate limit
+
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+            fiscal_year_end = data.get('fiscalYearEnd', '1231')  # MMDD format
+
+            if 'filings' not in data or 'recent' not in data['filings']:
+                return []
+
+            recent = data['filings']['recent']
+            forms = recent.get('form', [])
+            filing_dates = recent.get('filingDate', [])
+            report_dates = recent.get('reportDate', [])
+            accession_numbers = recent.get('accessionNumber', [])
+            primary_docs = recent.get('primaryDocument', [])
+
+            filings = []
+            for i, form in enumerate(forms):
+                # Match filing type (handle amendments like 10-K/A)
+                if form.upper() == filing_type_upper or form.upper() == f"{filing_type_upper}/A":
+                    if i >= len(report_dates) or not report_dates[i]:
+                        continue
+
+                    report_date = report_dates[i]
+                    fiscal_year = self._get_fiscal_year(report_date, fiscal_year_end)
+                    fiscal_quarter = self._get_fiscal_quarter(report_date, fiscal_year_end, filing_type_upper)
+
+                    filings.append({
+                        'accession_number': accession_numbers[i] if i < len(accession_numbers) else None,
+                        'filing_date': filing_dates[i] if i < len(filing_dates) else None,
+                        'report_date': report_date,
+                        'fiscal_year': fiscal_year,
+                        'fiscal_quarter': fiscal_quarter,
+                        'primary_document': primary_docs[i] if i < len(primary_docs) else None,
+                        'form': form
+                    })
+
+                    if len(filings) >= limit:
+                        break
+
+            self.logger.info(f"Found {len(filings)} {filing_type} filings for {ticker}")
+            return filings
+
+        except requests.RequestException as e:
+            self.logger.error(f"Error querying SEC API for {ticker}: {str(e)}")
+            raise DownloadError(f"Error querying SEC API: {str(e)}") from e
+
+    def _get_fiscal_year(self, report_date: str, fiscal_year_end: str) -> int:
+        """
+        Determine fiscal year from report date and fiscal year end.
+
+        Args:
+            report_date: Report period end date (YYYY-MM-DD)
+            fiscal_year_end: Fiscal year end in MMDD format
+
+        Returns:
+            Fiscal year as integer
+        """
+        from datetime import datetime
+
+        report_dt = datetime.strptime(report_date, '%Y-%m-%d')
+
+        # Parse fiscal year end (MMDD format)
+        fy_month = int(fiscal_year_end[:2])
+        fy_day = int(fiscal_year_end[2:])
+
+        # If report date is after fiscal year end month, it's that calendar year's fiscal year
+        # If before or equal, it's the previous calendar year's fiscal year
+        if (report_dt.month, report_dt.day) > (fy_month, fy_day):
+            return report_dt.year + 1
+        else:
+            return report_dt.year
+
+    def _get_fiscal_quarter(
+        self,
+        report_date: str,
+        fiscal_year_end: str,
+        filing_type: str
+    ) -> Optional[int]:
+        """
+        Determine fiscal quarter from report date.
+
+        Only applicable for quarterly filings (10-Q).
+
+        Args:
+            report_date: Report period end date (YYYY-MM-DD)
+            fiscal_year_end: Fiscal year end in MMDD format
+            filing_type: Filing type
+
+        Returns:
+            Quarter (1, 2, or 3) for 10-Q, None for others
+        """
+        if filing_type not in ('10-Q', '10Q'):
+            return None
+
+        from datetime import datetime
+
+        report_dt = datetime.strptime(report_date, '%Y-%m-%d')
+        fy_month = int(fiscal_year_end[:2])
+
+        # Calculate months from fiscal year start
+        # Fiscal year starts the month after fiscal year end
+        fy_start_month = (fy_month % 12) + 1
+
+        # Calculate which month of fiscal year this report is in
+        months_diff = (report_dt.month - fy_start_month) % 12
+
+        # Q1 = months 1-3, Q2 = months 4-6, Q3 = months 7-9, Q4 (10-K) = months 10-12
+        if months_diff < 3:
+            return 1
+        elif months_diff < 6:
+            return 2
+        elif months_diff < 9:
+            return 3
+        else:
+            return None  # Q4 would be covered by 10-K
+
+    def get_fiscal_year_end(self, ticker: str) -> Optional[str]:
+        """
+        Get the fiscal year end date for a company.
+
+        Args:
+            ticker: Stock ticker symbol
+
+        Returns:
+            Fiscal year end in MMDD format, or None if not found
+        """
+        ticker = ticker.upper()
+
+        try:
+            cik = self._get_cik_from_ticker(ticker)
+            if not cik:
+                return None
+
+            headers = {
+                'User-Agent': f'{self.company_name} {self.user_email}',
+                'Accept-Encoding': 'gzip, deflate',
+                'Host': 'data.sec.gov'
+            }
+
+            url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+            time.sleep(0.1)
+
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+            return data.get('fiscalYearEnd', '1231')
+
+        except Exception as e:
+            self.logger.error(f"Error getting fiscal year end for {ticker}: {str(e)}")
+            return None

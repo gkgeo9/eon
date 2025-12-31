@@ -45,7 +45,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # Tab 1: Analysis Runs
 with tab1:
     st.subheader("Analysis Runs")
-    st.markdown("View all analysis run records from the database")
+    st.markdown("View all analysis run records. **Select a run to view its results.**")
 
     query = """
     SELECT
@@ -96,21 +96,115 @@ with tab1:
         if filter_type != "All":
             filtered_df = filtered_df[filtered_df['analysis_type'] == filter_type]
 
+        # Create display labels for selection
+        filtered_df['display'] = (
+            filtered_df['ticker'] + " | " +
+            filtered_df['analysis_type'] + " | " +
+            filtered_df['status'] + " | " +
+            filtered_df['created_at'].str[:10]
+        )
+
+        if len(filtered_df) > 0:
+            # Selectable dropdown
+            selected_run_idx = st.selectbox(
+                "Select a run to inspect",
+                options=filtered_df.index.tolist(),
+                format_func=lambda idx: filtered_df.loc[idx, 'display'],
+                key="runs_selector"
+            )
+
+            selected_run = filtered_df.loc[selected_run_idx]
+
+            # Show run details
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Ticker", selected_run['ticker'])
+            with col2:
+                st.metric("Type", selected_run['analysis_type'])
+            with col3:
+                status_emoji = {"completed": "✅", "failed": "❌", "running": "🔄", "pending": "⏳"}.get(selected_run['status'], "❓")
+                st.metric("Status", f"{status_emoji} {selected_run['status']}")
+            with col4:
+                st.metric("Years", selected_run['years_analyzed'] or "N/A")
+
+            # Show error if failed
+            if selected_run['status'] == 'failed' and selected_run['error_message']:
+                st.error(f"**Error:** {selected_run['error_message']}")
+
+            # Get results for this run
+            results_query = """
+            SELECT id, fiscal_year, result_type, LENGTH(result_json) as json_size
+            FROM analysis_results
+            WHERE run_id = ?
+            ORDER BY fiscal_year DESC
+            """
+            run_results = db._execute_query(results_query, params=(selected_run['run_id'],))
+
+            if not run_results.empty:
+                st.markdown(f"**{len(run_results)} result(s) for this run:**")
+
+                # Let user select which result to view
+                run_results['display'] = (
+                    "FY" + run_results['fiscal_year'].astype(str) + " | " +
+                    run_results['result_type'] + " | " +
+                    run_results['json_size'].astype(str) + " bytes"
+                )
+
+                selected_result_idx = st.selectbox(
+                    "Select result to view JSON",
+                    options=run_results.index.tolist(),
+                    format_func=lambda idx: run_results.loc[idx, 'display'],
+                    key="run_results_selector"
+                )
+
+                if st.button("📄 View JSON for Selected Result", type="primary", key="view_run_result_json"):
+                    st.session_state.viewing_run_result_id = int(run_results.loc[selected_result_idx, 'id'])
+
+                # Show JSON if viewing
+                if st.session_state.get('viewing_run_result_id') == int(run_results.loc[selected_result_idx, 'id']):
+                    result_id = int(run_results.loc[selected_result_idx, 'id'])
+                    json_query = "SELECT result_json FROM analysis_results WHERE id = ?"
+                    result_row = db._execute_query(json_query, params=(result_id,))
+
+                    if not result_row.empty:
+                        result_json = result_row.iloc[0]['result_json']
+                        result_dict = json.loads(result_json)
+
+                        st.markdown("---")
+                        fiscal_year = int(run_results.loc[selected_result_idx, 'fiscal_year'])
+                        result_type = run_results.loc[selected_result_idx, 'result_type']
+                        st.subheader(f"JSON: {selected_run['ticker']} FY{fiscal_year} - {result_type}")
+
+                        # Download button
+                        st.download_button(
+                            "📥 Download JSON",
+                            data=json.dumps(result_dict, indent=2),
+                            file_name=f"{selected_run['ticker']}_{fiscal_year}_{result_type}.json",
+                            mime="application/json"
+                        )
+
+                        st.json(result_dict)
+            else:
+                if selected_run['status'] == 'completed':
+                    st.warning("No results stored for this completed run. The analysis may have failed silently.")
+                else:
+                    st.info("No results yet for this run.")
+
+        # Also show the table
+        st.markdown("---")
+        st.markdown("**All Runs (filtered)**")
         st.dataframe(
-            filtered_df,
+            filtered_df[['run_id', 'ticker', 'analysis_type', 'filing_type', 'status', 'years_analyzed', 'created_at', 'error_message']],
             width="stretch",
             hide_index=True,
             column_config={
                 "run_id": st.column_config.TextColumn("Run ID", width="small"),
                 "ticker": st.column_config.TextColumn("Ticker", width="small"),
-                "company_name": st.column_config.TextColumn("Company", width="medium"),
                 "analysis_type": st.column_config.TextColumn("Type", width="small"),
                 "filing_type": st.column_config.TextColumn("Filing", width="small"),
                 "status": st.column_config.TextColumn("Status", width="small"),
                 "years_analyzed": st.column_config.TextColumn("Years", width="medium"),
                 "created_at": st.column_config.TextColumn("Created", width="medium"),
-                "started_at": st.column_config.TextColumn("Started", width="medium"),
-                "completed_at": st.column_config.TextColumn("Completed", width="medium"),
                 "error_message": st.column_config.TextColumn("Error", width="large"),
             }
         )
@@ -120,7 +214,7 @@ with tab1:
 # Tab 2: Analysis Results
 with tab2:
     st.subheader("Analysis Results")
-    st.markdown("View stored analysis results (Pydantic model outputs)")
+    st.markdown("View stored analysis results (Pydantic model outputs). **Click a row to view its JSON.**")
 
     query = """
     SELECT
@@ -160,13 +254,71 @@ with tab2:
         if filter_type_res != "All":
             filtered_results = filtered_results[filtered_results['result_type'] == filter_type_res]
 
+        # Create display labels for selection
+        filtered_results['display'] = (
+            filtered_results['ticker'] + " | FY" +
+            filtered_results['fiscal_year'].astype(str) + " | " +
+            filtered_results['result_type'] + " | " +
+            filtered_results['created_at'].str[:10]
+        )
+
+        # Selectable list
+        if len(filtered_results) > 0:
+            selected_idx = st.selectbox(
+                "Select a result to view",
+                options=filtered_results.index.tolist(),
+                format_func=lambda idx: filtered_results.loc[idx, 'display'],
+                key="results_selector"
+            )
+
+            selected_result = filtered_results.loc[selected_idx]
+
+            # Show selected result details
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Ticker", selected_result['ticker'])
+            with col2:
+                st.metric("Year", int(selected_result['fiscal_year']))
+            with col3:
+                st.metric("Type", selected_result['result_type'])
+            with col4:
+                st.metric("Size", f"{selected_result['json_size']:,} bytes")
+
+            # View JSON button
+            if st.button("📄 View Full JSON", type="primary", key="view_selected_json"):
+                st.session_state.viewing_result_id = int(selected_result['id'])
+
+            # Show JSON if viewing
+            if st.session_state.get('viewing_result_id') == int(selected_result['id']):
+                query = "SELECT result_json FROM analysis_results WHERE id = ?"
+                result_row = db._execute_query(query, params=(int(selected_result['id']),))
+                if not result_row.empty:
+                    result_json = result_row.iloc[0]['result_json']
+                    result_dict = json.loads(result_json)
+
+                    st.markdown("---")
+                    st.subheader(f"JSON: {selected_result['ticker']} FY{int(selected_result['fiscal_year'])} - {selected_result['result_type']}")
+
+                    # Download button
+                    st.download_button(
+                        "📥 Download JSON",
+                        data=json.dumps(result_dict, indent=2),
+                        file_name=f"{selected_result['ticker']}_{int(selected_result['fiscal_year'])}_{selected_result['result_type']}.json",
+                        mime="application/json"
+                    )
+
+                    # Display JSON
+                    st.json(result_dict)
+
+        # Also show the table for reference
+        st.markdown("---")
+        st.markdown("**All Results (filtered)**")
         st.dataframe(
-            filtered_results,
+            filtered_results[['id', 'ticker', 'fiscal_year', 'filing_type', 'result_type', 'created_at', 'json_size']],
             width="stretch",
             hide_index=True,
             column_config={
                 "id": st.column_config.NumberColumn("ID", width="small"),
-                "run_id": st.column_config.TextColumn("Run ID", width="small"),
                 "ticker": st.column_config.TextColumn("Ticker", width="small"),
                 "fiscal_year": st.column_config.NumberColumn("Year", width="small"),
                 "filing_type": st.column_config.TextColumn("Filing", width="small"),
@@ -175,21 +327,6 @@ with tab2:
                 "json_size": st.column_config.NumberColumn("Size (bytes)", width="small"),
             }
         )
-
-        # View specific result
-        st.markdown("---")
-        st.subheader("View Result JSON")
-        result_id = st.number_input("Enter Result ID to view", min_value=1, step=1, key="view_result_id")
-
-        if st.button("Load Result JSON", key="load_result"):
-            query = "SELECT result_json FROM analysis_results WHERE id = ?"
-            result_row = db._execute_query(query, params=(int(result_id),))
-            if not result_row.empty:
-                result_json = result_row.iloc[0]['result_json']
-                result_dict = json.loads(result_json)
-                st.json(result_dict)
-            else:
-                st.error(f"No result found with ID {result_id}")
     else:
         st.info("No analysis results found in database")
 

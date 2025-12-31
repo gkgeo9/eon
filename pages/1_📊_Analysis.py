@@ -16,6 +16,21 @@ from fintel.ui.theme import apply_theme
 from fintel.ui.utils.validators import validate_ticker
 from fintel.data.sources.sec import SECDownloader
 
+# Filing type periodicities
+ANNUAL_FILINGS = {'10-K', '20-F', 'DEF 14A', '40-F', 'N-CSR', 'N-CSRS', 'ARS'}
+QUARTERLY_FILINGS = {'10-Q', '6-K'}
+# Everything else is event-based
+
+def get_filing_periodicity(filing_type: str) -> str:
+    """Get the periodicity of a filing type."""
+    ft = filing_type.upper().replace("/A", "")
+    if ft in ANNUAL_FILINGS:
+        return 'annual'
+    elif ft in QUARTERLY_FILINGS:
+        return 'quarterly'
+    else:
+        return 'event'
+
 # Import custom workflows discovery
 try:
     from custom_workflows import list_workflows, get_workflow
@@ -380,8 +395,8 @@ else:
             key="single_filing_type"
         )
 
-        # Year selection
-        st.subheader("Time Period Selection")
+        # Period selection - adapts based on filing type periodicity
+        st.subheader("Filing Period Selection")
 
         # Check if multi-year is required (builtin or custom workflow)
         multi_year_required = analysis_type in ['excellent', 'objective', 'scanner']
@@ -391,103 +406,189 @@ else:
 
         years = None
         num_years = None
+        quarters = None  # For quarterly filings
+        filing_periodicity = get_filing_periodicity(filing_type)
 
-        if multi_year_required:
-            st.warning("⚠️ This analysis type requires multiple years of data (minimum 3 years).")
+        # Show filing type hint
+        if filing_periodicity == 'quarterly':
+            st.info(f"📊 **{filing_type}** is a quarterly filing (Q1, Q2, Q3 per fiscal year)")
+        elif filing_periodicity == 'event':
+            st.info(f"📊 **{filing_type}** is an event-based filing (filed when material events occur)")
+        else:
+            st.info(f"📊 **{filing_type}** is an annual filing (one per fiscal year)")
 
-            year_mode = st.radio(
+        if filing_periodicity == 'quarterly':
+            # QUARTERLY FILING SELECTION
+            if multi_year_required:
+                st.warning("⚠️ This analysis type requires multiple periods (minimum 3).")
+
+            quarter_mode = st.radio(
                 "Selection Method",
-                options=["Last N Years", "Specific Years", "Year Range"],
+                options=["Recent Quarters", "Specific Quarters"],
                 horizontal=True,
-                key="single_multi_year_mode"
+                key="single_quarter_mode"
             )
 
-            if year_mode == "Last N Years":
-                num_years = st.slider("Number of recent years", min_value=3, max_value=15, value=5, key="single_num_years")
-                preview_years = list(range(current_year, current_year - num_years, -1))
-                st.info(f"📅 Will analyze: {', '.join(map(str, preview_years))}")
-
-            elif year_mode == "Specific Years":
-                years_input = st.text_input(
-                    "Enter years (comma-separated)",
-                    value=f"{current_year}, {current_year-1}, {current_year-2}, {current_year-3}, {current_year-4}",
-                    key="single_specific_years"
+            if quarter_mode == "Recent Quarters":
+                min_quarters = 3 if multi_year_required else 1
+                num_quarters = st.slider(
+                    "Number of recent quarters",
+                    min_value=min_quarters, max_value=12, value=max(4, min_quarters),
+                    key="single_num_quarters"
                 )
-                try:
-                    years = [int(y.strip()) for y in years_input.split(',') if y.strip()]
-                    years = sorted(years, reverse=True)
-                    if len(years) < 3:
-                        st.error(f"❌ Please enter at least 3 years. You entered {len(years)}.")
-                        years = None
-                    else:
-                        st.info(f"📅 Will analyze {len(years)} years: {', '.join(map(str, years))}")
-                except ValueError:
-                    st.error("❌ Invalid year format.")
-                    years = None
+                num_years = num_quarters  # We'll use num_years to pass the count
+                st.info(f"📅 Will analyze the {num_quarters} most recent {filing_type} filings")
 
-            else:  # Year Range
+            else:  # Specific Quarters
+                st.markdown("Select specific fiscal year + quarter combinations:")
                 col1, col2 = st.columns(2)
                 with col1:
-                    start_year = st.number_input("From Year", min_value=1995, max_value=current_year, value=current_year - 4, key="single_start_year")
+                    selected_years = st.multiselect(
+                        "Fiscal Years",
+                        options=list(range(current_year, current_year - 10, -1)),
+                        default=[current_year, current_year - 1] if not multi_year_required else [current_year, current_year - 1, current_year - 2],
+                        key="single_quarter_years"
+                    )
                 with col2:
-                    end_year = st.number_input("To Year", min_value=1995, max_value=current_year, value=current_year, key="single_end_year")
+                    selected_quarters = st.multiselect(
+                        "Quarters",
+                        options=["Q1", "Q2", "Q3"],
+                        default=["Q1", "Q2", "Q3"],
+                        key="single_quarter_quarters"
+                    )
 
-                if end_year < start_year:
-                    st.error("❌ End year must be greater than or equal to start year.")
-                elif (end_year - start_year + 1) < 3:
-                    st.error(f"❌ Range must include at least 3 years.")
+                # Build year-quarter combinations
+                quarters = []
+                for y in sorted(selected_years, reverse=True):
+                    for q in ["Q3", "Q2", "Q1"]:  # Reverse order for recent first
+                        if q in selected_quarters:
+                            quarters.append(f"{y}-{q}")
+
+                if multi_year_required and len(quarters) < 3:
+                    st.error(f"❌ Please select at least 3 quarter periods. You selected {len(quarters)}.")
+                    quarters = None
+                elif len(quarters) == 0:
+                    st.error("❌ Please select at least one year and quarter.")
+                    quarters = None
                 else:
-                    years = list(range(end_year, start_year - 1, -1))
-                    st.info(f"📅 Will analyze {len(years)} years: {start_year} to {end_year}")
+                    st.info(f"📅 Will analyze {len(quarters)} quarters: {', '.join(quarters[:6])}{'...' if len(quarters) > 6 else ''}")
+                    # Convert to years for now (backend will handle quarter logic)
+                    years = sorted(set(selected_years), reverse=True)
+
+        elif filing_periodicity == 'event':
+            # EVENT-BASED FILING SELECTION (8-K, etc.)
+            st.markdown("Event filings are filed when material events occur. Select how many recent filings to analyze.")
+
+            if multi_year_required:
+                st.warning("⚠️ This analysis type requires multiple filings (minimum 3).")
+
+            min_filings = 3 if multi_year_required else 1
+            num_filings = st.slider(
+                "Number of recent filings",
+                min_value=min_filings, max_value=20, value=max(5, min_filings),
+                key="single_num_event_filings"
+            )
+            num_years = num_filings  # We'll use this to pass the count
+            st.info(f"📅 Will analyze the {num_filings} most recent {filing_type} filings")
 
         else:
-            year_mode = st.radio(
-                "Selection Method",
-                options=["Single Year", "Last N Years", "Specific Years", "Year Range"],
-                horizontal=True,
-                key="single_flex_year_mode"
-            )
+            # ANNUAL FILING SELECTION (10-K, 20-F, etc.)
+            if multi_year_required:
+                st.warning("⚠️ This analysis type requires multiple years of data (minimum 3 years).")
 
-            if year_mode == "Single Year":
-                specific_year = st.number_input("Select Year", min_value=1995, max_value=current_year, value=current_year, key="single_year")
-                years = [specific_year]
-                st.info(f"📅 Will analyze fiscal year {specific_year}")
-
-            elif year_mode == "Last N Years":
-                num_years = st.slider("Number of recent years", min_value=1, max_value=15, value=3, key="single_flex_num_years")
-                preview_years = list(range(current_year, current_year - num_years, -1))
-                st.info(f"📅 Will analyze: {', '.join(map(str, preview_years))}")
-
-            elif year_mode == "Specific Years":
-                years_input = st.text_input(
-                    "Enter years (comma-separated)",
-                    value=f"{current_year}, {current_year-1}, {current_year-2}",
-                    key="single_flex_specific_years"
+                year_mode = st.radio(
+                    "Selection Method",
+                    options=["Last N Years", "Specific Years", "Year Range"],
+                    horizontal=True,
+                    key="single_multi_year_mode"
                 )
-                try:
-                    years = [int(y.strip()) for y in years_input.split(',') if y.strip()]
-                    years = sorted(years, reverse=True)
-                    if len(years) == 0:
-                        st.error("❌ Please enter at least 1 year.")
+
+                if year_mode == "Last N Years":
+                    num_years = st.slider("Number of recent years", min_value=3, max_value=15, value=5, key="single_num_years")
+                    preview_years = list(range(current_year, current_year - num_years, -1))
+                    st.info(f"📅 Will analyze: {', '.join(map(str, preview_years))}")
+
+                elif year_mode == "Specific Years":
+                    years_input = st.text_input(
+                        "Enter years (comma-separated)",
+                        value=f"{current_year}, {current_year-1}, {current_year-2}, {current_year-3}, {current_year-4}",
+                        key="single_specific_years"
+                    )
+                    try:
+                        years = [int(y.strip()) for y in years_input.split(',') if y.strip()]
+                        years = sorted(years, reverse=True)
+                        if len(years) < 3:
+                            st.error(f"❌ Please enter at least 3 years. You entered {len(years)}.")
+                            years = None
+                        else:
+                            st.info(f"📅 Will analyze {len(years)} years: {', '.join(map(str, years))}")
+                    except ValueError:
+                        st.error("❌ Invalid year format.")
                         years = None
+
+                else:  # Year Range
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        start_year = st.number_input("From Year", min_value=1995, max_value=current_year, value=current_year - 4, key="single_start_year")
+                    with col2:
+                        end_year = st.number_input("To Year", min_value=1995, max_value=current_year, value=current_year, key="single_end_year")
+
+                    if end_year < start_year:
+                        st.error("❌ End year must be greater than or equal to start year.")
+                    elif (end_year - start_year + 1) < 3:
+                        st.error(f"❌ Range must include at least 3 years.")
                     else:
-                        st.info(f"📅 Will analyze {len(years)} year{'s' if len(years) > 1 else ''}: {', '.join(map(str, years))}")
-                except ValueError:
-                    st.error("❌ Invalid year format.")
-                    years = None
+                        years = list(range(end_year, start_year - 1, -1))
+                        st.info(f"📅 Will analyze {len(years)} years: {start_year} to {end_year}")
 
-            else:  # Year Range
-                col1, col2 = st.columns(2)
-                with col1:
-                    start_year = st.number_input("From Year", min_value=1995, max_value=current_year, value=current_year - 2, key="single_flex_start_year")
-                with col2:
-                    end_year = st.number_input("To Year", min_value=1995, max_value=current_year, value=current_year, key="single_flex_end_year")
+            else:
+                year_mode = st.radio(
+                    "Selection Method",
+                    options=["Single Year", "Last N Years", "Specific Years", "Year Range"],
+                    horizontal=True,
+                    key="single_flex_year_mode"
+                )
 
-                if end_year < start_year:
-                    st.error("❌ End year must be greater than or equal to start year.")
-                else:
-                    years = list(range(end_year, start_year - 1, -1))
-                    st.info(f"📅 Will analyze {len(years)} years: {start_year} to {end_year}")
+                if year_mode == "Single Year":
+                    specific_year = st.number_input("Select Year", min_value=1995, max_value=current_year, value=current_year, key="single_year")
+                    years = [specific_year]
+                    st.info(f"📅 Will analyze fiscal year {specific_year}")
+
+                elif year_mode == "Last N Years":
+                    num_years = st.slider("Number of recent years", min_value=1, max_value=15, value=3, key="single_flex_num_years")
+                    preview_years = list(range(current_year, current_year - num_years, -1))
+                    st.info(f"📅 Will analyze: {', '.join(map(str, preview_years))}")
+
+                elif year_mode == "Specific Years":
+                    years_input = st.text_input(
+                        "Enter years (comma-separated)",
+                        value=f"{current_year}, {current_year-1}, {current_year-2}",
+                        key="single_flex_specific_years"
+                    )
+                    try:
+                        years = [int(y.strip()) for y in years_input.split(',') if y.strip()]
+                        years = sorted(years, reverse=True)
+                        if len(years) == 0:
+                            st.error("❌ Please enter at least 1 year.")
+                            years = None
+                        else:
+                            st.info(f"📅 Will analyze {len(years)} year{'s' if len(years) > 1 else ''}: {', '.join(map(str, years))}")
+                    except ValueError:
+                        st.error("❌ Invalid year format.")
+                        years = None
+
+                else:  # Year Range
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        start_year = st.number_input("From Year", min_value=1995, max_value=current_year, value=current_year - 2, key="single_flex_start_year")
+                    with col2:
+                        end_year = st.number_input("To Year", min_value=1995, max_value=current_year, value=current_year, key="single_flex_end_year")
+
+                    if end_year < start_year:
+                        st.error("❌ End year must be greater than or equal to start year.")
+                    else:
+                        years = list(range(end_year, start_year - 1, -1))
+                        st.info(f"📅 Will analyze {len(years)} years: {start_year} to {end_year}")
 
         # Advanced options
         with st.expander("⚙️ Advanced Options", expanded=False):
