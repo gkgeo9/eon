@@ -13,7 +13,11 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
-from fintel.core import get_config, get_logger
+from fintel.core import (
+    get_config, get_logger,
+    DownloadError, ConversionError, ExtractionError,
+    AnalysisError, AIProviderError, RateLimitError, ValidationError
+)
 from fintel.ai import APIKeyManager, RateLimiter
 from fintel.data.sources.sec import SECDownloader, SECConverter, PDFExtractor
 from fintel.analysis.fundamental import FundamentalAnalyzer
@@ -46,6 +50,8 @@ class AnalysisService:
         self.logger = get_logger(__name__)
 
         # Initialize shared components
+        # APIKeyManager and RateLimiter now use the persistent APIUsageTracker
+        # which stores usage data in JSON files for accurate cross-process tracking
         self.api_key_manager = APIKeyManager(self.config.google_api_keys)
         self.rate_limiter = RateLimiter()
         self.downloader = SECDownloader()
@@ -189,8 +195,50 @@ class AnalysisService:
             self.db.update_run_status(run_id, 'completed')
             self.logger.info(f"Analysis completed successfully: {run_id}")
 
+        except DownloadError as e:
+            error_msg = f"Download failed: {str(e)}"
+            self.logger.error(error_msg)
+            self.db.update_run_status(run_id, 'failed', error_msg)
+            raise
+
+        except ConversionError as e:
+            error_msg = f"PDF conversion failed: {str(e)}"
+            self.logger.error(error_msg)
+            self.db.update_run_status(run_id, 'failed', error_msg)
+            raise
+
+        except ExtractionError as e:
+            error_msg = f"Text extraction failed: {str(e)}"
+            self.logger.error(error_msg)
+            self.db.update_run_status(run_id, 'failed', error_msg)
+            raise
+
+        except AIProviderError as e:
+            error_msg = f"AI analysis failed: {str(e)}"
+            self.logger.error(error_msg)
+            self.db.update_run_status(run_id, 'failed', error_msg)
+            raise
+
+        except RateLimitError as e:
+            error_msg = f"Rate limit exceeded: {str(e)}"
+            self.logger.error(error_msg)
+            self.db.update_run_status(run_id, 'failed', error_msg)
+            raise
+
+        except ValidationError as e:
+            error_msg = f"Validation error: {str(e)}"
+            self.logger.error(error_msg)
+            self.db.update_run_status(run_id, 'failed', error_msg)
+            raise
+
+        except ValueError as e:
+            error_msg = f"Invalid configuration: {str(e)}"
+            self.logger.error(error_msg)
+            self.db.update_run_status(run_id, 'failed', error_msg)
+            raise
+
         except Exception as e:
-            error_msg = f"Analysis failed: {str(e)}"
+            error_msg = f"Unexpected error: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             self.db.update_run_status(run_id, 'failed', error_msg)
             raise
@@ -802,27 +850,36 @@ class AnalysisService:
                 )
                 full_prompt = f"{prompt}\n\nHere's the filing content:\n\n{text}"
 
-                # Run analysis via Gemini
-                api_key = self.api_key_manager.get_least_used_key()
-                provider = GeminiProvider(
-                    api_key=api_key,
-                    model=self.config.default_model,
-                    thinking_budget=self.config.thinking_budget,
-                    rate_limiter=self.rate_limiter
-                )
+                # Reserve API key atomically for parallel safety
+                api_key = self.api_key_manager.reserve_key()
+                if not api_key:
+                    self.logger.error("No API keys available for custom workflow")
+                    continue
 
-                result = provider.generate_with_retry(
-                    prompt=full_prompt,
-                    schema=workflow.schema,
-                    max_retries=3,
-                    retry_delay=10
-                )
+                try:
+                    provider = GeminiProvider(
+                        api_key=api_key,
+                        model=self.config.default_model,
+                        thinking_budget=self.config.thinking_budget,
+                        rate_limiter=self.rate_limiter
+                    )
 
-                self.api_key_manager.record_usage(api_key)
+                    result = provider.generate_with_retry(
+                        prompt=full_prompt,
+                        schema=workflow.schema,
+                        max_retries=3,
+                        retry_delay=10
+                    )
 
-                if result:
-                    results[year] = result
-                    self.logger.info(f"Completed {workflow.name} analysis for {ticker} {year}")
+                    self.api_key_manager.record_usage(api_key)
+
+                    if result:
+                        results[year] = result
+                        self.logger.info(f"Completed {workflow.name} analysis for {ticker} {year}")
+
+                finally:
+                    # Always release the key
+                    self.api_key_manager.release_key(api_key)
 
             except Exception as e:
                 self.logger.error(f"Failed to analyze {ticker} {year} with {workflow.name}: {e}")

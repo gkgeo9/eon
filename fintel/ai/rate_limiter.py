@@ -3,89 +3,100 @@
 """
 Rate limiting for API requests with mandatory sleep periods.
 
-Enforces Google Gemini API rate limits:
-- Maximum 500 requests per day per key
-- 65-second sleep after each request
+Uses the centralized API configuration and persistent usage tracker
+for accurate rate limiting across multiple processes.
 """
 
 import time
-from typing import Dict
+from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
+
 from fintel.core import get_logger
+from .api_config import get_api_limits, API_LIMITS
+from .usage_tracker import get_usage_tracker, APIUsageTracker
 
 
 class RateLimiter:
     """
     Rate limiter with mandatory sleep after each API request.
 
-    Based on legacy pattern from contrarian_evidence_based.py (SimpleAPITracker).
-    Enforces 65-second sleep AFTER every API call to avoid rate limits.
+    Features:
+    - Uses centralized API configuration from api_config.py
+    - Persistent usage tracking via APIUsageTracker
+    - Thread-safe for parallel execution
+    - Mandatory sleep after each request for rate limit compliance
 
     Example:
-        limiter = RateLimiter(sleep_after_request=65, max_requests_per_day=500)
+        limiter = RateLimiter()
 
         # After making an API call:
-        limiter.record_and_sleep(api_key)  # Records usage and sleeps 65 seconds
+        limiter.record_and_sleep(api_key)  # Records usage and sleeps
     """
 
     def __init__(
         self,
-        sleep_after_request: int = 65,
-        max_requests_per_day: int = 500
+        sleep_after_request: Optional[int] = None,
+        tracker: Optional[APIUsageTracker] = None
     ):
         """
         Initialize the rate limiter.
 
         Args:
-            sleep_after_request: Seconds to sleep after each request (default: 65)
-            max_requests_per_day: Maximum requests per day per key (default: 500)
+            sleep_after_request: Override for sleep duration (uses config default if None)
+            tracker: Optional custom usage tracker (uses global singleton if not provided)
         """
-        self.sleep_after_request = sleep_after_request
-        self.max_requests_per_day = max_requests_per_day
+        self.limits = get_api_limits()
+        self.tracker = tracker or get_usage_tracker()
 
-        # Track usage per key: {key: {date: count}}
-        self.usage: Dict[str, Dict[str, int]] = {}
+        # Use provided sleep time or fall back to config
+        self.sleep_after_request = (
+            sleep_after_request if sleep_after_request is not None
+            else self.limits.SLEEP_AFTER_REQUEST
+        )
 
         self.logger = get_logger(f"{__name__}.RateLimiter")
         self.logger.info(
             f"Initialized rate limiter "
-            f"(sleep={sleep_after_request}s, limit={max_requests_per_day}/day)"
+            f"(sleep={self.sleep_after_request}s, limit={self.limits.DAILY_LIMIT_PER_KEY}/key/day)"
         )
 
-    def record_and_sleep(self, api_key: str):
+    def record_and_sleep(self, api_key: str, error: bool = False):
         """
         Record API usage and sleep for the configured duration.
 
         This is the MANDATORY pattern after every API call:
-        1. Record the usage
-        2. Sleep for configured seconds (default 65)
+        1. Record the usage to persistent storage
+        2. Sleep for configured seconds (default from api_config.py)
 
         Args:
             api_key: The API key that was just used
+            error: Whether the request resulted in an error
 
         Note:
             This method ALWAYS sleeps, regardless of usage count.
-            This matches the legacy pattern to ensure rate limit compliance.
+            This ensures rate limit compliance.
         """
-        # Initialize tracking for this key if needed
-        if api_key not in self.usage:
-            self.usage[api_key] = {}
+        # Record usage to persistent tracker
+        self.tracker.record_request(api_key, error=error)
 
-        today = datetime.now().strftime('%Y-%m-%d')
+        # Get current status for logging
+        usage_today = self.tracker.get_usage_today(api_key)
+        remaining = self.tracker.get_remaining_today(api_key)
 
-        if today not in self.usage[api_key]:
-            self.usage[api_key][today] = 0
-
-        self.usage[api_key][today] += 1
-
-        usage_today = self.usage[api_key][today]
-        remaining = self.max_requests_per_day - usage_today
-
+        # Only log last 4 characters of API key for security
+        key_suffix = api_key[-4:] if len(api_key) >= 4 else "****"
         self.logger.info(
-            f"API call recorded for key {api_key[:10]}... "
-            f"(usage today: {usage_today}/{self.max_requests_per_day}, "
+            f"API call recorded for key ...{key_suffix} "
+            f"(usage today: {usage_today}/{self.limits.DAILY_LIMIT_PER_KEY}, "
             f"remaining: {remaining})"
         )
+
+        # Warn if near limit
+        if self.tracker.is_near_limit(api_key):
+            self.logger.warning(
+                f"Key ...{key_suffix} is approaching daily limit! "
+                f"Only {remaining} requests remaining."
+            )
 
         # MANDATORY sleep after every request
         if self.sleep_after_request > 0:
@@ -102,13 +113,7 @@ class RateLimiter:
         Returns:
             True if under daily limit, False otherwise
         """
-        if api_key not in self.usage:
-            return True
-
-        today = datetime.now().strftime('%Y-%m-%d')
-        usage_today = self.usage.get(api_key, {}).get(today, 0)
-
-        return usage_today < self.max_requests_per_day
+        return self.tracker.can_make_request(api_key)
 
     def get_usage_today(self, api_key: str) -> int:
         """
@@ -120,8 +125,7 @@ class RateLimiter:
         Returns:
             Number of requests made today
         """
-        today = datetime.now().strftime('%Y-%m-%d')
-        return self.usage.get(api_key, {}).get(today, 0)
+        return self.tracker.get_usage_today(api_key)
 
     def get_remaining_today(self, api_key: str) -> int:
         """
@@ -133,8 +137,7 @@ class RateLimiter:
         Returns:
             Number of requests remaining today
         """
-        usage_today = self.get_usage_today(api_key)
-        return max(0, self.max_requests_per_day - usage_today)
+        return self.tracker.get_remaining_today(api_key)
 
     def wait_for_reset(self) -> int:
         """
@@ -149,7 +152,7 @@ class RateLimiter:
         """
         try:
             import pytz
-            pst = pytz.timezone('America/Los_Angeles')
+            pst = pytz.timezone(self.limits.RESET_TIMEZONE)
             now_pst = datetime.now(pst)
 
             # Calculate next midnight PST
@@ -176,37 +179,24 @@ class RateLimiter:
                 midnight = midnight + timedelta(days=1)
             return int((midnight - now).total_seconds())
 
-    def reset_usage(self, api_key: str = None):
-        """
-        Reset usage tracking (mainly for testing).
-
-        Args:
-            api_key: Specific key to reset, or None to reset all
-        """
-        if api_key:
-            if api_key in self.usage:
-                self.usage[api_key] = {}
-                self.logger.info(f"Reset usage for key {api_key[:10]}...")
-        else:
-            self.usage = {}
-            self.logger.info("Reset usage for all keys")
-
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> Dict[str, Any]:
         """
         Get rate limiting statistics.
 
         Returns:
-            Dictionary with sleep duration and max requests
+            Dictionary with rate limiter configuration and status
         """
         return {
             'sleep_after_request': self.sleep_after_request,
-            'max_requests_per_day': self.max_requests_per_day,
-            'total_keys_tracked': len(self.usage)
+            'daily_limit_per_key': self.limits.DAILY_LIMIT_PER_KEY,
+            'requests_per_minute': self.limits.REQUESTS_PER_MINUTE,
+            'warning_threshold': self.limits.WARNING_THRESHOLD,
+            'reset_timezone': self.limits.RESET_TIMEZONE,
         }
 
     def __repr__(self) -> str:
         """String representation."""
         return (
             f"RateLimiter(sleep={self.sleep_after_request}s, "
-            f"limit={self.max_requests_per_day}/day)"
+            f"limit={self.limits.DAILY_LIMIT_PER_KEY}/key/day)"
         )

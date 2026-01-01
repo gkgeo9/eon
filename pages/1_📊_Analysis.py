@@ -70,12 +70,21 @@ if 'last_queried_ticker' not in st.session_state:
 if 'filing_types_loading' not in st.session_state:
     st.session_state.filing_types_loading = False
 
+if 'ticker_last_changed' not in st.session_state:
+    st.session_state.ticker_last_changed = 0.0
+
+# Debounce delay for auto-querying filing types (seconds)
+FILING_TYPES_DEBOUNCE_DELAY = 1.5
+
 # Batch-specific session state
 if 'batch_run_ids' not in st.session_state:
     st.session_state.batch_run_ids = []
 
 if 'batch_monitoring' not in st.session_state:
     st.session_state.batch_monitoring = False
+
+if 'batch_errors' not in st.session_state:
+    st.session_state.batch_errors = {}
 
 
 def get_available_filing_types(ticker: str, db: DatabaseRepository) -> list:
@@ -115,31 +124,44 @@ def run_analysis_background(service, params, run_id_key='current_run_id'):
         st.session_state[run_id_key] = None
 
 
-def run_single_analysis_thread(service, config, run_ids_list, ticker):
+def run_single_analysis_thread(service, config, run_ids_list, run_ids_lock, ticker, errors_dict, errors_lock):
     """Run a single analysis in a thread (for batch processing)."""
     try:
         run_id = service.run_analysis(**config)
-        run_ids_list.append(run_id)
+        with run_ids_lock:
+            run_ids_list.append(run_id)
     except Exception as e:
-        st.session_state[f'batch_error_{ticker}'] = str(e)
+        with errors_lock:
+            errors_dict[ticker] = str(e)
 
 
 def run_batch_analysis_background(service, ticker_configs):
     """Submit multiple analyses to run in parallel background threads."""
     run_ids = []
+    run_ids_lock = threading.Lock()
+    errors = {}
+    errors_lock = threading.Lock()
     threads = []
 
     for config in ticker_configs:
         thread = threading.Thread(
             target=run_single_analysis_thread,
-            args=(service, config, run_ids, config['ticker']),
+            args=(service, config, run_ids, run_ids_lock, config['ticker'], errors, errors_lock),
             daemon=True
         )
         thread.start()
         threads.append(thread)
         time.sleep(0.1)  # Small delay to avoid overwhelming the system
 
-    st.session_state.batch_run_ids = run_ids
+    # Wait for all threads to at least start their runs (give them a bit of time)
+    for thread in threads:
+        thread.join(timeout=2.0)
+
+    # Copy to session state (thread-safe copy)
+    with run_ids_lock:
+        st.session_state.batch_run_ids = list(run_ids)
+    with errors_lock:
+        st.session_state.batch_errors = dict(errors)
 
 
 # Page content
@@ -166,6 +188,12 @@ if st.session_state.batch_monitoring:
     if len(st.session_state.batch_run_ids) > 0:
         st.markdown(f"**{len(st.session_state.batch_run_ids)} analyses submitted**")
 
+    # Show any batch errors
+    if st.session_state.batch_errors:
+        with st.expander(f"⚠️ {len(st.session_state.batch_errors)} error(s) during submission", expanded=False):
+            for ticker, error in st.session_state.batch_errors.items():
+                st.error(f"**{ticker}:** {error}")
+
     st.session_state.batch_monitoring = False
 
     col1, col2 = st.columns(2)
@@ -175,6 +203,7 @@ if st.session_state.batch_monitoring:
     with col2:
         if st.button("➕ Start New Batch", width="stretch", key="batch_new"):
             st.session_state.batch_run_ids = []
+            st.session_state.batch_errors = {}
             st.rerun()
 
 # Check if we're monitoring a running analysis (single mode)
@@ -293,12 +322,21 @@ else:
                 else:
                     st.warning("Please enter a ticker first")
 
-        # Auto-query filing types if ticker changed
+        # Auto-query filing types if ticker changed (with debounce)
         if ticker and ticker != st.session_state.last_queried_ticker:
-            with st.spinner(f"Fetching available filing types for {ticker}..."):
-                filing_types = get_available_filing_types(ticker, st.session_state.db)
-                st.session_state.available_filing_types = filing_types
-                st.session_state.last_queried_ticker = ticker
+            # Track when ticker changed for debounce
+            if st.session_state.get('pending_ticker') != ticker:
+                st.session_state.pending_ticker = ticker
+                st.session_state.ticker_last_changed = time.time()
+
+            # Only query if enough time has passed since last change (debounce)
+            time_since_change = time.time() - st.session_state.ticker_last_changed
+            if time_since_change >= FILING_TYPES_DEBOUNCE_DELAY:
+                with st.spinner(f"Fetching available filing types for {ticker}..."):
+                    filing_types = get_available_filing_types(ticker, st.session_state.db)
+                    st.session_state.available_filing_types = filing_types
+                    st.session_state.last_queried_ticker = ticker
+                    st.session_state.pending_ticker = None
 
         # Build analysis type options including custom workflows
         builtin_options = [

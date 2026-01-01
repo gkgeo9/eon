@@ -180,28 +180,37 @@ Return ONLY a valid JSON object with NO additional text before or after.
             company_data_str = json.dumps(success_data, indent=2)
             prompt = self.CONTRARIAN_PROMPT.format(company_data=company_data_str)
 
-            # Get API key and provider
-            api_key = self.api_key_manager.get_next_key()
-            provider = GeminiProvider(
-                api_key=api_key,
-                rate_limiter=self.rate_limiter
-            )
-
-            # Perform contrarian analysis
-            result = provider.generate(
-                prompt=prompt,
-                schema=ContrarianAnalysis
-            )
-
-            if result:
-                logger.info(
-                    f"Contrarian analysis complete for {ticker} "
-                    f"(alpha score: {result.overall_alpha_score})"
-                )
-                return result
-            else:
-                logger.warning(f"Failed contrarian analysis for {ticker}")
+            # Reserve API key atomically for parallel safety
+            api_key = self.api_key_manager.reserve_key()
+            if not api_key:
+                logger.error(f"No API keys available for {ticker}")
                 return None
+
+            try:
+                provider = GeminiProvider(
+                    api_key=api_key,
+                    rate_limiter=self.rate_limiter
+                )
+
+                # Perform contrarian analysis
+                result = provider.generate(
+                    prompt=prompt,
+                    schema=ContrarianAnalysis
+                )
+
+                if result:
+                    logger.info(
+                        f"Contrarian analysis complete for {ticker} "
+                        f"(alpha score: {result.overall_alpha_score})"
+                    )
+                    return result
+                else:
+                    logger.warning(f"Failed contrarian analysis for {ticker}")
+                    return None
+
+            finally:
+                # Always release the key
+                self.api_key_manager.release_key(api_key)
 
         except Exception as e:
             logger.error(f"Error scanning {ticker}: {e}")

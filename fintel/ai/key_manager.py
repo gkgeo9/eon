@@ -1,26 +1,37 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-API key management with round-robin rotation and usage tracking.
+API key management with intelligent key selection and persistent usage tracking.
+
+Uses the APIUsageTracker for persistent, thread-safe usage tracking across
+multiple processes and sessions.
 """
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from datetime import datetime
 
 from fintel.core import get_logger, ConfigurationError
+from .api_config import get_api_limits
+from .usage_tracker import get_usage_tracker, APIUsageTracker
 
 
 class APIKeyManager:
     """
-    Manages multiple API keys with round-robin rotation and usage tracking.
+    Manages multiple API keys with intelligent selection and persistent usage tracking.
+
+    Features:
+    - Persistent usage tracking via JSON files (survives restarts)
+    - Thread-safe for parallel execution
+    - Intelligent key selection (least-used strategy)
+    - Configurable daily limits via api_config.py
 
     Example:
         manager = APIKeyManager(["key1", "key2", "key3"])
 
-        # Get next available key
-        key = manager.get_next_key()
+        # Get best available key (least used)
+        key = manager.get_least_used_key()
 
-        # Record usage
+        # Record usage (automatically done by RateLimiter)
         manager.record_usage(key)
 
         # Check usage
@@ -30,14 +41,14 @@ class APIKeyManager:
     def __init__(
         self,
         api_keys: List[str],
-        max_requests_per_day: int = 500
+        tracker: Optional[APIUsageTracker] = None
     ):
         """
         Initialize the API key manager.
 
         Args:
             api_keys: List of API keys to manage
-            max_requests_per_day: Maximum requests per day per key
+            tracker: Optional custom usage tracker (uses global singleton if not provided)
 
         Raises:
             ConfigurationError: If no API keys provided
@@ -45,17 +56,25 @@ class APIKeyManager:
         if not api_keys:
             raise ConfigurationError("No API keys provided")
 
-        self.api_keys = list(api_keys)  # Make a copy
-        self.max_requests_per_day = max_requests_per_day
+        # Filter out empty keys
+        self.api_keys = [k for k in api_keys if k and k.strip()]
+
+        if not self.api_keys:
+            raise ConfigurationError("All provided API keys are empty")
+
+        self.limits = get_api_limits()
+        self.tracker = tracker or get_usage_tracker()
         self.current_index = 0
 
-        # Track usage per key: {key: {date: count}}
-        self.usage: Dict[str, Dict[str, int]] = {
-            key: {} for key in self.api_keys
-        }
-
         self.logger = get_logger(f"{__name__}.APIKeyManager")
-        self.logger.info(f"Initialized with {len(self.api_keys)} API keys")
+        self.logger.info(
+            f"Initialized with {len(self.api_keys)} API keys "
+            f"(daily limit: {self.limits.DAILY_LIMIT_PER_KEY}/key)"
+        )
+
+        # Log initial status
+        available = len(self.get_available_keys())
+        self.logger.info(f"Keys available today: {available}/{len(self.api_keys)}")
 
     def get_next_key(self) -> str:
         """
@@ -65,125 +84,141 @@ class APIKeyManager:
             API key string
 
         Note:
-            This uses simple round-robin. For more sophisticated
-            load balancing, consider usage-based selection.
+            For better load balancing, use get_least_used_key() instead.
         """
         key = self.api_keys[self.current_index]
         self.current_index = (self.current_index + 1) % len(self.api_keys)
         return key
 
-    def get_least_used_key(self) -> str:
+    def get_least_used_key(self) -> Optional[str]:
         """
         Get the API key with the least usage today.
 
         Returns:
-            API key string with lowest usage
+            API key string with lowest usage, or None if all exhausted
 
         Note:
-            More sophisticated than round-robin for better
-            load distribution.
+            For parallel/batch operations, use reserve_key() instead
+            to prevent race conditions where multiple threads get the same key.
         """
-        today = datetime.now().strftime('%Y-%m-%d')
+        key = self.tracker.get_least_used_key(self.api_keys)
 
-        # Find key with minimum usage today
-        min_usage = float('inf')
-        best_key = self.api_keys[0]
+        if key is None:
+            self.logger.error(
+                f"All {len(self.api_keys)} API keys have reached their daily limit "
+                f"of {self.limits.DAILY_LIMIT_PER_KEY} requests!"
+            )
+            # Try to return any key as last resort (let the API return the error)
+            return self.api_keys[0] if self.api_keys else None
 
-        for key in self.api_keys:
-            usage_today = self.usage[key].get(today, 0)
-            if usage_today < min_usage:
-                min_usage = usage_today
-                best_key = key
+        return key
 
-        return best_key
+    def reserve_key(self) -> Optional[str]:
+        """
+        Atomically reserve and return the best available API key.
 
-    def record_usage(self, api_key: str, count: int = 1):
+        This is the RECOMMENDED method for parallel/batch operations.
+        It ensures each thread gets a unique key by using atomic reservation.
+
+        Returns:
+            Reserved API key, or None if no keys available
+
+        Note:
+            MUST call release_key() after the request is complete!
+        """
+        key = self.tracker.reserve_and_get_key(self.api_keys)
+
+        if key is None:
+            self.logger.error(
+                f"No API keys available! All {len(self.api_keys)} keys are either "
+                f"reserved by other threads or have reached their daily limit."
+            )
+
+        return key
+
+    def release_key(self, api_key: str):
+        """
+        Release a previously reserved API key.
+
+        Must be called after reserve_key() when the request is complete.
+
+        Args:
+            api_key: The API key to release
+        """
+        self.tracker.release_key(api_key)
+
+    def record_usage(self, api_key: str, error: bool = False):
         """
         Record API usage for a key.
 
         Args:
             api_key: The API key that was used
-            count: Number of requests made (default: 1)
+            error: Whether the request resulted in an error
         """
-        if api_key not in self.usage:
-            self.logger.warning(f"Unknown API key: {api_key[:10]}...")
+        if api_key not in self.api_keys:
+            key_id = api_key[-4:] if len(api_key) >= 4 else "****"
+            self.logger.warning(f"Unknown API key: ...{key_id}")
             return
 
-        today = datetime.now().strftime('%Y-%m-%d')
+        self.tracker.record_request(api_key, error=error)
 
-        if today not in self.usage[api_key]:
-            self.usage[api_key][today] = 0
-
-        self.usage[api_key][today] += count
-
-        self.logger.debug(
-            f"Recorded {count} request(s) for key {api_key[:10]}... "
-            f"(total today: {self.usage[api_key][today]})"
-        )
+        # Log warning if near limit
+        if self.tracker.is_near_limit(api_key):
+            key_id = api_key[-4:] if len(api_key) >= 4 else "****"
+            remaining = self.tracker.get_remaining_today(api_key)
+            self.logger.warning(
+                f"Key ...{key_id} is near daily limit! "
+                f"Remaining: {remaining}/{self.limits.DAILY_LIMIT_PER_KEY}"
+            )
 
     def get_usage_today(self, api_key: str) -> int:
-        """
-        Get usage count for a key today.
-
-        Args:
-            api_key: The API key to check
-
-        Returns:
-            Number of requests made today
-        """
-        today = datetime.now().strftime('%Y-%m-%d')
-        return self.usage.get(api_key, {}).get(today, 0)
+        """Get usage count for a key today."""
+        return self.tracker.get_usage_today(api_key)
 
     def can_make_request(self, api_key: str) -> bool:
-        """
-        Check if a key can make another request today.
-
-        Args:
-            api_key: The API key to check
-
-        Returns:
-            True if under daily limit, False otherwise
-        """
-        usage_today = self.get_usage_today(api_key)
-        return usage_today < self.max_requests_per_day
+        """Check if a key can make another request today."""
+        return self.tracker.can_make_request(api_key)
 
     def get_available_keys(self) -> List[str]:
-        """
-        Get list of keys that haven't hit daily limit.
+        """Get list of keys that haven't hit daily limit."""
+        return self.tracker.get_available_keys(self.api_keys)
 
-        Returns:
-            List of available API keys
+    def get_usage_stats(self) -> Dict[str, Dict[str, Any]]:
         """
-        return [
-            key for key in self.api_keys
-            if self.can_make_request(key)
-        ]
-
-    def get_usage_stats(self) -> Dict[str, Dict[str, int]]:
-        """
-        Get usage statistics for all keys.
+        Get comprehensive usage statistics for all keys.
 
         Returns:
             Dictionary with usage stats per key
         """
-        today = datetime.now().strftime('%Y-%m-%d')
-        stats = {}
+        return self.tracker.get_all_usage_stats(self.api_keys)
 
-        for key in self.api_keys:
-            key_short = f"{key[:10]}..."
-            usage_today = self.get_usage_today(key)
-            remaining = self.max_requests_per_day - usage_today
+    def get_summary(self) -> Dict[str, Any]:
+        """
+        Get a summary of current API key status.
 
-            stats[key_short] = {
-                'used_today': usage_today,
-                'remaining': remaining,
-                'limit': self.max_requests_per_day,
-                'percentage_used': round(
-                    (usage_today / self.max_requests_per_day) * 100, 1
-                )
-            }
+        Returns:
+            Dictionary with summary statistics
+        """
+        stats = self.get_usage_stats()
+        total_keys = len(self.api_keys)
+        available_keys = len(self.get_available_keys())
+        exhausted_keys = total_keys - available_keys
 
-        return stats
+        total_used = sum(s['used_today'] for s in stats.values())
+        total_capacity = total_keys * self.limits.DAILY_LIMIT_PER_KEY
+        total_remaining = total_capacity - total_used
+
+        return {
+            'total_keys': total_keys,
+            'available_keys': available_keys,
+            'exhausted_keys': exhausted_keys,
+            'daily_limit_per_key': self.limits.DAILY_LIMIT_PER_KEY,
+            'total_capacity': total_capacity,
+            'total_used_today': total_used,
+            'total_remaining_today': total_remaining,
+            'utilization_percent': round((total_used / total_capacity) * 100, 1) if total_capacity > 0 else 0,
+            'keys_near_limit': sum(1 for s in stats.values() if s['near_limit']),
+        }
 
     def reset_usage(self, api_key: Optional[str] = None):
         """
@@ -193,11 +228,9 @@ class APIKeyManager:
             api_key: Specific key to reset, or None to reset all
         """
         if api_key:
-            self.usage[api_key] = {}
-            self.logger.info(f"Reset usage for key {api_key[:10]}...")
+            self.tracker.reset_key_usage(api_key)
         else:
-            self.usage = {key: {} for key in self.api_keys}
-            self.logger.info("Reset usage for all keys")
+            self.tracker.reset_all_usage()
 
     @property
     def total_keys(self) -> int:
@@ -209,9 +242,15 @@ class APIKeyManager:
         """Number of keys still available today."""
         return len(self.get_available_keys())
 
+    @property
+    def daily_limit(self) -> int:
+        """Daily limit per key."""
+        return self.limits.DAILY_LIMIT_PER_KEY
+
     def __repr__(self) -> str:
         """String representation."""
         return (
             f"APIKeyManager(keys={self.total_keys}, "
-            f"available={self.available_keys_count})"
+            f"available={self.available_keys_count}, "
+            f"limit={self.daily_limit}/key/day)"
         )

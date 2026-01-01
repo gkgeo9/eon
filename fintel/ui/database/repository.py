@@ -364,6 +364,76 @@ class DatabaseRepository:
             })
         return results
 
+    def get_existing_results(
+        self,
+        ticker: str,
+        analysis_type: str,
+        years: List[int],
+        filing_type: str = "10-K",
+        max_age_days: int = 30
+    ) -> Dict[int, Dict[str, Any]]:
+        """
+        Check for existing completed results for specific years.
+
+        Used for caching - skip re-analyzing years we already have recent results for.
+
+        Args:
+            ticker: Company ticker
+            analysis_type: Type of analysis
+            years: List of years to check
+            filing_type: Filing type
+            max_age_days: Maximum age of cached results in days
+
+        Returns:
+            Dictionary mapping year to result data for years with existing results
+        """
+        if not years:
+            return {}
+
+        placeholders = ",".join("?" * len(years))
+        query = f"""
+            SELECT
+                r.fiscal_year,
+                r.result_type,
+                r.result_json,
+                ar.completed_at
+            FROM analysis_results r
+            JOIN analysis_runs ar ON r.run_id = ar.run_id
+            WHERE
+                ar.ticker = ?
+                AND ar.analysis_type = ?
+                AND ar.filing_type = ?
+                AND ar.status = 'completed'
+                AND r.fiscal_year IN ({placeholders})
+                AND julianday('now') - julianday(ar.completed_at) <= ?
+            ORDER BY ar.completed_at DESC
+        """
+
+        params = [ticker.upper(), analysis_type, filing_type] + years + [max_age_days]
+
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(query, params)
+
+                # Get most recent result per year
+                results = {}
+                for row in cursor.fetchall():
+                    year = row['fiscal_year']
+                    if year not in results:  # Keep first (most recent) result
+                        results[year] = {
+                            'year': year,
+                            'type': row['result_type'],
+                            'data': json.loads(row['result_json']),
+                            'cached_at': row['completed_at']
+                        }
+
+                return results
+        except Exception as e:
+            logger.warning(f"Error checking for existing results: {e}")
+            return {}
+
     def get_latest_result_for_ticker(
         self,
         ticker: str,
@@ -744,3 +814,89 @@ class DatabaseRepository:
                 updated_at = CURRENT_TIMESTAMP
         """
         self._execute_with_retry(query, (key, str(value)))
+
+    # ==================== API Usage Tracking ====================
+
+    def record_api_usage(self, api_key: str, count: int = 1) -> None:
+        """
+        Record API usage for a key.
+
+        Args:
+            api_key: The API key (will be masked to last 4 chars)
+            count: Number of requests to record (default: 1)
+        """
+        key_suffix = api_key[-4:] if len(api_key) >= 4 else "****"
+        today = datetime.utcnow().strftime('%Y-%m-%d')
+
+        query = """
+            INSERT INTO api_usage (api_key_suffix, usage_date, request_count, updated_at)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(api_key_suffix, usage_date) DO UPDATE SET
+                request_count = request_count + ?,
+                updated_at = CURRENT_TIMESTAMP
+        """
+        self._execute_with_retry(query, (key_suffix, today, count, count))
+
+    def get_api_usage_today(self, api_key: str = None) -> int:
+        """
+        Get API usage count for today.
+
+        Args:
+            api_key: Optional specific key (masked to last 4 chars). If None, returns total.
+
+        Returns:
+            Number of API calls today
+        """
+        today = datetime.utcnow().strftime('%Y-%m-%d')
+
+        if api_key:
+            key_suffix = api_key[-4:] if len(api_key) >= 4 else "****"
+            query = "SELECT request_count FROM api_usage WHERE api_key_suffix = ? AND usage_date = ?"
+            cursor = self._execute_with_retry(query, (key_suffix, today))
+            row = cursor.fetchone()
+            return row[0] if row else 0
+        else:
+            query = "SELECT SUM(request_count) FROM api_usage WHERE usage_date = ?"
+            cursor = self._execute_with_retry(query, (today,))
+            row = cursor.fetchone()
+            return row[0] if row and row[0] else 0
+
+    def get_api_usage_history(self, days: int = 30) -> pd.DataFrame:
+        """
+        Get API usage history.
+
+        Args:
+            days: Number of days to look back (default: 30)
+
+        Returns:
+            DataFrame with columns: api_key_suffix, usage_date, request_count
+        """
+        query = """
+            SELECT api_key_suffix, usage_date, request_count
+            FROM api_usage
+            WHERE usage_date >= DATE('now', ?)
+            ORDER BY usage_date DESC, api_key_suffix
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            return pd.read_sql(query, conn, params=(f'-{days} days',))
+
+    def get_api_usage_summary(self) -> pd.DataFrame:
+        """
+        Get API usage summary by key.
+
+        Returns:
+            DataFrame with columns: api_key_suffix, total_requests, first_used, last_used
+        """
+        query = """
+            SELECT
+                api_key_suffix,
+                SUM(request_count) as total_requests,
+                MIN(usage_date) as first_used,
+                MAX(usage_date) as last_used,
+                COUNT(DISTINCT usage_date) as days_active
+            FROM api_usage
+            GROUP BY api_key_suffix
+            ORDER BY total_requests DESC
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            return pd.read_sql(query, conn)

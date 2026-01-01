@@ -142,14 +142,26 @@ class FintelConfig(BaseSettings):
         # Load API keys from environment if not provided
         if not self.google_api_keys:
             keys = []
-            for i in range(1, 26):  # Try to load up to 25 keys
+            # Load unlimited keys: GOOGLE_API_KEY_1, GOOGLE_API_KEY_2, ...
+            # Keep looking until we find 5 consecutive gaps in numbering
+            i = 1
+            max_gap = 5  # Allow up to 5 gaps in numbering
+            gap_count = 0
+            while gap_count < max_gap:
                 key = os.getenv(f"GOOGLE_API_KEY_{i}")
-                if key and key not in keys:
-                    keys.append(key)
+                if key and key.strip() and key.strip() not in keys:
+                    keys.append(key.strip())
+                    gap_count = 0  # Reset gap counter when we find a key
+                elif not key or not key.strip():
+                    gap_count += 1
+                i += 1
+                # Safety limit to prevent infinite loop (support up to 200 keys)
+                if i > 200:
+                    break
             # Also check for single GOOGLE_API_KEY
             single_key = os.getenv("GOOGLE_API_KEY")
-            if single_key and single_key not in keys:
-                keys.append(single_key)
+            if single_key and single_key.strip() and single_key.strip() not in keys:
+                keys.append(single_key.strip())
             self.google_api_keys = keys
 
         # Validate configuration

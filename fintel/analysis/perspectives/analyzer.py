@@ -314,19 +314,18 @@ class PerspectiveAnalyzer:
         Returns:
             Validated Pydantic model instance
         """
-        try:
-            # Get least-used API key
-            api_key = self.api_key_manager.get_least_used_key()
+        # Reserve a key atomically to prevent race conditions in batch processing
+        api_key = self.api_key_manager.reserve_key()
 
-            if not self.rate_limiter.can_make_request(api_key):
-                self.logger.warning(
-                    f"API key {api_key[:10]}... hit daily limit. "
-                    f"Trying next available..."
-                )
-                available_keys = self.api_key_manager.get_available_keys()
-                if not available_keys:
-                    raise AnalysisError("All API keys hit daily limits")
-                api_key = available_keys[0]
+        if api_key is None:
+            raise AnalysisError(
+                "No API keys available! All keys are either in use by other threads "
+                "or have reached their daily limits."
+            )
+
+        try:
+            key_suffix = api_key[-4:] if len(api_key) >= 4 else "****"
+            self.logger.debug(f"Using reserved API key: ...{key_suffix}")
 
             # Create provider with rate limiter
             provider = GeminiProvider(
@@ -352,6 +351,10 @@ class PerspectiveAnalyzer:
         except Exception as e:
             self.logger.error(f"AI analysis failed: {e}")
             raise AnalysisError(f"AI analysis failed: {e}") from e
+
+        finally:
+            # Always release the key, even on error
+            self.api_key_manager.release_key(api_key)
 
     def _save_result(
         self,

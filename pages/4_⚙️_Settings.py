@@ -34,12 +34,13 @@ st.markdown("Inspect cached data, analysis runs, and database statistics")
 st.markdown("---")
 
 # Tab selection
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Analysis Runs",
     "📄 Analysis Results",
     "📁 File Cache",
     "📝 Custom Prompts",
-    "📈 Statistics"
+    "📈 Statistics",
+    "🔑 API Usage"
 ])
 
 # Tab 1: Analysis Runs
@@ -604,6 +605,189 @@ with tab5:
 
         counts_df = pd.DataFrame(list(counts.items()), columns=['Table', 'Rows'])
         st.dataframe(counts_df, width="stretch", hide_index=True)
+
+# Tab 6: API Usage
+with tab6:
+    st.subheader("API Usage Tracking")
+    st.markdown("Monitor API usage across all configured keys (persistent JSON-based tracking)")
+
+    # Import the new API usage tracking system
+    from fintel.core import get_config
+    from fintel.ai import get_api_limits, get_usage_tracker, APIKeyManager
+
+    config = get_config()
+    limits = get_api_limits()
+    tracker = get_usage_tracker()
+
+    # Configuration info
+    st.markdown("#### Configuration")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Daily Limit/Key", limits.DAILY_LIMIT_PER_KEY)
+    with col2:
+        st.metric("Sleep After Request", f"{limits.SLEEP_AFTER_REQUEST}s")
+    with col3:
+        st.metric("Warning Threshold", f"{int(limits.WARNING_THRESHOLD * 100)}%")
+    with col4:
+        st.metric("Total API Keys", len(config.google_api_keys))
+
+    st.caption(f"*Edit limits in: `fintel/ai/api_config.py`*")
+    st.markdown("---")
+
+    # Get usage for all configured keys
+    if config.google_api_keys:
+        api_key_manager = APIKeyManager(config.google_api_keys)
+        usage_stats = api_key_manager.get_usage_stats()
+        summary = api_key_manager.get_summary()
+
+        # Summary metrics
+        st.markdown("#### Today's Summary")
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric("Total Used Today", summary['total_used_today'])
+        with col2:
+            st.metric("Total Remaining", summary['total_remaining_today'])
+        with col3:
+            st.metric("Keys Available", f"{summary['available_keys']}/{summary['total_keys']}")
+        with col4:
+            st.metric("Utilization", f"{summary['utilization_percent']}%")
+
+        if summary['exhausted_keys'] > 0:
+            st.warning(f"{summary['exhausted_keys']} API key(s) have reached their daily limit!")
+
+        if summary['keys_near_limit'] > 0:
+            st.info(f"{summary['keys_near_limit']} API key(s) are approaching their daily limit (>{int(limits.WARNING_THRESHOLD * 100)}%)")
+
+        st.markdown("---")
+
+        # Per-key usage table
+        st.markdown("#### Usage by API Key")
+
+        if usage_stats:
+            # Convert to DataFrame for display
+            usage_data = []
+            for key_id, stats in usage_stats.items():
+                status = "Exhausted" if not stats['can_make_request'] else ("Near Limit" if stats['near_limit'] else "Available")
+                status_emoji = {"Exhausted": "🔴", "Near Limit": "🟡", "Available": "🟢"}[status]
+                usage_data.append({
+                    'Key': key_id,
+                    'Status': f"{status_emoji} {status}",
+                    'Used Today': stats['used_today'],
+                    'Remaining': stats['remaining_today'],
+                    'Limit': stats['daily_limit'],
+                    'Usage %': f"{stats['percentage_used']}%",
+                    'Errors Today': stats['errors_today'],
+                    'Total Requests': stats['total_requests'],
+                    'Last Used': stats['last_used'][:19] if stats['last_used'] else 'Never',
+                })
+
+            usage_df = pd.DataFrame(usage_data)
+            st.dataframe(
+                usage_df,
+                width="stretch",
+                hide_index=True,
+                column_config={
+                    "Key": st.column_config.TextColumn("Key (last 4)", width="small"),
+                    "Status": st.column_config.TextColumn("Status", width="small"),
+                    "Used Today": st.column_config.NumberColumn("Used Today", width="small"),
+                    "Remaining": st.column_config.NumberColumn("Remaining", width="small"),
+                    "Limit": st.column_config.NumberColumn("Limit", width="small"),
+                    "Usage %": st.column_config.TextColumn("Usage %", width="small"),
+                    "Errors Today": st.column_config.NumberColumn("Errors", width="small"),
+                    "Total Requests": st.column_config.NumberColumn("All-Time", width="small"),
+                    "Last Used": st.column_config.TextColumn("Last Used", width="medium"),
+                }
+            )
+
+        st.markdown("---")
+
+        # Visual progress bars for each key
+        st.markdown("#### Key Status (Visual)")
+
+        for key_id, stats in usage_stats.items():
+            pct = stats['percentage_used'] / 100.0
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.progress(min(pct, 1.0), text=f"{key_id}: {stats['used_today']}/{stats['daily_limit']}")
+            with col2:
+                if not stats['can_make_request']:
+                    st.markdown("**🔴 Exhausted**")
+                elif stats['near_limit']:
+                    st.markdown("**🟡 Near Limit**")
+                else:
+                    st.markdown("**🟢 Available**")
+
+        st.markdown("---")
+
+        # Usage history for individual keys
+        st.markdown("#### Usage History (Last 7 Days)")
+
+        # Let user select a key to view history
+        key_options = list(usage_stats.keys())
+        if key_options:
+            selected_key_display = st.selectbox("Select Key", options=key_options, key="history_key_select")
+
+            # Find the actual key
+            selected_key = None
+            for key in config.google_api_keys:
+                if f"...{key[-4:]}" == selected_key_display:
+                    selected_key = key
+                    break
+
+            if selected_key:
+                history = tracker.get_usage_history(selected_key, days=7)
+                if history:
+                    history_df = pd.DataFrame(history)
+                    st.bar_chart(history_df.set_index('date')['request_count'])
+
+                    with st.expander("View Raw History Data"):
+                        st.dataframe(history_df, width="stretch", hide_index=True)
+
+        st.markdown("---")
+
+        # Actions
+        st.markdown("#### Actions")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("Refresh Usage Data", width="stretch"):
+                st.rerun()
+
+        with col2:
+            if st.button("Reset All Usage Data", type="secondary", width="stretch"):
+                if st.session_state.get('confirm_reset_usage', False):
+                    tracker.reset_all_usage()
+                    st.success("All usage data has been reset!")
+                    st.session_state.confirm_reset_usage = False
+                    st.rerun()
+                else:
+                    st.session_state.confirm_reset_usage = True
+                    st.warning("Click again to confirm reset")
+
+        # Data location info
+        st.markdown("---")
+        st.caption(f"**Usage data location:** `{tracker.usage_dir}`")
+        st.caption("Each API key's usage is stored in a separate JSON file for parallel-safe tracking.")
+
+    else:
+        st.warning("No API keys configured. Add keys to your `.env` file:")
+        st.code("""
+GOOGLE_API_KEY_1=your_first_key
+GOOGLE_API_KEY_2=your_second_key
+GOOGLE_API_KEY_3=your_third_key
+# ... up to unlimited keys
+        """)
+
+        st.markdown("---")
+        st.markdown("""
+        **How API usage tracking works:**
+        - Each API key has its own JSON file for usage data
+        - Usage is tracked per key per day with timestamps
+        - File locking ensures safe parallel access
+        - Daily limits are enforced (configurable in `fintel/ai/api_config.py`)
+        - Least-used key is automatically selected for each request
+        """)
 
 # Navigation
 st.markdown("---")

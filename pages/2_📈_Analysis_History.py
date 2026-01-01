@@ -5,6 +5,7 @@ Analysis History Page - View and manage past analyses.
 """
 
 import streamlit as st
+import time
 from datetime import date, timedelta
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.theme import apply_theme
@@ -186,7 +187,16 @@ else:
 
                     st.caption(f"Started: {pd.to_datetime(run_details['started_at']).strftime('%Y-%m-%d %H:%M:%S') if run_details.get('started_at') else 'N/A'}")
 
-        if st.button("🔄 Refresh Progress", width="stretch"):
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button("🔄 Refresh Now", width="stretch"):
+                st.rerun()
+        with col2:
+            auto_refresh = st.checkbox("Auto-refresh (5s)", value=True, key="auto_refresh_running")
+
+        # Auto-refresh when running analyses exist
+        if auto_refresh:
+            time.sleep(5)
             st.rerun()
 
         st.markdown("---")

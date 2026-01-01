@@ -287,11 +287,18 @@ class _BaseSuccessAnalyzer:
         if not self.OUTPUT_MODEL:
             raise ValueError("OUTPUT_MODEL not set in subclass")
 
-        try:
-            # Get least-used API key
-            api_key = self.api_key_manager.get_least_used_key()
+        # Reserve a key atomically to prevent race conditions in batch processing
+        api_key = self.api_key_manager.reserve_key()
 
-            self.logger.debug(f"Using API key: {api_key[:10]}...")
+        if api_key is None:
+            raise AnalysisError(
+                "No API keys available! All keys are either in use by other threads "
+                "or have reached their daily limits."
+            )
+
+        try:
+            key_suffix = api_key[-4:] if len(api_key) >= 4 else "****"
+            self.logger.debug(f"Using reserved API key: ...{key_suffix}")
 
             # Create provider with rate limiter
             provider = GeminiProvider(
@@ -317,6 +324,10 @@ class _BaseSuccessAnalyzer:
         except Exception as e:
             self.logger.error(f"AI analysis failed: {e}")
             raise AnalysisError(f"AI analysis failed: {e}") from e
+
+        finally:
+            # Always release the key, even on error
+            self.api_key_manager.release_key(api_key)
 
     def _save_result(
         self,
