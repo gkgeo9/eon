@@ -195,3 +195,34 @@ def flatten_for_csv(data: Dict[str, Any]) -> pd.DataFrame:
         Flattened DataFrame
     """
     return pd.json_normalize(data)
+
+
+def format_all_years_text(results: list, ticker: str) -> str:
+    """
+    Format all years of analysis results into a single text document.
+
+    Args:
+        results: List of result dictionaries with 'year', 'type', and 'data' keys
+        ticker: Stock ticker symbol
+
+    Returns:
+        Formatted text with all years' analyses
+    """
+    sections = []
+
+    for result in results:
+        year = result.get('year', 'Unknown')
+        result_type = result.get('type', 'Analysis')
+        data = result.get('data', {})
+
+        # Format year label
+        year_label = "Multi-Year" if year == 0 else str(year)
+
+        # Generate the markdown report for this year
+        report = generate_markdown_report(data, result_type)
+
+        # Add year header and report
+        section = f"{'=' * 60}\n{year_label} {ticker} Analysis ({result_type})\n{'=' * 60}\n\n{report}"
+        sections.append(section)
+
+    return "\n\n".join(sections)

@@ -7,7 +7,7 @@ Results display components for Streamlit.
 import streamlit as st
 import json
 from typing import Dict, Any, List
-from fintel.ui.utils.formatting import generate_markdown_report, flatten_for_csv
+from fintel.ui.utils.formatting import generate_markdown_report, flatten_for_csv, format_all_years_text
 
 
 def display_results(run_details: Dict[str, Any], results: List[Dict[str, Any]]):
@@ -55,6 +55,21 @@ def display_results(run_details: Dict[str, Any], results: List[Dict[str, Any]]):
     else:
         st.subheader(f"Year: {selected_year}")
 
+    # Copy All Years expander (only show if multiple years)
+    if len(results) > 1:
+        with st.expander("📋 Copy All Years"):
+            copy_tab1, copy_tab2 = st.tabs(["Formatted Text", "JSON"])
+            with copy_tab1:
+                all_formatted = format_all_years_text(results, ticker)
+                st.code(all_formatted, language=None)
+            with copy_tab2:
+                all_json = json.dumps(
+                    {r['year']: r['data'] for r in results},
+                    indent=2,
+                    default=str
+                )
+                st.code(all_json, language='json')
+
     result_type = result_data['type']
     data = result_data['data']
 
@@ -71,7 +86,7 @@ def display_results(run_details: Dict[str, Any], results: List[Dict[str, Any]]):
 
     with tab3:
         # Export options
-        display_export_options(data, result_type, ticker, selected_year)
+        display_export_options(data, result_type, ticker, selected_year, results)
 
 
 def display_formatted_view(data: Dict[str, Any], result_type: str):
@@ -462,9 +477,9 @@ def _display_scanner_formatted(data: Dict):
         st.markdown(data.get('catalyst_timeline', 'N/A'))
 
 
-def display_export_options(data: Dict[str, Any], result_type: str, ticker: str, year: int):
+def display_export_options(data: Dict[str, Any], result_type: str, ticker: str, year: int, all_results: List[Dict[str, Any]] = None):
     """Display export options."""
-    st.subheader("Export Options")
+    st.subheader("Export Current Year")
 
     col1, col2, col3 = st.columns(3)
 
@@ -501,3 +516,41 @@ def display_export_options(data: Dict[str, Any], result_type: str, ticker: str, 
             mime="text/markdown",
             width="stretch"
         )
+
+    # Download All Years section (only show if multiple years)
+    if all_results and len(all_results) > 1:
+        st.markdown("---")
+        st.subheader("Download All Years")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # All years as JSON
+            all_data = {r['year']: r['data'] for r in all_results}
+            all_json = json.dumps(all_data, indent=2, default=str)
+            st.download_button(
+                label="📥 Download All (JSON)",
+                data=all_json,
+                file_name=f"{ticker}_all_years.json",
+                mime="application/json",
+                width="stretch"
+            )
+
+        with col2:
+            # All years as formatted text
+            all_text = format_all_years_text(all_results, ticker)
+            st.download_button(
+                label="📥 Download All (Text)",
+                data=all_text,
+                file_name=f"{ticker}_all_years.txt",
+                mime="text/plain",
+                width="stretch"
+            )
+
+        # Copy All section in Export tab
+        with st.expander("📋 Copy All Years"):
+            copy_tab1, copy_tab2 = st.tabs(["Formatted Text", "JSON"])
+            with copy_tab1:
+                st.code(format_all_years_text(all_results, ticker), language=None)
+            with copy_tab2:
+                st.code(json.dumps({r['year']: r['data'] for r in all_results}, indent=2, default=str), language='json')
