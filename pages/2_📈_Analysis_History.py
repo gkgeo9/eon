@@ -153,7 +153,7 @@ else:
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
             "Analysis": st.column_config.TextColumn("Analysis Type", width="medium"),
-            "Status": st.column_config.TextColumn("Status", width="small"),
+            "Status": st.column_config.TextColumn("Status", width="medium"),
             "Start Time": st.column_config.TextColumn("Started", width="medium"),
             "End Time": st.column_config.TextColumn("Completed", width="medium"),
             "Duration": st.column_config.TextColumn("Duration", width="small"),
@@ -200,6 +200,68 @@ else:
             st.rerun()
 
         st.markdown("---")
+
+    # Check for interrupted runs
+    from fintel.ui.services.analysis_service import AnalysisService
+    import threading
+
+    analysis_service = AnalysisService(db)
+    interrupted_runs = analysis_service.get_interrupted_runs(stale_minutes=5)
+
+    if interrupted_runs:
+        st.subheader("⚠️ Interrupted Analyses")
+        st.markdown("These analyses appear to have been interrupted and can be resumed.")
+
+        for run in interrupted_runs:
+            with st.container():
+                col1, col2, col3 = st.columns([3, 1, 1])
+
+                with col1:
+                    completed = len(run['completed_years'])
+                    total = len(run['years_analyzed'])
+                    remaining = len(run['remaining_years'])
+
+                    st.markdown(f"""
+                    **{run['ticker']}** - {run['analysis_type'].capitalize()} ({run['filing_type']})
+                    - Progress: {completed}/{total} years completed
+                    - Remaining: {run['remaining_years']}
+                    - Last activity: {run['last_activity_at'] or 'Unknown'}
+                    """)
+
+                    if run['progress_percent']:
+                        st.progress(run['progress_percent'] / 100.0)
+
+                with col2:
+                    resume_key = f"resume_{run['run_id']}"
+                    if st.button("▶️ Resume", key=resume_key, type="primary"):
+                        st.session_state[f'resuming_{run["run_id"]}'] = True
+                        st.info(f"Resuming analysis for {run['ticker']}...")
+
+                        # Run resume in background thread
+                        def resume_in_background(run_id):
+                            try:
+                                analysis_service.resume_analysis(run_id)
+                            except Exception as e:
+                                print(f"Resume error: {e}")
+
+                        thread = threading.Thread(
+                            target=resume_in_background,
+                            args=(run['run_id'],),
+                            daemon=True
+                        )
+                        thread.start()
+                        time.sleep(1)
+                        st.rerun()
+
+                with col3:
+                    cancel_key = f"cancel_{run['run_id']}"
+                    if st.button("❌ Cancel", key=cancel_key, type="secondary"):
+                        db.mark_run_as_interrupted(run['run_id'])
+                        db.update_run_status(run['run_id'], 'failed', 'Cancelled by user')
+                        st.success("Analysis cancelled")
+                        st.rerun()
+
+                st.markdown("---")
 
     # Action selector
     st.subheader("Actions")

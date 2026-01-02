@@ -928,3 +928,275 @@ class AnalysisService:
             return True
 
         return False
+
+    def get_interrupted_runs(self, stale_minutes: int = 5) -> List[Dict[str, Any]]:
+        """
+        Get runs that appear to be interrupted.
+
+        Args:
+            stale_minutes: Consider run stale if no activity for this many minutes
+
+        Returns:
+            List of interrupted run details
+        """
+        return self.db.get_interrupted_runs(stale_minutes)
+
+    def resume_analysis(self, run_id: str) -> bool:
+        """
+        Resume an interrupted analysis from where it left off.
+
+        Args:
+            run_id: Run UUID to resume
+
+        Returns:
+            True if resumed successfully
+        """
+        # Get run details
+        details = self.db.get_run_details(run_id)
+        if not details:
+            self.logger.error(f"Run {run_id} not found")
+            return False
+
+        # Check if can be resumed
+        if not self.db.prepare_for_resume(run_id):
+            self.logger.error(f"Run {run_id} cannot be resumed")
+            return False
+
+        try:
+            import json as json_module
+
+            ticker = details['ticker']
+            analysis_type = details['analysis_type']
+            filing_type = details['filing_type']
+            years = json_module.loads(details['years_analyzed']) if details['years_analyzed'] else []
+            completed_years = self.db.get_completed_years(run_id)
+            custom_prompt = None
+
+            # Get custom prompt from config if it exists
+            if details.get('config_json'):
+                config = json_module.loads(details['config_json'])
+                custom_prompt = config.get('custom_prompt')
+
+            # Calculate remaining years
+            remaining_years = [y for y in years if y not in completed_years]
+
+            if not remaining_years:
+                self.logger.info(f"Run {run_id} has no remaining years to analyze")
+                self.db.update_run_status(run_id, 'completed')
+                return True
+
+            self.logger.info(
+                f"Resuming {analysis_type} analysis for {ticker}: "
+                f"completed={completed_years}, remaining={remaining_years}"
+            )
+
+            # Download/retrieve filings for remaining years
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Resuming: downloading {filing_type} filings...",
+                progress_percent=10
+            )
+            pdf_paths = self._get_or_download_filings(ticker, filing_type, remaining_years, run_id)
+
+            if not pdf_paths:
+                raise ValueError(f"No filings found for remaining years: {remaining_years}")
+
+            # Run analysis for remaining years
+            if analysis_type == 'fundamental':
+                results = self._run_fundamental_analysis_with_tracking(
+                    ticker, pdf_paths, custom_prompt, run_id
+                )
+            elif analysis_type.startswith('custom:'):
+                workflow_id = analysis_type.replace('custom:', '')
+                results = self._run_custom_workflow_with_tracking(
+                    ticker, pdf_paths, workflow_id, run_id
+                )
+            else:
+                # For other analysis types, use original methods
+                # These don't support per-year resumption as well
+                results = self._run_analysis_by_type(
+                    analysis_type, ticker, pdf_paths, custom_prompt, run_id
+                )
+
+            # Store results
+            for year, result in results.items():
+                if result:
+                    self.db.store_result(
+                        run_id=run_id,
+                        ticker=ticker,
+                        fiscal_year=year,
+                        filing_type=filing_type,
+                        result_type=type(result).__name__,
+                        result_data=result.model_dump()
+                    )
+
+            self.db.update_run_status(run_id, 'completed')
+            self.logger.info(f"Resumed analysis completed: {run_id}")
+            return True
+
+        except Exception as e:
+            error_msg = f"Resume failed: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            self.db.update_run_status(run_id, 'failed', error_msg)
+            return False
+
+    def _run_analysis_by_type(
+        self,
+        analysis_type: str,
+        ticker: str,
+        pdf_paths: Dict[int, Path],
+        custom_prompt: Optional[str],
+        run_id: str
+    ) -> Dict[int, Any]:
+        """Run analysis based on type (helper for resume)."""
+        if analysis_type == 'fundamental':
+            return self._run_fundamental_analysis(ticker, pdf_paths, custom_prompt, run_id)
+        elif analysis_type == 'excellent':
+            return self._run_excellent_analysis(ticker, pdf_paths, run_id)
+        elif analysis_type == 'objective':
+            return self._run_objective_analysis(ticker, pdf_paths, run_id)
+        elif analysis_type == 'buffett':
+            return self._run_buffett_analysis(ticker, pdf_paths, run_id)
+        elif analysis_type == 'taleb':
+            return self._run_taleb_analysis(ticker, pdf_paths, run_id)
+        elif analysis_type == 'contrarian':
+            return self._run_contrarian_analysis(ticker, pdf_paths, run_id)
+        elif analysis_type == 'multi':
+            return self._run_multi_perspective(ticker, pdf_paths, run_id)
+        elif analysis_type == 'scanner':
+            return self._run_contrarian_scanner(ticker, pdf_paths, run_id)
+        else:
+            raise ValueError(f"Unknown analysis type: {analysis_type}")
+
+    def _run_fundamental_analysis_with_tracking(
+        self,
+        ticker: str,
+        pdf_paths: Dict[int, Path],
+        custom_prompt: Optional[str],
+        run_id: str
+    ) -> Dict[int, Any]:
+        """Run fundamental analyzer with per-year completion tracking."""
+        if not pdf_paths:
+            return {}
+
+        analyzer = FundamentalAnalyzer(
+            api_key_manager=self.api_key_manager,
+            rate_limiter=self.rate_limiter
+        )
+
+        results = {}
+        total_years = len(pdf_paths)
+
+        for idx, (year, pdf_path) in enumerate(sorted(pdf_paths.items(), reverse=True), 1):
+            self.logger.info(f"Analyzing {ticker} {year} (Fundamental)")
+
+            # Update progress and activity
+            progress_pct = 50 + int((idx / total_years) * 40)
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} (Fundamental)",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+            self.db.update_last_activity(run_id)
+
+            try:
+                result = analyzer.analyze_filing(
+                    pdf_path=pdf_path,
+                    ticker=ticker,
+                    year=year,
+                    custom_prompt=custom_prompt
+                )
+                if result:
+                    results[year] = result
+                    # Mark year as completed for resume tracking
+                    self.db.mark_year_completed(run_id, year)
+                    self.logger.info(f"Completed and tracked {ticker} {year}")
+
+            except Exception as e:
+                self.logger.error(f"Failed to analyze {ticker} {year}: {e}")
+                # Continue with other years
+
+        return results
+
+    def _run_custom_workflow_with_tracking(
+        self,
+        ticker: str,
+        pdf_paths: Dict[int, Path],
+        workflow_id: str,
+        run_id: str
+    ) -> Dict[int, Any]:
+        """Run custom workflow with per-year completion tracking."""
+        try:
+            from custom_workflows import get_workflow
+        except ImportError:
+            raise ValueError("Custom workflows module not available")
+
+        workflow_class = get_workflow(workflow_id)
+        if not workflow_class:
+            raise ValueError(f"Unknown custom workflow: {workflow_id}")
+
+        workflow = workflow_class()
+        workflow.validate_config(len(pdf_paths))
+
+        self.logger.info(f"Running custom workflow '{workflow.name}' for {ticker}")
+
+        from fintel.ai.providers.gemini import GeminiProvider
+
+        results = {}
+        total_years = len(pdf_paths)
+
+        for idx, (year, pdf_path) in enumerate(sorted(pdf_paths.items(), reverse=True), 1):
+            self.logger.info(f"Analyzing {ticker} {year} ({workflow.name})")
+
+            progress_pct = 50 + int((idx / total_years) * 40)
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Analyzing {ticker} {year} ({workflow.name})",
+                progress_percent=progress_pct,
+                current_step=f"Year {year}",
+                total_steps=total_years
+            )
+            self.db.update_last_activity(run_id)
+
+            try:
+                text = self.extractor.extract_text(pdf_path)
+                prompt = workflow.prompt_template.format(ticker=ticker, year=year)
+                full_prompt = f"{prompt}\n\nHere's the filing content:\n\n{text}"
+
+                api_key = self.api_key_manager.reserve_key()
+                if not api_key:
+                    self.logger.error("No API keys available")
+                    continue
+
+                try:
+                    provider = GeminiProvider(
+                        api_key=api_key,
+                        model=self.config.default_model,
+                        thinking_budget=self.config.thinking_budget,
+                        rate_limiter=self.rate_limiter
+                    )
+
+                    result = provider.generate_with_retry(
+                        prompt=full_prompt,
+                        schema=workflow.schema,
+                        max_retries=3,
+                        retry_delay=10
+                    )
+
+                    self.api_key_manager.record_usage(api_key)
+
+                    if result:
+                        results[year] = result
+                        self.db.mark_year_completed(run_id, year)
+                        self.logger.info(f"Completed {workflow.name} for {ticker} {year}")
+
+                finally:
+                    self.api_key_manager.release_key(api_key)
+
+            except Exception as e:
+                self.logger.error(f"Failed {ticker} {year}: {e}")
+                continue
+
+        return results

@@ -71,6 +71,7 @@ Desktop.ini
 # Project specific - Data
 /data/raw/
 /data/workflows/exports/
+/data/api_usage/
 **/pdfs/
 *.pdf
 
