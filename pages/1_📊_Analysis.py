@@ -748,15 +748,63 @@ else:
         # Default settings for batch
         st.subheader("Batch Settings")
 
+        # Build analysis type options including custom workflows (same as single mode)
+        batch_builtin_options = [
+            ("📋 Fundamental Analysis", "fundamental"),
+            ("⭐ Excellent Company Success Factors", "excellent"),
+            ("🎯 Objective Company Analysis", "objective"),
+            ("💰 Buffett Lens", "buffett"),
+            ("🛡️ Taleb Lens", "taleb"),
+            ("🔍 Contrarian Lens", "contrarian"),
+            ("🎭 Multi-Perspective", "multi"),
+            ("💎 Contrarian Scanner", "scanner"),
+        ]
+
+        # Get custom workflows
+        batch_custom_workflows = list_workflows()
+
+        # Build options list
+        batch_analysis_options = [opt[0] for opt in batch_builtin_options]
+
+        # Add custom workflows if any exist
+        if batch_custom_workflows:
+            batch_analysis_options.append("───── Custom Workflows ─────")
+            for wf in batch_custom_workflows:
+                batch_analysis_options.append(f"{wf['icon']} {wf['name']}")
+
         col1, col2 = st.columns(2)
 
         with col1:
-            batch_analysis_type = st.selectbox(
+            batch_analysis_type_display = st.selectbox(
                 "Analysis Type (applies to all)",
-                options=["fundamental", "excellent", "objective", "buffett", "taleb", "contrarian", "multi", "scanner"],
+                options=batch_analysis_options,
                 index=0,
                 key="batch_analysis_type"
             )
+
+            # Determine if this is a custom workflow
+            batch_is_custom_workflow = False
+            batch_custom_workflow_id = None
+            batch_custom_workflow_min_years = 1
+
+            # Map display name to internal type
+            batch_analysis_type_map = {opt[0]: opt[1] for opt in batch_builtin_options}
+
+            if batch_analysis_type_display in batch_analysis_type_map:
+                batch_analysis_type = batch_analysis_type_map[batch_analysis_type_display]
+            elif batch_analysis_type_display.startswith("─"):
+                # This is the separator, default to fundamental
+                batch_analysis_type = "fundamental"
+            else:
+                # This is a custom workflow
+                batch_is_custom_workflow = True
+                # Find the matching workflow
+                for wf in batch_custom_workflows:
+                    if f"{wf['icon']} {wf['name']}" == batch_analysis_type_display:
+                        batch_custom_workflow_id = wf['id']
+                        batch_custom_workflow_min_years = wf['min_years']
+                        break
+                batch_analysis_type = f"custom:{batch_custom_workflow_id}"
 
         with col2:
             batch_filing_type = st.selectbox(
@@ -766,10 +814,36 @@ else:
                 key="batch_filing_type"
             )
 
+        # Show analysis type description
+        batch_analysis_descriptions = {
+            "fundamental": "📋 Analyzes business model, financials, risks, and key strategies.",
+            "excellent": "⭐ Multi-year analysis for proven winners - identifies what made excellent companies succeed. **Requires at least 3 years**.",
+            "objective": "🎯 Multi-year unbiased analysis - objective assessment of any company's strengths and weaknesses. **Requires at least 3 years**.",
+            "buffett": "💰 Warren Buffett perspective: economic moat, management quality, pricing power, and intrinsic value.",
+            "taleb": "🛡️ Nassim Taleb perspective: fragility assessment, tail risks, and antifragility.",
+            "contrarian": "🔍 Contrarian perspective: variant perception, hidden opportunities, and market mispricings.",
+            "multi": "🎭 Combined analysis through all three investment lenses: Buffett, Taleb, and Contrarian.",
+            "scanner": "💎 Six-dimension scoring system (0-600 scale) to identify companies with hidden compounder potential. **Requires at least 3 years**."
+        }
+
+        if batch_is_custom_workflow and batch_custom_workflow_id:
+            # Get description from custom workflow
+            for wf in batch_custom_workflows:
+                if wf['id'] == batch_custom_workflow_id:
+                    min_years_note = f" **Requires at least {wf['min_years']} years**." if wf['min_years'] > 1 else ""
+                    st.info(f"{wf['icon']} {wf['description']}{min_years_note}")
+                    break
+        else:
+            if batch_analysis_type in batch_analysis_descriptions:
+                st.info(batch_analysis_descriptions[batch_analysis_type])
+
         # Year selection for batch
         st.subheader("Time Period (applies to all)")
 
         batch_multi_year_required = batch_analysis_type in ['excellent', 'objective', 'scanner']
+        # Also check custom workflow min_years requirement
+        if batch_is_custom_workflow and batch_custom_workflow_min_years >= 3:
+            batch_multi_year_required = True
         current_year = datetime.now().year
 
         batch_years = None
