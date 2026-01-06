@@ -104,7 +104,7 @@ def _process_single_company(
         logger.info(f"Analyzing {len(pdf_paths)} filings for {ticker}")
 
         # Create rate limiter for this worker
-        rate_limiter = RateLimiter(sleep_after_request=65, max_requests_per_day=500)
+        rate_limiter = RateLimiter(sleep_after_request=65)
 
         # Create single-key manager for this worker
         from fintel.ai.key_manager import APIKeyManager

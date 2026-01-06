@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field
 from fintel.core import get_logger, AnalysisError
 from fintel.ai import APIKeyManager, RateLimiter
 from fintel.ai.providers.gemini import GeminiProvider
-from fintel.analysis.fundamental import CompanySuccessAnalyzer
 
 logger = get_logger(__name__)
 
@@ -134,10 +133,6 @@ Return ONLY a valid JSON object with NO additional text before or after.
         """
         self.api_key_manager = api_key_manager
         self.rate_limiter = rate_limiter
-        self.success_analyzer = CompanySuccessAnalyzer(
-            api_key_manager=api_key_manager,
-            rate_limiter=rate_limiter
-        )
         logger.info("Initialized ContrarianScanner")
 
     def scan_company(
@@ -160,21 +155,17 @@ Return ONLY a valid JSON object with NO additional text before or after.
         try:
             logger.info(f"Scanning {ticker} for contrarian opportunities")
 
-            # Get success factors (either load or compute)
+            # Get success factors (must be pre-computed or loaded from file)
             if success_factors_path and success_factors_path.exists():
                 logger.debug(f"Loading success factors from {success_factors_path}")
                 with open(success_factors_path, "r") as f:
                     success_data = json.load(f)
             else:
-                logger.debug(f"Computing success factors for {ticker}")
-                success_factors = self.success_analyzer.analyze_success_factors(
-                    ticker=ticker,
-                    years=years
+                logger.error(
+                    f"No pre-computed success factors found for {ticker}. "
+                    f"Run success factor analysis first using CompanySuccessAnalyzer."
                 )
-                if not success_factors:
-                    logger.warning(f"Failed to compute success factors for {ticker}")
-                    return None
-                success_data = success_factors.model_dump()
+                return None
 
             # Create analysis prompt
             company_data_str = json.dumps(success_data, indent=2)
@@ -192,8 +183,8 @@ Return ONLY a valid JSON object with NO additional text before or after.
                     rate_limiter=self.rate_limiter
                 )
 
-                # Perform contrarian analysis
-                result = provider.generate(
+                # Perform contrarian analysis with retry
+                result = provider.generate_with_retry(
                     prompt=prompt,
                     schema=ContrarianAnalysis
                 )

@@ -114,14 +114,22 @@ def get_available_filing_types(ticker: str, db: DatabaseRepository) -> list:
         return ["10-K", "10-Q", "8-K", "4", "DEF 14A"]
 
 
-def run_analysis_background(service, params, run_id_key='current_run_id'):
-    """Run analysis in background thread and store run_id in session state."""
+def run_analysis_background(service, params, result_container):
+    """
+    Run analysis in background thread and store result in container.
+
+    Args:
+        service: AnalysisService instance
+        params: Analysis parameters
+        result_container: Dict to store {'run_id': str, 'error': str or None}
+    """
     try:
         run_id = service.run_analysis(**params)
-        st.session_state[run_id_key] = run_id
+        result_container['run_id'] = run_id
+        result_container['error'] = None
     except Exception as e:
-        st.session_state[f'{run_id_key}_error'] = str(e)
-        st.session_state[run_id_key] = None
+        result_container['run_id'] = None
+        result_container['error'] = str(e)
 
 
 def run_single_analysis_thread(service, config, run_ids_list, run_ids_lock, ticker, errors_dict, errors_lock):
@@ -135,8 +143,15 @@ def run_single_analysis_thread(service, config, run_ids_list, run_ids_lock, tick
             errors_dict[ticker] = str(e)
 
 
-def run_batch_analysis_background(service, ticker_configs):
-    """Submit multiple analyses to run in parallel background threads."""
+def run_batch_analysis_background(service, ticker_configs, result_container):
+    """
+    Submit multiple analyses to run in parallel background threads.
+
+    Args:
+        service: AnalysisService instance
+        ticker_configs: List of analysis config dicts
+        result_container: Dict to store {'run_ids': list, 'errors': dict}
+    """
     run_ids = []
     run_ids_lock = threading.Lock()
     errors = {}
@@ -157,11 +172,11 @@ def run_batch_analysis_background(service, ticker_configs):
     for thread in threads:
         thread.join(timeout=2.0)
 
-    # Copy to session state (thread-safe copy)
+    # Store results in container (no st.session_state access from thread)
     with run_ids_lock:
-        st.session_state.batch_run_ids = list(run_ids)
+        result_container['run_ids'] = list(run_ids)
     with errors_lock:
-        st.session_state.batch_errors = dict(errors)
+        result_container['errors'] = dict(errors)
 
 
 # Page content
@@ -670,17 +685,26 @@ else:
                         'company_name': company_name if company_name else None
                     }
 
+                    # Use a result container to avoid st.session_state access from thread
+                    result_container = {}
                     thread = threading.Thread(
                         target=run_analysis_background,
-                        args=(st.session_state.analysis_service, params),
+                        args=(st.session_state.analysis_service, params, result_container),
                         daemon=True
                     )
                     thread.start()
 
+                    # Wait briefly for thread to start and get run_id
+                    time.sleep(0.5)
+
+                    # Copy results to session state (main thread)
+                    st.session_state.current_run_id = result_container.get('run_id')
+                    if result_container.get('error'):
+                        st.session_state.current_run_id_error = result_container['error']
+
                     st.session_state.check_status = True
                     st.session_state.start_wait_count = 0
 
-                    time.sleep(0.5)
                     st.rerun()
 
     # ============== MULTIPLE COMPANIES MODE ==============
@@ -948,14 +972,21 @@ else:
             else:
                 st.info(f"Starting batch analysis for {len(configs)} companies...")
 
+                # Use a result container to avoid st.session_state access from thread
+                result_container = {}
                 thread = threading.Thread(
                     target=run_batch_analysis_background,
-                    args=(st.session_state.analysis_service, configs),
+                    args=(st.session_state.analysis_service, configs, result_container),
                     daemon=True
                 )
                 thread.start()
 
-                st.session_state.batch_monitoring = True
-
+                # Wait for threads to start
                 time.sleep(1)
+
+                # Copy results to session state (main thread)
+                st.session_state.batch_run_ids = result_container.get('run_ids', [])
+                st.session_state.batch_errors = result_container.get('errors', {})
+
+                st.session_state.batch_monitoring = True
                 st.rerun()

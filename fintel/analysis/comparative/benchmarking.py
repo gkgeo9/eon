@@ -198,10 +198,12 @@ class BenchmarkComparator:
         Returns:
             BenchmarkComparison model
         """
-        try:
-            # Get least-used API key
-            api_key = self.api_key_manager.get_least_used_key()
+        # Reserve API key atomically for parallel safety
+        api_key = self.api_key_manager.reserve_key()
+        if not api_key:
+            raise AnalysisError("No API keys available")
 
+        try:
             self.logger.debug(f"Using API key: {api_key[:10]}...")
 
             # Create provider with rate limiter
@@ -220,14 +222,15 @@ class BenchmarkComparator:
                 retry_delay=10
             )
 
-            # Record usage
-            self.api_key_manager.record_usage(api_key)
-
             return result
 
         except Exception as e:
             self.logger.error(f"AI analysis failed: {e}")
             raise AnalysisError(f"AI analysis failed: {e}") from e
+
+        finally:
+            # Always release the key
+            self.api_key_manager.release_key(api_key)
 
     def _save_result(self, result: BenchmarkComparison, output_file: Path):
         """

@@ -70,10 +70,15 @@ Desktop.ini
 
 # Project specific - Data
 /data/raw/
-/data/workflows/exports/
+/data/workflows/
 /data/api_usage/
 **/pdfs/
 *.pdf
+*.sql
+*.corrupted
+
+# Workflow JSON exports (user-generated)
+/workflows/
 
 # Project specific - Cache & Logs
 cache/

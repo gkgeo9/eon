@@ -143,13 +143,22 @@ class DatabaseRepository:
             status: New status (pending, running, completed, failed)
             error_message: Optional error message if failed
         """
+        now = datetime.utcnow().isoformat()
         if status == 'completed':
             query = """
                 UPDATE analysis_runs
-                SET status = ?, completed_at = ?, error_message = ?
+                SET status = ?, completed_at = ?, error_message = ?, last_activity_at = ?
                 WHERE run_id = ?
             """
-            self._execute_with_retry(query, (status, datetime.utcnow().isoformat(), error_message, run_id))
+            self._execute_with_retry(query, (status, now, error_message, now, run_id))
+        elif status == 'running':
+            # Set last_activity_at when transitioning to running
+            query = """
+                UPDATE analysis_runs
+                SET status = ?, error_message = ?, last_activity_at = ?
+                WHERE run_id = ?
+            """
+            self._execute_with_retry(query, (status, error_message, now, run_id))
         else:
             query = """
                 UPDATE analysis_runs
@@ -181,7 +190,8 @@ class DatabaseRepository:
             SET progress_message = ?,
                 progress_percent = ?,
                 current_step = ?,
-                total_steps = ?
+                total_steps = ?,
+                last_activity_at = ?
             WHERE run_id = ?
         """
         self._execute_with_retry(query, (
@@ -189,6 +199,7 @@ class DatabaseRepository:
             progress_percent,
             current_step,
             total_steps,
+            datetime.utcnow().isoformat(),
             run_id
         ))
 
@@ -703,13 +714,6 @@ class DatabaseRepository:
             VALUES (?, ?, ?)
         """
         self._execute_with_retry(query, (key, value, datetime.utcnow().isoformat()))
-
-    def get_setting(self, key: str, default: Optional[str] = None) -> Optional[str]:
-        """Get user setting."""
-        query = "SELECT value FROM user_settings WHERE key = ?"
-        cursor = self._execute_with_retry(query, (key,))
-        row = cursor.fetchone()
-        return row[0] if row else default
 
     # ==================== Resume Functionality ====================
 

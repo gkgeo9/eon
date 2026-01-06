@@ -103,7 +103,7 @@ class JSONStore(StorageBackend):
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            result = schema(**data)
+            result = schema.model_validate(data)
             logger.debug(f"Loaded data from {file_path}")
             return result
 

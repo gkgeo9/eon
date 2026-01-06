@@ -155,17 +155,13 @@ class RateLimiter:
             pst = pytz.timezone(self.limits.RESET_TIMEZONE)
             now_pst = datetime.now(pst)
 
-            # Calculate next midnight PST
-            midnight_pst = now_pst.replace(
+            # Calculate next midnight PST (always tomorrow since we're past midnight)
+            midnight_pst = (now_pst + timedelta(days=1)).replace(
                 hour=0, minute=0, second=1, microsecond=0
             )
 
-            # If we're past midnight today, use tomorrow's midnight
-            if now_pst.hour > 0 or now_pst.minute > 0:
-                midnight_pst = midnight_pst + timedelta(days=1)
-
             wait_seconds = int((midnight_pst - now_pst).total_seconds())
-            return wait_seconds
+            return max(0, wait_seconds)  # Ensure non-negative
 
         except ImportError:
             self.logger.warning(
@@ -174,10 +170,10 @@ class RateLimiter:
             )
             # Fallback to local timezone
             now = datetime.now()
-            midnight = now.replace(hour=0, minute=0, second=1, microsecond=0)
-            if now.hour > 0 or now.minute > 0:
-                midnight = midnight + timedelta(days=1)
-            return int((midnight - now).total_seconds())
+            midnight = (now + timedelta(days=1)).replace(
+                hour=0, minute=0, second=1, microsecond=0
+            )
+            return max(0, int((midnight - now).total_seconds()))
 
     def get_stats(self) -> Dict[str, Any]:
         """
