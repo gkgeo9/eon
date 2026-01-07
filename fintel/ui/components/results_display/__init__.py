@@ -1,16 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Enhanced results display components with modular formatters and UX improvements.
+Results display component.
+
+Routes to the legacy display implementation.
+Future work: Implement modular formatters.
 """
 
-from .formatters import BaseFormatter, FundamentalFormatter
-
-__all__ = [
-    'BaseFormatter',
-    'FundamentalFormatter',
-    'display_results',
-]
+__all__ = ['display_results']
 
 
 def display_results(run_details: dict, results: list):
