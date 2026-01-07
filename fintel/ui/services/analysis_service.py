@@ -100,11 +100,20 @@ class AnalysisService:
         run_id = str(uuid.uuid4())
 
         # Determine years to analyze
+        # Note: When num_years is specified, we'll request those years but be flexible
+        # about which ones are actually available (handled in _get_or_download_filings)
         if years is None and num_years:
             current_year = datetime.now().year
+            # Request from current year, but actual available years may differ
+            # (e.g., in early January, current year filings may not exist yet)
             years = list(range(current_year, current_year - num_years, -1))
         elif years is None:
-            years = [datetime.now().year]  # Default to current year
+            # Default to previous year since current year often not available
+            current_year = datetime.now().year
+            years = [current_year - 1]
+
+        # Store original requested count for flexible matching
+        requested_num_years = num_years
 
         self.logger.info(
             f"Starting {analysis_type} analysis for {ticker} "
@@ -250,20 +259,40 @@ class AnalysisService:
         ticker: str,
         filing_type: str,
         years: List[int],
-        run_id: str
+        run_id: str,
+        flexible_years: bool = True
     ) -> Dict[int, Path]:
         """
         Download filings or retrieve from cache.
 
+        This method is flexible about year matching:
+        - For annual filings (10-K, 20-F): Tries to match requested years, falls back to most recent
+        - For event-based filings (8-K, 4, DEF 14A): Uses most recent N filings regardless of year
+
         Args:
             ticker: Company ticker
-            filing_type: Filing type (10-K, 10-Q, etc.)
-            years: List of years
+            filing_type: Filing type (10-K, 10-Q, 8-K, etc.)
+            years: List of years to try (for annual filings) or implicit count (for event filings)
+            run_id: Analysis run ID for progress updates
+            flexible_years: If True, use available filings when requested years aren't found
 
         Returns:
-            Dictionary mapping year to PDF path
+            Dictionary mapping year to PDF path (year may be inferred from filing date)
         """
         pdf_paths = {}
+
+        # Determine if this is an annual filing or event-based
+        # Annual filings have one per year; event filings can have multiple per year
+        is_annual_filing = filing_type.upper() in ['10-K', '10-Q', '20-F', 'N-CSR', 'N-CSRS', '40-F', 'ARS']
+        is_quarterly_filing = filing_type.upper() in ['10-Q', '6-K']
+
+        self.logger.info(f"Filing type {filing_type} - Annual: {is_annual_filing}, Quarterly: {is_quarterly_filing}")
+
+        # For event-based filings, use count-based logic
+        if not is_annual_filing and not is_quarterly_filing:
+            return self._get_event_filings(ticker, filing_type, len(years), run_id)
+
+        # For annual/quarterly filings, try year-based matching
         years_to_download = []
 
         # First, check cache for all years
@@ -284,22 +313,22 @@ class AnalysisService:
             self.logger.info(f"Downloading {ticker} {filing_type} for years: {years_to_download}")
 
             # Download enough filings to cover all requested years
-            # Calculate how many filings we need (add buffer for safety)
-            max_year = max(years_to_download)
-            min_year = min(years_to_download)
-            current_year = datetime.now().year
-            years_back = current_year - min_year + 3  # Add 3 year buffer
-            num_filings = min(years_back, 20)  # Cap at 20 filings
+            # For annual filings: one per year, so download len(years) + buffer
+            # For quarterly: 4 per year, so download len(years) * 4 + buffer
+            num_to_request = len(years_to_download)
+            if is_quarterly_filing:
+                num_to_request = num_to_request * 4  # 4 quarters per year
+            num_to_request = min(num_to_request + 5, 20)  # Add buffer, cap at 20
 
             self.db.update_run_progress(
                 run_id,
-                progress_message=f"Downloading {num_filings} {filing_type} filings from SEC...",
+                progress_message=f"Downloading {num_to_request} {filing_type} filings from SEC...",
                 progress_percent=15
             )
 
             filing_dir = self.downloader.download(
                 ticker=ticker,
-                num_filings=num_filings,
+                num_filings=num_to_request,
                 filing_type=filing_type
             )
 
@@ -314,9 +343,6 @@ class AnalysisService:
             )
 
             # Convert to PDF - converter extracts year from accession number
-            # Organize PDFs by ticker: pdfs/{TICKER}/
-            # IMPORTANT: Create a new converter instance for each analysis to avoid
-            # browser state mixing when running parallel analyses
             ticker_pdf_path = self.config.get_data_path("pdfs") / ticker.upper()
             with SECConverter() as converter:
                 pdf_files = converter.convert(
@@ -332,7 +358,8 @@ class AnalysisService:
 
             # Build year->pdf mapping from converted files
             available_pdfs = {pdf_info['year']: pdf_info for pdf_info in pdf_files}
-            self.logger.info(f"Converted {len(pdf_files)} filings for {ticker}. Available years: {sorted(available_pdfs.keys())}")
+            available_years_sorted = sorted(available_pdfs.keys(), reverse=True)
+            self.logger.info(f"Converted {len(pdf_files)} {filing_type} filings for {ticker}. Available years: {available_years_sorted}")
 
             # Match requested years with available PDFs
             for year in years_to_download:
@@ -345,15 +372,122 @@ class AnalysisService:
                     self.db.cache_file(ticker, year, filing_type, str(pdf_path))
                     self.logger.info(f"Matched and cached {ticker} {year}: {pdf_path}")
                 else:
-                    self.logger.warning(
-                        f"No PDF found for {ticker} year {year}. "
-                        f"Available years: {sorted(available_pdfs.keys())}"
+                    self.logger.info(
+                        f"Year {year} not available for {ticker}. "
+                        f"Available years: {available_years_sorted}"
                     )
+
+            # Flexible matching: if we didn't find all requested years,
+            # fill in with the most recent available years we haven't used yet
+            if flexible_years and len(pdf_paths) < len(years):
+                needed_count = len(years) - len(pdf_paths)
+                already_used = set(pdf_paths.keys())
+
+                for avail_year in available_years_sorted:
+                    if needed_count <= 0:
+                        break
+                    if avail_year not in already_used:
+                        pdf_info = available_pdfs[avail_year]
+                        pdf_path = pdf_info['pdf_path']
+                        pdf_paths[avail_year] = Path(pdf_path)
+
+                        # Cache it
+                        self.db.cache_file(ticker, avail_year, filing_type, str(pdf_path))
+                        self.logger.info(
+                            f"Flexible match: using {ticker} {avail_year} "
+                            f"(requested year not available): {pdf_path}"
+                        )
+                        needed_count -= 1
 
         except Exception as e:
             self.logger.error(f"Failed to download/convert {ticker}: {e}", exc_info=True)
 
         return pdf_paths
+
+    def _get_event_filings(
+        self,
+        ticker: str,
+        filing_type: str,
+        count: int,
+        run_id: str
+    ) -> Dict[int, Path]:
+        """
+        Get N most recent event-based filings (8-K, 4, DEF 14A, etc.).
+
+        For event filings, we fetch by count not by year, then use a sequence
+        number as the "year" key for compatibility with the analysis pipeline.
+
+        Args:
+            ticker: Company ticker
+            filing_type: Filing type (8-K, 4, DEF 14A, etc.)
+            count: Number of filings to fetch
+            run_id: Analysis run ID for progress updates
+
+        Returns:
+            Dictionary mapping filing_index to PDF path
+        """
+        self.logger.info(f"Getting {count} most recent {filing_type} filings for {ticker}")
+
+        pdf_paths = {}
+
+        try:
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Downloading {count} {filing_type} filings from SEC...",
+                progress_percent=15
+            )
+
+            filing_dir = self.downloader.download(
+                ticker=ticker,
+                num_filings=count,
+                filing_type=filing_type
+            )
+
+            if not filing_dir:
+                self.logger.error(f"Failed to download filings for {ticker}")
+                return pdf_paths
+
+            self.db.update_run_progress(
+                run_id,
+                progress_message=f"Converting {filing_type} filings to PDF...",
+                progress_percent=30
+            )
+
+            ticker_pdf_path = self.config.get_data_path("pdfs") / ticker.upper()
+            with SECConverter() as converter:
+                pdf_files = converter.convert(
+                    ticker=ticker,
+                    input_path=filing_dir,
+                    output_path=ticker_pdf_path,
+                    filing_type=filing_type
+                )
+
+            if not pdf_files:
+                self.logger.warning(f"No PDFs generated for {ticker}")
+                return pdf_paths
+
+            # For event filings, use a sequence number instead of year
+            # Sort by filing date (most recent first)
+            for idx, pdf_info in enumerate(sorted(pdf_files, key=lambda x: x['year'], reverse=True)[:count]):
+                # Use a synthetic "year" that represents the filing sequence
+                # This allows the analysis pipeline to work with event filings
+                filing_index = idx + 1
+                pdf_path = pdf_info['pdf_path']
+                actual_year = pdf_info['year']
+
+                pdf_paths[filing_index] = pdf_path
+
+                # Log with actual year for debugging
+                self.logger.info(
+                    f"Event filing {filing_index}: {filing_type} from {actual_year} -> {pdf_path}"
+                )
+
+            self.logger.info(f"Retrieved {len(pdf_paths)} {filing_type} filings for {ticker}")
+            return pdf_paths
+
+        except Exception as e:
+            self.logger.error(f"Failed to get event filings for {ticker}: {e}", exc_info=True)
+            return pdf_paths
 
     def _run_fundamental_analysis(
         self,

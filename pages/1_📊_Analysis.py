@@ -530,19 +530,23 @@ else:
 
         elif filing_periodicity == 'event':
             # EVENT-BASED FILING SELECTION (8-K, etc.)
-            st.markdown("Event filings are filed when material events occur. Select how many recent filings to analyze.")
+            st.markdown(f"""
+**Event filings ({filing_type})** are filed when material events occur, not on a fixed schedule.
+They can occur multiple times per year. Fintel will fetch the N most recent filings automatically.
+            """)
 
             if multi_year_required:
                 st.warning("⚠️ This analysis type requires multiple filings (minimum 3).")
 
             min_filings = 3 if multi_year_required else 1
             num_filings = st.slider(
-                "Number of recent filings",
+                "Number of recent filings to analyze",
                 min_value=min_filings, max_value=20, value=max(5, min_filings),
-                key="single_num_event_filings"
+                key="single_num_event_filings",
+                help="Fetches this many most recent filings, regardless of year/date"
             )
             num_years = num_filings  # We'll use this to pass the count
-            st.info(f"📅 Will analyze the {num_filings} most recent {filing_type} filings")
+            st.info(f"📋 Will analyze the {num_filings} most recent {filing_type} filings available")
 
         else:
             # ANNUAL FILING SELECTION (10-K, 20-F, etc.)
@@ -558,13 +562,15 @@ else:
 
                 if year_mode == "Last N Years":
                     num_years = st.slider("Number of recent years", min_value=3, max_value=15, value=5, key="single_num_years")
-                    preview_years = list(range(current_year, current_year - num_years, -1))
-                    st.info(f"📅 Will analyze: {', '.join(map(str, preview_years))}")
+                    # Show preview but note that actual years may differ based on availability
+                    preview_years = list(range(current_year - 1, current_year - 1 - num_years, -1))
+                    st.info(f"📅 Will analyze up to {num_years} most recent available years (e.g., {', '.join(map(str, preview_years[:3]))}...)")
 
                 elif year_mode == "Specific Years":
+                    # Default to previous years (current year often not available in early months)
                     years_input = st.text_input(
                         "Enter years (comma-separated)",
-                        value=f"{current_year}, {current_year-1}, {current_year-2}, {current_year-3}, {current_year-4}",
+                        value=f"{current_year-1}, {current_year-2}, {current_year-3}, {current_year-4}, {current_year-5}",
                         key="single_specific_years"
                     )
                     try:
@@ -603,19 +609,22 @@ else:
                 )
 
                 if year_mode == "Single Year":
-                    specific_year = st.number_input("Select Year", min_value=1995, max_value=current_year, value=current_year, key="single_year")
+                    # Default to previous year (current year often not available in early months)
+                    specific_year = st.number_input("Select Year", min_value=1995, max_value=current_year, value=current_year - 1, key="single_year")
                     years = [specific_year]
                     st.info(f"📅 Will analyze fiscal year {specific_year}")
 
                 elif year_mode == "Last N Years":
                     num_years = st.slider("Number of recent years", min_value=1, max_value=15, value=3, key="single_flex_num_years")
-                    preview_years = list(range(current_year, current_year - num_years, -1))
-                    st.info(f"📅 Will analyze: {', '.join(map(str, preview_years))}")
+                    # Show preview but note actual years depend on availability
+                    preview_years = list(range(current_year - 1, current_year - 1 - num_years, -1))
+                    st.info(f"📅 Will analyze up to {num_years} most recent available years")
 
                 elif year_mode == "Specific Years":
+                    # Default to previous years (current year often not available in early months)
                     years_input = st.text_input(
                         "Enter years (comma-separated)",
-                        value=f"{current_year}, {current_year-1}, {current_year-2}",
+                        value=f"{current_year-1}, {current_year-2}, {current_year-3}",
                         key="single_flex_specific_years"
                     )
                     try:
@@ -694,8 +703,13 @@ else:
                     )
                     thread.start()
 
-                    # Wait briefly for thread to start and get run_id
-                    time.sleep(0.5)
+                    # Wait for thread to populate result_container (with timeout)
+                    # The DB record is created immediately, so we wait for that
+                    max_wait = 10  # seconds
+                    waited = 0
+                    while waited < max_wait and 'run_id' not in result_container and 'error' not in result_container:
+                        time.sleep(0.1)
+                        waited += 0.1
 
                     # Copy results to session state (main thread)
                     st.session_state.current_run_id = result_container.get('run_id')
@@ -876,8 +890,8 @@ else:
         if batch_multi_year_required:
             st.warning("⚠️ This analysis type requires at least 3 years.")
             batch_num_years = st.slider("Number of recent years", min_value=3, max_value=15, value=5, key="batch_num_years")
-            preview_years = list(range(current_year, current_year - batch_num_years, -1))
-            st.info(f"📅 Will analyze: {', '.join(map(str, preview_years))}")
+            preview_years = list(range(current_year - 1, current_year - 1 - batch_num_years, -1))
+            st.info(f"📅 Will analyze up to {batch_num_years} most recent available years (e.g., {', '.join(map(str, preview_years[:3]))}...)")
         else:
             batch_year_mode = st.radio(
                 "Selection Method",
@@ -887,13 +901,13 @@ else:
             )
 
             if batch_year_mode == "Single Year":
-                batch_year = st.number_input("Year", min_value=1995, max_value=current_year, value=current_year, key="batch_single_year")
+                # Default to previous year (current year often not available in early months)
+                batch_year = st.number_input("Year", min_value=1995, max_value=current_year, value=current_year - 1, key="batch_single_year")
                 batch_years = [batch_year]
                 st.info(f"📅 Will analyze fiscal year {batch_year}")
             else:
                 batch_num_years = st.slider("Number of recent years", min_value=1, max_value=15, value=3, key="batch_flex_num_years")
-                preview_years = list(range(current_year, current_year - batch_num_years, -1))
-                st.info(f"📅 Will analyze: {', '.join(map(str, preview_years))}")
+                st.info(f"📅 Will analyze up to {batch_num_years} most recent available years")
 
         # Submit batch
         if st.button("🚀 Run Batch Analysis", type="primary", width="stretch", key="batch_submit"):
