@@ -147,13 +147,42 @@ class SECConverter:
             pass
         return None
 
+    @staticmethod
+    def _get_filing_date_from_metadata(
+        accession_dir_name: str,
+        filing_metadata: Optional[List[Dict]]
+    ) -> Optional[str]:
+        """
+        Get filing_date from metadata by matching accession number.
+
+        Args:
+            accession_dir_name: Directory name (accession number format)
+            filing_metadata: List of filing metadata dicts from SEC API
+
+        Returns:
+            Filing date in YYYY-MM-DD format, or None if not found
+        """
+        if not filing_metadata:
+            return None
+
+        # Normalize accession number for comparison (remove dashes)
+        accession_normalized = accession_dir_name.replace('-', '')
+
+        for filing in filing_metadata:
+            filing_accession = filing.get('accession_number', '')
+            if filing_accession.replace('-', '') == accession_normalized:
+                return filing.get('filing_date')
+
+        return None
+
     def convert(
         self,
         ticker: str,
         input_path: Path,
         output_path: Optional[Path] = None,
         cleanup_originals: bool = True,
-        filing_type: str = "10-K"
+        filing_type: str = "10-K",
+        filing_metadata: Optional[List[Dict]] = None
     ) -> List[Dict[str, Any]]:
         """
         Convert downloaded SEC filings to PDF.
@@ -164,9 +193,12 @@ class SECConverter:
             output_path: Optional custom output path for PDFs
             cleanup_originals: Whether to delete original HTML files after conversion
             filing_type: Type of SEC filing (e.g., '10-K', '10-Q', 'DEF 14A')
+            filing_metadata: Optional list of filing metadata from SEC API
+                            (used to get filing_date for unique filenames)
 
         Returns:
-            List of dicts with 'pdf_path', 'year', and 'ticker' for each converted filing
+            List of dicts with 'pdf_path', 'year', 'filing_date', and 'ticker'
+            for each converted filing
         """
         ticker = ticker.upper()
 
@@ -221,16 +253,30 @@ class SECConverter:
             # Convert to PDF
             # Replace spaces with underscores for filesystem compatibility
             safe_filing_type = filing_type.replace(" ", "_")
-            pdf_filename = f"{ticker}_{safe_filing_type}_{year}.pdf"
+
+            # Get filing_date from metadata for unique filename
+            filing_date = self._get_filing_date_from_metadata(accession_dir.name, filing_metadata)
+
+            # Universal naming: use filing_date if available, otherwise fallback
+            if filing_date:
+                # Format: TICKER_FILING-TYPE_YYYY-MM-DD.pdf
+                pdf_filename = f"{ticker}_{safe_filing_type}_{filing_date}.pdf"
+            else:
+                # Fallback: use year + accession suffix for uniqueness
+                accession_suffix = accession_dir.name.split('-')[-1] if '-' in accession_dir.name else accession_dir.name[-4:]
+                pdf_filename = f"{ticker}_{safe_filing_type}_{year}_{accession_suffix}.pdf"
+
             pdf_path = output_path / pdf_filename
 
-            self.logger.info(f"Converting {year} filing to PDF...")
+            self.logger.info(f"Converting filing to PDF: {pdf_filename}")
             if self._convert_html_to_pdf(html_file, pdf_path):
-                self.logger.info(f"Successfully converted {year} filing")
+                self.logger.info(f"Successfully converted: {pdf_filename}")
                 converted_pdfs.append({
                     'pdf_path': pdf_path,
                     'year': year,
-                    'ticker': ticker
+                    'filing_date': filing_date,
+                    'ticker': ticker,
+                    'accession_number': accession_dir.name
                 })
 
                 # Cleanup original if requested
@@ -249,7 +295,8 @@ class SECConverter:
         ticker_paths: Dict[str, Path],
         output_base: Optional[Path] = None,
         cleanup_originals: bool = True,
-        filing_type: str = "10-K"
+        filing_type: str = "10-K",
+        ticker_metadata: Optional[Dict[str, List[Dict]]] = None
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Convert multiple tickers' filings to PDF.
@@ -259,6 +306,7 @@ class SECConverter:
             output_base: Base path for PDF output
             cleanup_originals: Whether to delete original HTML files
             filing_type: Type of SEC filing (e.g., '10-K', '10-Q', 'DEF 14A')
+            ticker_metadata: Optional dict mapping ticker to filing metadata list
 
         Returns:
             Dict mapping ticker to list of converted PDFs
@@ -267,7 +315,11 @@ class SECConverter:
         for ticker, input_path in ticker_paths.items():
             if input_path:
                 output_path = output_base / ticker if output_base else None
-                pdfs = self.convert(ticker, input_path, output_path, cleanup_originals, filing_type)
+                filing_metadata = ticker_metadata.get(ticker) if ticker_metadata else None
+                pdfs = self.convert(
+                    ticker, input_path, output_path, cleanup_originals,
+                    filing_type, filing_metadata
+                )
                 results[ticker] = pdfs
 
         return results

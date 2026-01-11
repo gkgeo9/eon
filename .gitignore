@@ -140,3 +140,5 @@ temp/
 site/
 dist/
 build/
+data/api_usage/usage_6bca3f63b6a6b95c.json
+data/fintel.db

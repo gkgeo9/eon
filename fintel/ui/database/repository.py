@@ -564,13 +564,24 @@ class DatabaseRepository:
         fiscal_year: int,
         filing_type: str,
         file_path: str,
-        file_hash: Optional[str] = None
+        file_hash: Optional[str] = None,
+        filing_date: Optional[str] = None
     ) -> None:
-        """Cache downloaded file information."""
+        """
+        Cache downloaded file information.
+
+        Args:
+            ticker: Company ticker symbol
+            fiscal_year: Fiscal year of the filing
+            filing_type: Type of filing (10-K, 10-Q, 8-K, etc.)
+            file_path: Path to the cached file
+            file_hash: Optional SHA256 hash for integrity
+            filing_date: Optional filing date (YYYY-MM-DD) for unique identification
+        """
         query = """
             INSERT OR REPLACE INTO file_cache
-            (ticker, fiscal_year, filing_type, file_path, file_hash, downloaded_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (ticker, fiscal_year, filing_type, file_path, file_hash, filing_date, downloaded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """
         self._execute_with_retry(query, (
             ticker.upper(),
@@ -578,6 +589,7 @@ class DatabaseRepository:
             filing_type,
             file_path,
             file_hash,
+            filing_date,
             datetime.utcnow().isoformat()
         ))
 
@@ -594,6 +606,35 @@ class DatabaseRepository:
             WHERE ticker = ? AND fiscal_year = ? AND filing_type = ?
         """
         cursor = self._execute_with_retry(query, (ticker.upper(), fiscal_year, filing_type))
+        row = cursor.fetchone()
+        return row[0] if row else None
+
+    def get_cached_file_by_date(
+        self,
+        ticker: str,
+        filing_date: str,
+        filing_type: str
+    ) -> Optional[str]:
+        """
+        Get cached file path by filing_date.
+
+        This is useful for event-based filings (8-K, 4, etc.) where multiple
+        filings can exist in the same year.
+
+        Args:
+            ticker: Company ticker symbol
+            filing_date: Filing date in YYYY-MM-DD format
+            filing_type: Type of filing
+
+        Returns:
+            File path if cached, None otherwise
+        """
+        query = """
+            SELECT file_path
+            FROM file_cache
+            WHERE ticker = ? AND filing_date = ? AND filing_type = ?
+        """
+        cursor = self._execute_with_retry(query, (ticker.upper(), filing_date, filing_type))
         row = cursor.fetchone()
         return row[0] if row else None
 

@@ -40,7 +40,7 @@ with st.expander("🔍 Filters", expanded=False):
     with col3:
         filter_status = st.selectbox(
             "Status",
-            ["All", "completed", "running", "pending", "failed"]
+            ["All", "completed", "running", "pending", "failed", "cancelled"]
         )
 
     # Date range
@@ -124,7 +124,8 @@ else:
             'completed': ('✅', 'Completed'),
             'running': ('🔄', 'Running'),
             'pending': ('⏳', 'Queued'),
-            'failed': ('❌', 'Failed')
+            'failed': ('❌', 'Failed'),
+            'cancelled': ('🛑', 'Cancelled')
         }
 
         emoji, label = status_display.get(status, ('❓', 'Unknown'))
@@ -167,6 +168,12 @@ else:
     if not running_analyses.empty:
         st.subheader("📊 Active Analyses")
 
+        # Import analysis service for cancellation
+        from fintel.ui.services.analysis_service import AnalysisService
+        if 'analysis_service' not in st.session_state:
+            st.session_state.analysis_service = AnalysisService(db)
+        analysis_svc = st.session_state.analysis_service
+
         for idx, row in running_analyses.iterrows():
             with st.expander(f"{row['ticker'].upper()} - {row['analysis_type'].capitalize()} (Running)", expanded=True):
                 run_details = db.get_run_details(row['run_id'])
@@ -176,20 +183,36 @@ else:
                     current_step = run_details.get('current_step')
                     total_steps = run_details.get('total_steps')
 
-                    st.markdown(f"**Status:** {progress_msg}")
+                    # Progress info column and cancel button column
+                    col_info, col_cancel = st.columns([4, 1])
 
-                    if progress_pct:
-                        st.progress(progress_pct / 100.0)
-                        st.caption(f"{progress_pct}% complete")
+                    with col_info:
+                        st.markdown(f"**Status:** {progress_msg}")
 
-                    if current_step and total_steps:
-                        st.caption(f"Current: {current_step} ({total_steps} year{'s' if total_steps > 1 else ''} total)")
+                        if progress_pct:
+                            st.progress(progress_pct / 100.0)
+                            st.caption(f"{progress_pct}% complete")
 
-                    st.caption(f"Started: {pd.to_datetime(run_details['started_at']).strftime('%Y-%m-%d %H:%M:%S') if run_details.get('started_at') else 'N/A'}")
+                        if current_step and total_steps:
+                            st.caption(f"Current: {current_step} ({total_steps} year{'s' if total_steps > 1 else ''} total)")
+
+                        st.caption(f"Started: {pd.to_datetime(run_details['started_at']).strftime('%Y-%m-%d %H:%M:%S') if run_details.get('started_at') else 'N/A'}")
+
+                    with col_cancel:
+                        cancel_key = f"cancel_running_{row['run_id']}"
+                        if st.button("Cancel", key=cancel_key, type="secondary", help="Cancel this analysis"):
+                            with st.spinner("Cancelling analysis..."):
+                                success = analysis_svc.cancel_analysis(row['run_id'])
+                                if success:
+                                    st.success("Analysis cancelled")
+                                else:
+                                    st.warning("Could not cancel cleanly - marked as cancelled")
+                                time.sleep(1)
+                                st.rerun()
 
         col1, col2 = st.columns([1, 1])
         with col1:
-            if st.button("🔄 Refresh Now", width="stretch"):
+            if st.button("Refresh Now", width="stretch"):
                 st.rerun()
         with col2:
             auto_refresh = st.checkbox("Auto-refresh (5s)", value=True, key="auto_refresh_running")

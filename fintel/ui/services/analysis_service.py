@@ -9,8 +9,9 @@ and progress tracking.
 """
 
 import uuid
+import threading
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 
 from fintel.core import (
@@ -25,6 +26,11 @@ from fintel.analysis.fundamental.success_factors import ExcellentCompanyAnalyzer
 from fintel.analysis.perspectives import PerspectiveAnalyzer
 from fintel.analysis.comparative.contrarian_scanner import ContrarianScanner
 from fintel.ui.database import DatabaseRepository
+from fintel.ui.services.cancellation import (
+    get_cancellation_registry,
+    CancellationToken,
+    AnalysisCancelledException
+)
 
 
 class AnalysisService:
@@ -136,8 +142,16 @@ class AnalysisService:
             company_name=company_name
         )
 
+        # Create cancellation token for this run
+        registry = get_cancellation_registry()
+        token = registry.create_token(run_id)
+        token.set_thread(threading.current_thread())
+
         try:
             self.db.update_run_status(run_id, 'running')
+
+            # Check for cancellation before starting
+            token.raise_if_cancelled()
 
             # Download/retrieve filings
             self.db.update_run_progress(
@@ -146,6 +160,9 @@ class AnalysisService:
                 progress_percent=10
             )
             pdf_paths = self._get_or_download_filings(ticker, filing_type, years, run_id)
+
+            # Check for cancellation after download
+            token.raise_if_cancelled()
 
             # Check if we have any PDFs
             if not pdf_paths:
@@ -246,11 +263,20 @@ class AnalysisService:
             self.db.update_run_status(run_id, 'failed', error_msg)
             raise
 
+        except AnalysisCancelledException:
+            self.logger.info(f"Analysis {run_id} cancelled by user")
+            self.db.update_run_status(run_id, 'cancelled', 'Cancelled by user')
+            raise
+
         except Exception as e:
             error_msg = f"Unexpected error: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             self.db.update_run_status(run_id, 'failed', error_msg)
             raise
+
+        finally:
+            # Always cleanup cancellation token
+            registry.cleanup_token(run_id)
 
         return run_id
 
@@ -326,7 +352,8 @@ class AnalysisService:
                 progress_percent=15
             )
 
-            filing_dir = self.downloader.download(
+            # Use download_with_metadata to get filing dates for unique filenames
+            filing_dir, filing_metadata = self.downloader.download_with_metadata(
                 ticker=ticker,
                 num_filings=num_to_request,
                 filing_type=filing_type
@@ -342,14 +369,15 @@ class AnalysisService:
                 progress_percent=30
             )
 
-            # Convert to PDF - converter extracts year from accession number
+            # Convert to PDF - pass filing_metadata for unique filename generation
             ticker_pdf_path = self.config.get_data_path("pdfs") / ticker.upper()
             with SECConverter() as converter:
                 pdf_files = converter.convert(
                     ticker=ticker,
                     input_path=filing_dir,
                     output_path=ticker_pdf_path,
-                    filing_type=filing_type
+                    filing_type=filing_type,
+                    filing_metadata=filing_metadata
                 )
 
             if not pdf_files:
@@ -366,11 +394,15 @@ class AnalysisService:
                 if year in available_pdfs:
                     pdf_info = available_pdfs[year]
                     pdf_path = pdf_info['pdf_path']
+                    filing_date = pdf_info.get('filing_date')
                     pdf_paths[year] = Path(pdf_path)
 
-                    # Cache it
-                    self.db.cache_file(ticker, year, filing_type, str(pdf_path))
-                    self.logger.info(f"Matched and cached {ticker} {year}: {pdf_path}")
+                    # Cache it with filing_date for future lookups
+                    self.db.cache_file(
+                        ticker, year, filing_type, str(pdf_path),
+                        filing_date=filing_date
+                    )
+                    self.logger.info(f"Matched and cached {ticker} {year} (filed {filing_date}): {pdf_path}")
                 else:
                     self.logger.info(
                         f"Year {year} not available for {ticker}. "
@@ -389,10 +421,14 @@ class AnalysisService:
                     if avail_year not in already_used:
                         pdf_info = available_pdfs[avail_year]
                         pdf_path = pdf_info['pdf_path']
+                        filing_date = pdf_info.get('filing_date')
                         pdf_paths[avail_year] = Path(pdf_path)
 
-                        # Cache it
-                        self.db.cache_file(ticker, avail_year, filing_type, str(pdf_path))
+                        # Cache it with filing_date
+                        self.db.cache_file(
+                            ticker, avail_year, filing_type, str(pdf_path),
+                            filing_date=filing_date
+                        )
                         self.logger.info(
                             f"Flexible match: using {ticker} {avail_year} "
                             f"(requested year not available): {pdf_path}"
@@ -410,12 +446,12 @@ class AnalysisService:
         filing_type: str,
         count: int,
         run_id: str
-    ) -> Dict[int, Path]:
+    ) -> Dict[str, Path]:
         """
         Get N most recent event-based filings (8-K, 4, DEF 14A, etc.).
 
-        For event filings, we fetch by count not by year, then use a sequence
-        number as the "year" key for compatibility with the analysis pipeline.
+        For event filings, we use filing_date as the key since there can be
+        multiple filings per year. This ensures unique identification.
 
         Args:
             ticker: Company ticker
@@ -424,7 +460,7 @@ class AnalysisService:
             run_id: Analysis run ID for progress updates
 
         Returns:
-            Dictionary mapping filing_index to PDF path
+            Dictionary mapping filing_date (or index) to PDF path
         """
         self.logger.info(f"Getting {count} most recent {filing_type} filings for {ticker}")
 
@@ -437,7 +473,8 @@ class AnalysisService:
                 progress_percent=15
             )
 
-            filing_dir = self.downloader.download(
+            # Use download_with_metadata for event filings
+            filing_dir, filing_metadata = self.downloader.download_with_metadata(
                 ticker=ticker,
                 num_filings=count,
                 filing_type=filing_type
@@ -459,27 +496,42 @@ class AnalysisService:
                     ticker=ticker,
                     input_path=filing_dir,
                     output_path=ticker_pdf_path,
-                    filing_type=filing_type
+                    filing_type=filing_type,
+                    filing_metadata=filing_metadata
                 )
 
             if not pdf_files:
                 self.logger.warning(f"No PDFs generated for {ticker}")
                 return pdf_paths
 
-            # For event filings, use a sequence number instead of year
-            # Sort by filing date (most recent first)
-            for idx, pdf_info in enumerate(sorted(pdf_files, key=lambda x: x['year'], reverse=True)[:count]):
-                # Use a synthetic "year" that represents the filing sequence
-                # This allows the analysis pipeline to work with event filings
-                filing_index = idx + 1
+            # For event filings, use filing_date as key (or index if no date)
+            # Sort by filing_date (most recent first)
+            sorted_pdfs = sorted(
+                pdf_files,
+                key=lambda x: x.get('filing_date') or str(x.get('year', '')),
+                reverse=True
+            )[:count]
+
+            for idx, pdf_info in enumerate(sorted_pdfs):
                 pdf_path = pdf_info['pdf_path']
-                actual_year = pdf_info['year']
+                filing_date = pdf_info.get('filing_date')
+                actual_year = pdf_info.get('year')
 
-                pdf_paths[filing_index] = pdf_path
+                # Use filing_date as key, fallback to index for compatibility
+                if filing_date:
+                    pdf_paths[filing_date] = pdf_path
+                    # Cache with filing_date
+                    self.db.cache_file(
+                        ticker, actual_year or 0, filing_type, str(pdf_path),
+                        filing_date=filing_date
+                    )
+                else:
+                    # Fallback: use sequence index
+                    pdf_paths[idx + 1] = pdf_path
 
-                # Log with actual year for debugging
                 self.logger.info(
-                    f"Event filing {filing_index}: {filing_type} from {actual_year} -> {pdf_path}"
+                    f"Event filing: {filing_type} filed {filing_date or f'(seq {idx+1})'} "
+                    f"from {actual_year} -> {pdf_path}"
                 )
 
             self.logger.info(f"Retrieved {len(pdf_paths)} {filing_type} filings for {ticker}")
@@ -492,15 +544,18 @@ class AnalysisService:
     def _run_fundamental_analysis(
         self,
         ticker: str,
-        pdf_paths: Dict[int, Path],
+        pdf_paths: Dict[Union[int, str], Path],
         custom_prompt: Optional[str],
         run_id: str
-    ) -> Dict[int, Any]:
+    ) -> Dict[Union[int, str], Any]:
         """Run fundamental analyzer for each year."""
         # Validate PDF paths
         if not pdf_paths or len(pdf_paths) == 0:
             self.logger.warning(f"No PDF files provided for fundamental analysis of {ticker}")
             return {}
+
+        # Get cancellation token for this run
+        token = get_cancellation_registry().get_token(run_id)
 
         analyzer = FundamentalAnalyzer(
             api_key_manager=self.api_key_manager,
@@ -510,6 +565,10 @@ class AnalysisService:
         results = {}
         total_years = len(pdf_paths)
         for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
+            # Check for cancellation before processing each year
+            if token:
+                token.raise_if_cancelled()
+
             self.logger.info(f"Analyzing {ticker} {year} (Fundamental)")
 
             # Update progress for this specific year
@@ -674,6 +733,9 @@ class AnalysisService:
             self.logger.warning(f"No PDF files provided for Buffett analysis of {ticker}")
             return {}
 
+        # Get cancellation token
+        token = get_cancellation_registry().get_token(run_id)
+
         analyzer = PerspectiveAnalyzer(
             api_key_manager=self.api_key_manager,
             rate_limiter=self.rate_limiter
@@ -682,6 +744,10 @@ class AnalysisService:
         results = {}
         total_years = len(pdf_paths)
         for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
+            # Check for cancellation
+            if token:
+                token.raise_if_cancelled()
+
             self.logger.info(f"Analyzing {ticker} {year} (Buffett Lens)")
 
             progress_pct = 50 + int((idx / total_years) * 40)
@@ -715,6 +781,9 @@ class AnalysisService:
             self.logger.warning(f"No PDF files provided for Taleb analysis of {ticker}")
             return {}
 
+        # Get cancellation token
+        token = get_cancellation_registry().get_token(run_id)
+
         analyzer = PerspectiveAnalyzer(
             api_key_manager=self.api_key_manager,
             rate_limiter=self.rate_limiter
@@ -723,6 +792,10 @@ class AnalysisService:
         results = {}
         total_years = len(pdf_paths)
         for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
+            # Check for cancellation
+            if token:
+                token.raise_if_cancelled()
+
             self.logger.info(f"Analyzing {ticker} {year} (Taleb Lens)")
 
             progress_pct = 50 + int((idx / total_years) * 40)
@@ -1043,25 +1116,49 @@ class AnalysisService:
 
         return {'status': 'not_found'}
 
-    def cancel_analysis(self, run_id: str) -> bool:
+    def cancel_analysis(self, run_id: str, timeout: float = 30.0) -> bool:
         """
-        Cancel a running analysis.
+        Cancel a running analysis with actual thread termination.
+
+        This method signals the cancellation token and waits for the
+        analysis thread to stop gracefully.
 
         Args:
             run_id: Run UUID
+            timeout: Seconds to wait for graceful termination
 
         Returns:
-            True if cancelled successfully
+            True if cancelled successfully, False otherwise
         """
-        # For now, just mark as failed
-        # In a production system, you'd need to actually stop the thread
         status = self.db.get_run_status(run_id)
 
-        if status == 'running':
-            self.db.update_run_status(run_id, 'failed', 'Cancelled by user')
-            return True
+        if status != 'running':
+            self.logger.warning(f"Run {run_id} is not running (status: {status})")
+            return False
 
-        return False
+        registry = get_cancellation_registry()
+        success = registry.cancel_run(run_id, timeout=timeout)
+
+        if success:
+            # Token cleanup and status update happen in the analysis thread
+            # via the exception handler, but we ensure status is updated
+            current_status = self.db.get_run_status(run_id)
+            if current_status == 'running':
+                self.db.update_run_status(run_id, 'cancelled', 'Cancelled by user')
+            self.logger.info(f"Successfully cancelled analysis {run_id}")
+        else:
+            # Thread didn't terminate in time, but we've signaled cancellation
+            # It will stop at the next cancellation check point
+            self.logger.warning(
+                f"Cancellation signaled for {run_id} but thread didn't terminate "
+                f"within {timeout}s. It will stop at the next check point."
+            )
+            self.db.update_run_status(
+                run_id, 'cancelled',
+                'Cancellation requested (may take a moment to stop)'
+            )
+
+        return True
 
     def get_interrupted_runs(self, stale_minutes: int = 5) -> List[Dict[str, Any]]:
         """
