@@ -18,6 +18,7 @@ This works across processes (unlike threading.Lock) because it uses the filesyst
 
 import fcntl
 import time
+import threading
 from pathlib import Path
 from typing import Optional, Callable, Any
 
@@ -186,30 +187,29 @@ class GeminiRequestQueue:
         }
 
 
-# Global singleton instance
+# Global singleton instance with thread-safe initialization
 _global_queue: Optional[GeminiRequestQueue] = None
-_queue_creation_lock = None  # Will use fcntl instead
+_queue_creation_lock = threading.Lock()
 
 
 def get_gemini_request_queue() -> GeminiRequestQueue:
     """
     Get the global Gemini request queue singleton.
 
+    Thread-safe singleton pattern using double-checked locking.
     Returns the same instance regardless of how many processes/threads call this.
-    Uses the lock file itself for initialization safety.
 
     Returns:
         The global GeminiRequestQueue instance
     """
     global _global_queue
 
+    # First check without lock (fast path)
     if _global_queue is None:
-        # For initialization, we need minimal synchronization
-        # We'll just create the instance - it's safe because:
-        # 1. Worst case: multiple instances created, but they all use same lock file
-        # 2. The lock file itself provides proper synchronization
-        # 3. This is a read-only pattern after initialization
-        _global_queue = GeminiRequestQueue()
+        with _queue_creation_lock:
+            # Second check with lock (thread-safe)
+            if _global_queue is None:
+                _global_queue = GeminiRequestQueue()
 
     return _global_queue
 
@@ -221,4 +221,5 @@ def reset_gemini_request_queue():
     Use with caution - this creates a new queue instance and resets metrics.
     """
     global _global_queue
-    _global_queue = None
+    with _queue_creation_lock:
+        _global_queue = None

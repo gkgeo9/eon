@@ -26,19 +26,19 @@ Fintel is a production-ready platform that analyzes SEC 10-K filings using Googl
 
 ## Key Features
 
-| Feature                        | Description                                      |
-| ------------------------------ | ------------------------------------------------ |
-| **Multi-Perspective Analysis** | Buffett, Taleb, and Contrarian investment lenses |
-| **Custom Workflows**           | Auto-discovered Python-based analysis workflows  |
-| **Batch Processing**           | Analyze 1-1000+ companies in parallel            |
-| **Contrarian Scanner**         | 6-dimension hidden gem scoring (0-600 scale)     |
-| **Compounder DNA**             | Compare against top 50 proven performers         |
-| **Resume Support**             | Continue interrupted analyses automatically      |
-| **API Key Rotation**           | Distribute load across 25+ Gemini API keys       |
-| **Web + CLI**                  | Both Streamlit UI and command-line interface     |
-| **Batch Queue**                | Multi-day batch processing with progress tracking|
-| **Analysis Cancellation**      | Cancel running analyses gracefully               |
-| **Cross-Process Rate Limiting**| File-based locking prevents API quota errors     |
+| Feature                         | Description                                       |
+| ------------------------------- | ------------------------------------------------- |
+| **Multi-Perspective Analysis**  | Buffett, Taleb, and Contrarian investment lenses  |
+| **Custom Workflows**            | Auto-discovered Python-based analysis workflows   |
+| **Batch Processing**            | Analyze 1-1000+ companies in parallel             |
+| **Contrarian Scanner**          | 6-dimension hidden gem scoring (0-600 scale)      |
+| **Compounder DNA**              | Compare against top 50 proven performers          |
+| **Resume Support**              | Continue interrupted analyses automatically       |
+| **API Key Rotation**            | Distribute load across 25+ Gemini API keys        |
+| **Web + CLI**                   | Both Streamlit UI and command-line interface      |
+| **Batch Queue**                 | Multi-day batch processing with progress tracking |
+| **Analysis Cancellation**       | Cancel running analyses gracefully                |
+| **Cross-Process Rate Limiting** | File-based locking prevents API quota errors      |
 
 ---
 
@@ -321,7 +321,7 @@ pages/                           # Streamlit pages
 ├── 1_📊_Analysis.py             # Single/batch analysis
 ├── 2_📈_Analysis_History.py     # History and filtering
 ├── 3_🔍_Results_Viewer.py       # Results exploration
-├── 4_⚙️_Settings.py             # Settings and database viewer
+├── 5_⚙️_Settings.py             # Settings and database viewer
 └── 5_🌙_Batch_Queue.py          # Multi-day batch processing
 
 streamlit_app.py                 # Home page / dashboard
@@ -439,6 +439,7 @@ This project demonstrates several advanced engineering solutions:
 **Problem:** Parallel analyses across threads, processes, and simultaneous CLI/UI execution exceeded Gemini API rate limits (503 UNAVAILABLE, 429 RESOURCE_EXHAUSTED).
 
 **Solution:** File-based locking using `fcntl` that serializes all API requests across the entire system:
+
 - Lock file at `data/api_usage/gemini_request.lock`
 - Mandatory 65-second sleep between requests (Gemini requirement)
 - Works across ThreadPool workers, ProcessPoolExecutor, and mixed execution modes

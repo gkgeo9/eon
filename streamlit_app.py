@@ -171,7 +171,7 @@ def main():
 
     with col2:
         if st.button("⚙️ Settings", width="stretch"):
-            st.switch_page("pages/4_⚙️_Settings.py")
+            st.switch_page("pages/5_⚙️_Settings.py")
 
     # Footer
     st.markdown("---")

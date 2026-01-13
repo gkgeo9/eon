@@ -5,6 +5,7 @@ Configuration management for Fintel using Pydantic Settings.
 """
 
 import os
+import threading
 from pathlib import Path
 from typing import List, Optional
 from pydantic import Field
@@ -206,8 +207,9 @@ class FintelConfig(BaseSettings):
 
         # Raise error if critical issues found
         if errors:
+            from fintel.core.exceptions import ConfigurationError
             error_msg = "\n\nConfiguration Errors:\n" + "\n".join(f"  - {err}" for err in errors)
-            raise ValueError(error_msg)
+            raise ConfigurationError(error_msg)
 
     @property
     def num_api_keys(self) -> int:
@@ -227,13 +229,16 @@ class FintelConfig(BaseSettings):
         return self.log_dir.joinpath(*parts)
 
 
-# Singleton instance
+# Singleton instance with thread-safe initialization
 _config_instance: Optional[FintelConfig] = None
+_config_lock = threading.Lock()
 
 
 def get_config(**kwargs) -> FintelConfig:
     """
     Get or create the global configuration instance.
+
+    Thread-safe singleton pattern using double-checked locking.
 
     Args:
         **kwargs: Optional configuration overrides
@@ -242,12 +247,17 @@ def get_config(**kwargs) -> FintelConfig:
         FintelConfig instance
     """
     global _config_instance
+    # First check without lock (fast path)
     if _config_instance is None:
-        _config_instance = FintelConfig(**kwargs)
+        with _config_lock:
+            # Second check with lock (thread-safe)
+            if _config_instance is None:
+                _config_instance = FintelConfig(**kwargs)
     return _config_instance
 
 
 def reset_config():
     """Reset the global configuration instance (mainly for testing)."""
     global _config_instance
-    _config_instance = None
+    with _config_lock:
+        _config_instance = None

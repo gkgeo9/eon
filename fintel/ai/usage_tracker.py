@@ -581,19 +581,29 @@ class APIUsageTracker:
         self.logger.info("Reset all API usage data")
 
 
-# Singleton instance
+# Singleton instance with thread-safe initialization
 _tracker_instance: Optional[APIUsageTracker] = None
+_tracker_lock = threading.Lock()
 
 
 def get_usage_tracker() -> APIUsageTracker:
-    """Get or create the global usage tracker instance."""
+    """
+    Get or create the global usage tracker instance.
+
+    Thread-safe singleton pattern using double-checked locking.
+    """
     global _tracker_instance
+    # First check without lock (fast path)
     if _tracker_instance is None:
-        _tracker_instance = APIUsageTracker()
+        with _tracker_lock:
+            # Second check with lock (thread-safe)
+            if _tracker_instance is None:
+                _tracker_instance = APIUsageTracker()
     return _tracker_instance
 
 
 def reset_tracker():
     """Reset the global tracker instance (mainly for testing)."""
     global _tracker_instance
-    _tracker_instance = None
+    with _tracker_lock:
+        _tracker_instance = None

@@ -75,7 +75,8 @@ class AnalysisService:
         years: Optional[List[int]] = None,
         num_years: Optional[int] = None,
         custom_prompt: Optional[str] = None,
-        company_name: Optional[str] = None
+        company_name: Optional[str] = None,
+        api_key: Optional[str] = None
     ) -> str:
         """
         Run analysis and return run_id for tracking.
@@ -95,6 +96,7 @@ class AnalysisService:
             num_years: Number of recent years (alternative to years)
             custom_prompt: Optional custom prompt template
             company_name: Optional company name
+            api_key: Optional pre-reserved API key (for batch processing Fix #1)
 
         Returns:
             run_id (UUID string) for tracking progress
@@ -180,28 +182,29 @@ class AnalysisService:
             )
 
             # Run analysis based on type
+            # api_key is passed to support pre-reserved keys from batch processing (Fix #1)
             if analysis_type == 'fundamental':
                 results = self._run_fundamental_analysis(
-                    ticker, pdf_paths, custom_prompt, run_id
+                    ticker, pdf_paths, custom_prompt, run_id, api_key=api_key
                 )
             elif analysis_type == 'excellent':
-                results = self._run_excellent_analysis(ticker, pdf_paths, run_id)
+                results = self._run_excellent_analysis(ticker, pdf_paths, run_id, api_key=api_key)
             elif analysis_type == 'objective':
-                results = self._run_objective_analysis(ticker, pdf_paths, run_id)
+                results = self._run_objective_analysis(ticker, pdf_paths, run_id, api_key=api_key)
             elif analysis_type == 'buffett':
-                results = self._run_buffett_analysis(ticker, pdf_paths, run_id)
+                results = self._run_buffett_analysis(ticker, pdf_paths, run_id, api_key=api_key)
             elif analysis_type == 'taleb':
-                results = self._run_taleb_analysis(ticker, pdf_paths, run_id)
+                results = self._run_taleb_analysis(ticker, pdf_paths, run_id, api_key=api_key)
             elif analysis_type == 'contrarian':
-                results = self._run_contrarian_analysis(ticker, pdf_paths, run_id)
+                results = self._run_contrarian_analysis(ticker, pdf_paths, run_id, api_key=api_key)
             elif analysis_type == 'multi':
-                results = self._run_multi_perspective(ticker, pdf_paths, run_id)
+                results = self._run_multi_perspective(ticker, pdf_paths, run_id, api_key=api_key)
             elif analysis_type == 'scanner':
-                results = self._run_contrarian_scanner(ticker, pdf_paths, run_id)
+                results = self._run_contrarian_scanner(ticker, pdf_paths, run_id, api_key=api_key)
             elif analysis_type.startswith('custom:'):
                 workflow_id = analysis_type.replace('custom:', '')
                 results = self._run_custom_workflow(
-                    ticker, pdf_paths, workflow_id, run_id
+                    ticker, pdf_paths, workflow_id, run_id, api_key=api_key
                 )
             else:
                 raise ValueError(f"Unknown analysis type: {analysis_type}")
@@ -546,9 +549,16 @@ class AnalysisService:
         ticker: str,
         pdf_paths: Dict[Union[int, str], Path],
         custom_prompt: Optional[str],
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[Union[int, str], Any]:
-        """Run fundamental analyzer for each year."""
+        """
+        Run fundamental analyzer for each year.
+
+        Args:
+            api_key: Optional pre-reserved API key from batch processing (Fix #1).
+                     When provided, this key should be used instead of reserving a new one.
+        """
         # Validate PDF paths
         if not pdf_paths or len(pdf_paths) == 0:
             self.logger.warning(f"No PDF files provided for fundamental analysis of {ticker}")
@@ -557,9 +567,12 @@ class AnalysisService:
         # Get cancellation token for this run
         token = get_cancellation_registry().get_token(run_id)
 
+        # Create analyzer - if api_key is provided, it's from batch queue Fix #1
+        # The analyzer will use the api_key_manager internally
         analyzer = FundamentalAnalyzer(
             api_key_manager=self.api_key_manager,
-            rate_limiter=self.rate_limiter
+            rate_limiter=self.rate_limiter,
+            api_key=api_key  # Pass pre-reserved key if available
         )
 
         results = {}
@@ -596,7 +609,8 @@ class AnalysisService:
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run excellent company analyzer (multi-year, success-focused)."""
         # Validate PDF paths
@@ -661,7 +675,8 @@ class AnalysisService:
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run objective company analyzer (multi-year, unbiased)."""
         # Validate PDF paths
@@ -725,7 +740,8 @@ class AnalysisService:
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run Buffett perspective analyzer."""
         # Validate PDF paths
@@ -773,7 +789,8 @@ class AnalysisService:
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run Taleb perspective analyzer."""
         # Validate PDF paths
@@ -821,7 +838,8 @@ class AnalysisService:
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run Contrarian perspective analyzer."""
         # Validate PDF paths
@@ -862,7 +880,8 @@ class AnalysisService:
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run multi-perspective analyzer (Buffett + Taleb + Contrarian)."""
         # Validate PDF paths
@@ -903,7 +922,8 @@ class AnalysisService:
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run contrarian scanner (multi-year, hidden gems detection)."""
         # First, run fundamental analysis for each year
@@ -996,7 +1016,8 @@ class AnalysisService:
         ticker: str,
         pdf_paths: Dict[int, Path],
         workflow_id: str,
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """
         Run a custom workflow analysis.
@@ -1004,6 +1025,7 @@ class AnalysisService:
         Args:
             ticker: Company ticker
             pdf_paths: Dictionary mapping year to PDF path
+            api_key: Optional pre-reserved API key from batch processing
             workflow_id: Custom workflow identifier
             run_id: Analysis run ID
 
@@ -1431,3 +1453,194 @@ class AnalysisService:
                 continue
 
         return results
+
+    def create_multi_year_synthesis(
+        self,
+        run_id: str,
+        synthesis_prompt: Optional[str] = None
+    ) -> Optional[str]:
+        """
+        Create a synthesis analysis that combines all years from a single analysis run.
+
+        This takes a multi-year analysis (e.g., 10 years of Amazon 10-Ks) and creates
+        an additional synthesis that combines insights from all years into a comprehensive
+        longitudinal analysis.
+
+        Args:
+            run_id: The original multi-year analysis run ID
+            synthesis_prompt: Optional custom prompt for synthesis
+
+        Returns:
+            New run_id of the synthesis analysis, or None if failed
+        """
+        from fintel.ai.providers.gemini import GeminiProvider
+        import json as json_module
+
+        # Get original run details
+        run_details = self.db.get_run_details(run_id)
+        if not run_details:
+            self.logger.error(f"Run {run_id} not found")
+            return None
+
+        ticker = run_details['ticker']
+        analysis_type = run_details['analysis_type']
+        filing_type = run_details.get('filing_type', '10-K')
+
+        # Get all year results
+        results = self.db.get_analysis_results(run_id)
+        if not results or len(results) < 2:
+            self.logger.error(f"Run {run_id} has less than 2 year results")
+            return None
+
+        self.logger.info(f"Creating multi-year synthesis for {ticker} with {len(results)} years")
+
+        # Create synthesis run record
+        synthesis_run_id = str(uuid.uuid4())
+        years = [r.get('year') for r in results if r.get('year')]
+
+        self.db.create_analysis_run(
+            run_id=synthesis_run_id,
+            ticker=ticker,
+            analysis_type='multi_year_synthesis',
+            filing_type=filing_type,
+            years=years,
+            config={
+                'source_run_id': run_id,
+                'source_analysis_type': analysis_type,
+                'num_years': len(results)
+            },
+            company_name=run_details.get('company_name', ticker)
+        )
+
+        try:
+            self.db.update_run_status(synthesis_run_id, 'running')
+            self.db.update_run_progress(
+                synthesis_run_id,
+                progress_message=f"Synthesizing {len(results)} years of analysis...",
+                progress_percent=10
+            )
+
+            # Build synthesis prompt
+            default_prompt = f"""
+You are analyzing {len(results)} years of {analysis_type} analysis for {ticker}.
+
+Your task is to synthesize all the individual year analyses into a comprehensive longitudinal assessment:
+
+1. **Executive Summary**: High-level synthesis of the company's trajectory over all years
+2. **Key Trends**: Major trends observed across the years (improving, declining, stable)
+3. **Turning Points**: Significant changes or pivotal moments in the company's evolution
+4. **Consistency Analysis**: What has remained consistent vs. what has changed
+5. **Trajectory Assessment**: Where the company appears to be heading
+6. **Risk Evolution**: How risks have evolved over time
+7. **Investment Timeline**: Key periods that would have been good/bad for investment
+8. **Forward Outlook**: Projections based on historical patterns
+9. **Key Metrics Over Time**: Summarize important metrics across years if available
+
+Be comprehensive but focus on actionable insights from the longitudinal perspective.
+"""
+            prompt = synthesis_prompt or default_prompt
+
+            # Build context with all year analyses
+            context_parts = [prompt, f"\n\n=== {ticker} ANALYSIS BY YEAR ===\n"]
+
+            # Sort by year
+            sorted_results = sorted(results, key=lambda r: r.get('year', 0))
+
+            for result in sorted_results:
+                year = result.get('year', 'N/A')
+                data = result.get('data', {})
+
+                context_parts.append(f"\n--- YEAR {year} ---\n")
+
+                if isinstance(data, dict):
+                    for key, value in data.items():
+                        if isinstance(value, (list, dict)):
+                            context_parts.append(f"  {key}: {json_module.dumps(value, indent=2)}\n")
+                        else:
+                            context_parts.append(f"  {key}: {value}\n")
+                else:
+                    context_parts.append(f"  {data}\n")
+
+            full_prompt = "".join(context_parts)
+
+            self.db.update_run_progress(
+                synthesis_run_id,
+                progress_message="Running AI synthesis...",
+                progress_percent=50
+            )
+
+            # Reserve API key
+            api_key = self.api_key_manager.reserve_key()
+            if not api_key:
+                raise Exception("No API keys available for synthesis")
+
+            try:
+                provider = GeminiProvider(
+                    api_key=api_key,
+                    model=self.config.default_model,
+                    thinking_budget=self.config.thinking_budget,
+                    rate_limiter=self.rate_limiter
+                )
+
+                # Schema for multi-year synthesis
+                from pydantic import BaseModel, Field
+                from typing import List as TypeList
+
+                class TrendItem(BaseModel):
+                    area: str = Field(description="Area of analysis")
+                    trend: str = Field(description="Trend direction: improving, declining, stable, mixed")
+                    details: str = Field(description="Explanation of the trend")
+
+                class TurningPoint(BaseModel):
+                    year: int
+                    event: str
+                    impact: str
+
+                class MultiYearSynthesis(BaseModel):
+                    executive_summary: str = Field(description="High-level synthesis")
+                    key_trends: TypeList[TrendItem] = Field(description="Major trends across years")
+                    turning_points: TypeList[TurningPoint] = Field(description="Pivotal moments")
+                    consistent_strengths: TypeList[str] = Field(description="Strengths maintained over time")
+                    consistent_weaknesses: TypeList[str] = Field(description="Persistent challenges")
+                    notable_changes: TypeList[str] = Field(description="Significant changes observed")
+                    trajectory_assessment: str = Field(description="Where the company is heading")
+                    risk_evolution: str = Field(description="How risks have evolved")
+                    investment_insights: TypeList[str] = Field(description="Investment timing insights")
+                    forward_outlook: str = Field(description="Future projections")
+                    overall_score_trend: str = Field(description="If scores available, how they've trended")
+                    recommendations: TypeList[str] = Field(description="Action recommendations")
+
+                result = provider.generate_with_retry(
+                    prompt=full_prompt,
+                    schema=MultiYearSynthesis,
+                    max_retries=3,
+                    retry_delay=10
+                )
+
+                self.api_key_manager.record_usage(api_key)
+
+                if result:
+                    # Store synthesis result
+                    self.db.store_result(
+                        run_id=synthesis_run_id,
+                        ticker=ticker,
+                        fiscal_year=0,  # 0 indicates synthesis
+                        filing_type=filing_type,
+                        result_type='MultiYearSynthesis',
+                        result_data=result.model_dump()
+                    )
+
+                    self.db.update_run_status(synthesis_run_id, 'completed')
+                    self.logger.info(f"Multi-year synthesis completed: {synthesis_run_id}")
+                    return synthesis_run_id
+                else:
+                    raise Exception("AI returned no result")
+
+            finally:
+                self.api_key_manager.release_key(api_key)
+
+        except Exception as e:
+            error_msg = f"Multi-year synthesis failed: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            self.db.update_run_status(synthesis_run_id, 'failed', error_msg)
+            return None

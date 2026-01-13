@@ -254,14 +254,24 @@ class GeminiProvider(LLMProvider):
         """
         Validate that the API key is working.
 
+        Uses the global request queue to respect rate limits and serialization.
+
         Returns:
             True if API key is valid, False otherwise
         """
         try:
-            # Simple test prompt
-            self.client.models.generate_content(
-                model=self.model,
-                contents="Hello, respond with 'OK'",
+            # Use request queue to respect rate limiting
+            request_queue = get_gemini_request_queue()
+
+            def _validation_request():
+                return self.client.models.generate_content(
+                    model=self.model,
+                    contents="Hello, respond with 'OK'",
+                )
+
+            request_queue.execute_with_lock(
+                request_func=_validation_request,
+                api_key=self.api_key,
             )
             self.logger.info("API key validation successful")
             return True

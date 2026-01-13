@@ -14,6 +14,7 @@ from rich.table import Table
 
 from fintel.core import get_config, get_logger
 from fintel.processing import ParallelProcessor
+from fintel.cli.utils import read_ticker_file
 
 console = Console()
 logger = get_logger(__name__)
@@ -64,18 +65,22 @@ def batch(
     max_workers = min(workers, len(config.google_api_keys))
     if workers > max_workers:
         console.print(
-            f"  Requested {workers} workers but only {max_workers} API keys available. "
+            f"ï¿½ Requested {workers} workers but only {max_workers} API keys available. "
             f"Using {max_workers} workers.",
             style="yellow"
         )
         workers = max_workers
 
-    # Read ticker list
+    # Read ticker list using shared utility
     ticker_path = Path(ticker_file)
-    tickers = _read_ticker_file(ticker_path)
+    try:
+        tickers = read_ticker_file(ticker_path)
+    except ValueError as e:
+        console.print(f"Error: {e}", style="bold red")
+        return
 
     if not tickers:
-        console.print(f" No tickers found in {ticker_file}", style="bold red")
+        console.print(f"Error: No tickers found in {ticker_file}", style="bold red")
         return
 
     # Determine output directory
@@ -143,7 +148,7 @@ def batch(
 
     except KeyboardInterrupt:
         console.print(
-            f"\n  Batch processing interrupted. "
+            f"\nï¿½ Batch processing interrupted. "
             f"Run with --session-id {session_id} --resume to continue.",
             style="bold yellow"
         )
@@ -151,50 +156,6 @@ def batch(
         console.print(f"\n Batch processing failed: {e}", style="bold red")
         logger.exception("Batch processing failed")
         raise click.Abort()
-
-
-def _read_ticker_file(ticker_path: Path) -> list[str]:
-    """
-    Read ticker symbols from a file (CSV or text).
-
-    Args:
-        ticker_path: Path to ticker file
-
-    Returns:
-        List of ticker symbols
-    """
-    tickers = []
-
-    if ticker_path.suffix.lower() == ".csv":
-        import pandas as pd
-        df = pd.read_csv(ticker_path)
-
-        # Look for ticker column
-        ticker_col = None
-        for col in df.columns:
-            if col.lower() in ["ticker", "symbol", "stock", "company"]:
-                ticker_col = col
-                break
-
-        if ticker_col:
-            tickers = df[ticker_col].dropna().astype(str).str.upper().tolist()
-        else:
-            # Try first column
-            tickers = df.iloc[:, 0].dropna().astype(str).str.upper().tolist()
-    else:
-        # Text file, one ticker per line
-        with open(ticker_path, "r") as f:
-            tickers = [line.strip().upper() for line in f if line.strip()]
-
-    # Remove duplicates while preserving order
-    seen = set()
-    unique_tickers = []
-    for ticker in tickers:
-        if ticker not in seen:
-            seen.add(ticker)
-            unique_tickers.append(ticker)
-
-    return unique_tickers
 
 
 def _display_results_summary(results: dict, tickers: list[str]) -> None:

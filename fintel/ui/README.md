@@ -38,12 +38,14 @@ Streamlit-based web interface for the Fintel financial analysis platform.
 ### Prerequisites
 
 1. Install dependencies:
+
    ```bash
    cd fintel
    pip install -e .
    ```
 
 2. Set up environment variables (create `.env` file):
+
    ```bash
    # Google API Keys (1-25 keys)
    GOOGLE_API_KEY_1=your_api_key_here
@@ -96,6 +98,7 @@ The app will open in your browser at `http://localhost:8501`
 ### 2. Running Batch Analysis
 
 #### Via CSV Upload:
+
 1. Navigate to **📦 Batch Analysis** page
 2. Download the CSV template
 3. Fill in your tickers and optional settings:
@@ -111,6 +114,7 @@ The app will open in your browser at `http://localhost:8501`
 9. View results in History when complete
 
 #### Manual Entry:
+
 1. Navigate to **📦 Batch Analysis** page
 2. Scroll to "Manual Entry" section
 3. Enter tickers (comma or newline separated)
@@ -171,7 +175,7 @@ src/fintel/ui/
 │   ├── 1_📊_Single_Analysis.py    # Single company analysis
 │   ├── 2_📈_Analysis_History.py   # Search and filter past analyses
 │   ├── 3_🔍_Results_Viewer.py     # View analysis results
-│   ├── 4_⚙️_Settings.py           # Custom prompts and cache management
+│   ├── 5_⚙️_Settings.py           # Custom prompts and cache management
 │   └── 5_📦_Batch_Analysis.py     # Batch analysis via CSV or manual entry
 ├── components/
 │   └── results_display.py          # Display formatters for all analysis types
@@ -189,6 +193,7 @@ src/fintel/ui/
 ### Database Schema
 
 **Tables:**
+
 - `analysis_runs`: Tracks each analysis job
 - `analysis_results`: Stores Pydantic model outputs (JSON)
 - `custom_prompts`: User-created prompts
@@ -198,6 +203,7 @@ src/fintel/ui/
 ### Service Layer
 
 The `AnalysisService` class wraps existing fintel analyzers without modifying them:
+
 - `FundamentalAnalyzer` → fundamental analysis (single year)
 - `ExcellentCompanyAnalyzer` → success factors for proven winners (multi-year, success-focused)
 - `ObjectiveCompanyAnalyzer` → success factors for unknown companies (multi-year, unbiased)
@@ -212,6 +218,7 @@ The `AnalysisService` class wraps existing fintel analyzers without modifying th
 ### Database Issues
 
 If you encounter database errors:
+
 ```bash
 # Delete and recreate database
 rm data/fintel.db
@@ -221,6 +228,7 @@ rm data/fintel.db
 ### Analysis Stuck
 
 If an analysis appears stuck:
+
 1. Check the terminal for errors
 2. Verify API keys are valid
 3. Check internet connection (SEC Edgar requires network)
@@ -229,6 +237,7 @@ If an analysis appears stuck:
 ### Import Errors
 
 If you see import errors:
+
 ```bash
 # Reinstall in development mode
 cd fintel
@@ -240,21 +249,25 @@ pip install -e .
 ### Adding a New Analysis Type
 
 1. **Implement analyzer** in `src/fintel/analysis/`:
+
    - Create analyzer class with appropriate methods
    - Define Pydantic models for output
    - Create prompts if using AI
 
 2. **Add to AnalysisService** (`src/fintel/ui/services/analysis_service.py`):
+
    - Add new method `_run_<type>_analysis(ticker, pdf_paths)`
    - Add case to `run_analysis()` switch statement
    - Handle multi-year vs single-year logic
 
 3. **Add display formatting** (`src/fintel/ui/components/results_display.py`):
+
    - Create `_display_<type>_formatted(data)` function
    - Add case to `display_formatted_view()` switch
    - Use expanders and markdown for clean layout
 
 4. **Update UI selectors**:
+
    - Add to analysis type dropdown in `1_📊_Single_Analysis.py`
    - Add description to `analysis_descriptions` dict
    - Add to analysis type map
@@ -269,11 +282,13 @@ pip install -e .
 ### Adding a New Page
 
 1. Create file in `src/fintel/ui/pages/` with format: `N_<emoji>_<Name>.py`
+
    - N is a number determining order (1-9)
    - Use an appropriate emoji
    - Name should be descriptive
 
 2. Use consistent session state initialization:
+
    ```python
    if 'db' not in st.session_state:
        st.session_state.db = DatabaseRepository()
@@ -288,26 +303,28 @@ pip install -e .
 
 ## Analysis Type Reference
 
-| Type | Years | Purpose | Output Model | Time |
-|------|-------|---------|--------------|------|
-| fundamental | 1 (or more) | Basic 10-K analysis | `TenKAnalysis` | 1-5 min/year |
-| excellent | 3-15 | Success factors for winners | `ExcellentCompanyFactors` | 10-30 min |
-| objective | 3-15 | Unbiased success factors | `CompanySuccessFactors` | 10-30 min |
-| buffett | 1 | Value investing lens | `BuffettAnalysis` | 1-5 min |
-| taleb | 1 | Antifragility lens | `TalebAnalysis` | 1-5 min |
-| contrarian | 1 | Variant perception | `ContrarianAnalysis` | 1-5 min |
-| multi | 1 | All three lenses | `SimplifiedAnalysis` | 3-10 min |
-| scanner | 3-15 | Hidden gem detection | `ContrarianAnalysis` (with scores) | 15-40 min |
+| Type        | Years       | Purpose                     | Output Model                       | Time         |
+| ----------- | ----------- | --------------------------- | ---------------------------------- | ------------ |
+| fundamental | 1 (or more) | Basic 10-K analysis         | `TenKAnalysis`                     | 1-5 min/year |
+| excellent   | 3-15        | Success factors for winners | `ExcellentCompanyFactors`          | 10-30 min    |
+| objective   | 3-15        | Unbiased success factors    | `CompanySuccessFactors`            | 10-30 min    |
+| buffett     | 1           | Value investing lens        | `BuffettAnalysis`                  | 1-5 min      |
+| taleb       | 1           | Antifragility lens          | `TalebAnalysis`                    | 1-5 min      |
+| contrarian  | 1           | Variant perception          | `ContrarianAnalysis`               | 1-5 min      |
+| multi       | 1           | All three lenses            | `SimplifiedAnalysis`               | 3-10 min     |
+| scanner     | 3-15        | Hidden gem detection        | `ContrarianAnalysis` (with scores) | 15-40 min    |
 
 ## Future Enhancements
 
 ### Planned
+
 - **Benchmark Comparison**: Compare against top 50 baseline (requires baseline file)
 - **Data Visualizations**: Charts for trends, financial metrics, score distributions
 - **Comparative Analysis**: Side-by-side company comparisons
 - **PDF Report Generation**: Professional reports for presentations
 
 ### Under Consideration
+
 - Email notifications for completed analyses
 - User authentication and multi-user support
 - API endpoint for programmatic access
@@ -318,6 +335,7 @@ pip install -e .
 ## Support
 
 For issues or questions:
+
 1. Check the logs in `./logs/`
 2. Review database with SQLite browser
 3. Consult the main Fintel documentation
