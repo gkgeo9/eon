@@ -76,7 +76,9 @@ class AnalysisService:
         num_years: Optional[int] = None,
         custom_prompt: Optional[str] = None,
         company_name: Optional[str] = None,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        input_mode: str = 'ticker',
+        cik: Optional[str] = None
     ) -> str:
         """
         Run analysis and return run_id for tracking.
@@ -89,7 +91,7 @@ class AnalysisService:
         5. Updates status
 
         Args:
-            ticker: Company ticker symbol
+            ticker: Company ticker symbol or CIK (based on input_mode)
             analysis_type: Type of analysis (fundamental, excellent, buffett, etc.)
             filing_type: Filing type (10-K, 10-Q, 8-K)
             years: Specific years to analyze
@@ -97,6 +99,8 @@ class AnalysisService:
             custom_prompt: Optional custom prompt template
             company_name: Optional company name
             api_key: Optional pre-reserved API key (for batch processing Fix #1)
+            input_mode: 'ticker' or 'cik' - determines how ticker param is interpreted
+            cik: Explicit CIK value (if known from ticker lookup)
 
         Returns:
             run_id (UUID string) for tracking progress
@@ -106,6 +110,41 @@ class AnalysisService:
             Exception: If analysis fails
         """
         run_id = str(uuid.uuid4())
+
+        # Handle CIK mode - resolve company info if needed
+        resolved_cik = cik
+        resolved_company_name = company_name
+        display_identifier = ticker
+
+        if input_mode == 'cik':
+            resolved_cik = ticker.zfill(10)
+            display_identifier = f"CIK:{resolved_cik}"
+
+            # Get company name from SEC if not provided
+            if not resolved_company_name:
+                # Check cache first
+                cached = self.db.get_cached_cik_company(resolved_cik)
+                if cached:
+                    resolved_company_name = cached.get('company_name', f'CIK {resolved_cik}')
+                else:
+                    # Query SEC directly
+                    company_info = self.downloader.get_company_info_from_cik(resolved_cik)
+                    if company_info:
+                        resolved_company_name = company_info.get('company_name', f'CIK {resolved_cik}')
+                        # Cache for future use
+                        self.db.cache_cik_company(
+                            cik=resolved_cik,
+                            company_name=resolved_company_name,
+                            former_names=company_info.get('former_names'),
+                            sic_code=company_info.get('sic_code'),
+                            sic_description=company_info.get('sic_description'),
+                            state_of_incorporation=company_info.get('state_of_incorporation'),
+                            fiscal_year_end=company_info.get('fiscal_year_end')
+                        )
+                    else:
+                        resolved_company_name = f'CIK {resolved_cik}'
+        elif cik:
+            resolved_cik = cik.zfill(10)
 
         # Determine years to analyze
         # Note: When num_years is specified, we'll request those years but be flexible
@@ -124,14 +163,14 @@ class AnalysisService:
         requested_num_years = num_years
 
         self.logger.info(
-            f"Starting {analysis_type} analysis for {ticker} "
-            f"({filing_type}, years: {years})"
+            f"Starting {analysis_type} analysis for {display_identifier} "
+            f"({filing_type}, years: {years}, mode: {input_mode})"
         )
 
-        # Create run record
-        self.db.create_analysis_run(
+        # Create run record with CIK support
+        self.db.create_analysis_run_with_cik(
             run_id=run_id,
-            ticker=ticker,
+            ticker=ticker if input_mode == 'ticker' else resolved_cik,
             analysis_type=analysis_type,
             filing_type=filing_type,
             years=years,
@@ -139,9 +178,12 @@ class AnalysisService:
                 'custom_prompt': custom_prompt,
                 'model': self.config.default_model,
                 'thinking_budget': self.config.thinking_budget,
-                'filing_type': filing_type
+                'filing_type': filing_type,
+                'input_mode': input_mode
             },
-            company_name=company_name
+            company_name=resolved_company_name,
+            cik=resolved_cik,
+            input_mode=input_mode
         )
 
         # Create cancellation token for this run
@@ -158,10 +200,15 @@ class AnalysisService:
             # Download/retrieve filings
             self.db.update_run_progress(
                 run_id,
-                progress_message=f"Downloading {filing_type} filings for {ticker}...",
+                progress_message=f"Downloading {filing_type} filings for {display_identifier}...",
                 progress_percent=10
             )
-            pdf_paths = self._get_or_download_filings(ticker, filing_type, years, run_id)
+            # Pass the appropriate identifier based on mode
+            identifier_for_download = resolved_cik if input_mode == 'cik' else ticker
+            pdf_paths = self._get_or_download_filings(
+                identifier_for_download, filing_type, years, run_id,
+                input_mode=input_mode
+            )
 
             # Check for cancellation after download
             token.raise_if_cancelled()
@@ -169,8 +216,8 @@ class AnalysisService:
             # Check if we have any PDFs
             if not pdf_paths:
                 raise ValueError(
-                    f"No {filing_type} filings could be downloaded/found for {ticker}. "
-                    "Please check the ticker symbol and try again."
+                    f"No {filing_type} filings could be downloaded/found for {display_identifier}. "
+                    "Please check the identifier and try again."
                 )
 
             self.logger.info(f"Ready to analyze {len(pdf_paths)} years: {list(pdf_paths.keys())}")
@@ -289,7 +336,8 @@ class AnalysisService:
         filing_type: str,
         years: List[int],
         run_id: str,
-        flexible_years: bool = True
+        flexible_years: bool = True,
+        input_mode: str = 'ticker'
     ) -> Dict[int, Path]:
         """
         Download filings or retrieve from cache.
@@ -299,36 +347,40 @@ class AnalysisService:
         - For event-based filings (8-K, 4, DEF 14A): Uses most recent N filings regardless of year
 
         Args:
-            ticker: Company ticker
+            ticker: Company ticker or CIK (based on input_mode)
             filing_type: Filing type (10-K, 10-Q, 8-K, etc.)
             years: List of years to try (for annual filings) or implicit count (for event filings)
             run_id: Analysis run ID for progress updates
             flexible_years: If True, use available filings when requested years aren't found
+            input_mode: 'ticker' or 'cik' - determines download method
 
         Returns:
             Dictionary mapping year to PDF path (year may be inferred from filing date)
         """
         pdf_paths = {}
 
+        # For CIK mode, use CIK as identifier
+        identifier = ticker.zfill(10) if input_mode == 'cik' else ticker
+
         # Determine if this is an annual filing or event-based
         # Annual filings have one per year; event filings can have multiple per year
         is_annual_filing = filing_type.upper() in ['10-K', '10-Q', '20-F', 'N-CSR', 'N-CSRS', '40-F', 'ARS']
         is_quarterly_filing = filing_type.upper() in ['10-Q', '6-K']
 
-        self.logger.info(f"Filing type {filing_type} - Annual: {is_annual_filing}, Quarterly: {is_quarterly_filing}")
+        self.logger.info(f"Filing type {filing_type} - Annual: {is_annual_filing}, Quarterly: {is_quarterly_filing}, Mode: {input_mode}")
 
         # For event-based filings, use count-based logic
         if not is_annual_filing and not is_quarterly_filing:
-            return self._get_event_filings(ticker, filing_type, len(years), run_id)
+            return self._get_event_filings(identifier, filing_type, len(years), run_id, input_mode=input_mode)
 
         # For annual/quarterly filings, try year-based matching
         years_to_download = []
 
         # First, check cache for all years
         for year in years:
-            cached = self.db.get_cached_file(ticker, year, filing_type)
+            cached = self.db.get_cached_file(identifier, year, filing_type)
             if cached and Path(cached).exists():
-                self.logger.info(f"Using cached file for {ticker} {year}: {cached}")
+                self.logger.info(f"Using cached file for {identifier} {year}: {cached}")
                 pdf_paths[year] = Path(cached)
             else:
                 years_to_download.append(year)
@@ -339,7 +391,7 @@ class AnalysisService:
 
         # Download and convert once for all uncached years
         try:
-            self.logger.info(f"Downloading {ticker} {filing_type} for years: {years_to_download}")
+            self.logger.info(f"Downloading {identifier} {filing_type} for years: {years_to_download} (mode: {input_mode})")
 
             # Download enough filings to cover all requested years
             # For annual filings: one per year, so download len(years) + buffer
@@ -355,15 +407,23 @@ class AnalysisService:
                 progress_percent=15
             )
 
-            # Use download_with_metadata to get filing dates for unique filenames
-            filing_dir, filing_metadata = self.downloader.download_with_metadata(
-                ticker=ticker,
-                num_filings=num_to_request,
-                filing_type=filing_type
-            )
+            # Use CIK-direct download method if in CIK mode
+            if input_mode == 'cik':
+                filing_dir, filing_metadata = self.downloader.download_with_metadata_by_cik(
+                    cik=identifier,
+                    num_filings=num_to_request,
+                    filing_type=filing_type
+                )
+            else:
+                # Use standard ticker-based download
+                filing_dir, filing_metadata = self.downloader.download_with_metadata(
+                    ticker=identifier,
+                    num_filings=num_to_request,
+                    filing_type=filing_type
+                )
 
             if not filing_dir:
-                self.logger.error(f"Failed to download filings for {ticker}")
+                self.logger.error(f"Failed to download filings for {identifier}")
                 return pdf_paths
 
             self.db.update_run_progress(
@@ -373,10 +433,12 @@ class AnalysisService:
             )
 
             # Convert to PDF - pass filing_metadata for unique filename generation
-            ticker_pdf_path = self.config.get_data_path("pdfs") / ticker.upper()
+            # Use identifier (CIK or ticker) for the PDF directory
+            pdf_dir_name = identifier.upper() if input_mode == 'ticker' else f"CIK_{identifier}"
+            ticker_pdf_path = self.config.get_data_path("pdfs") / pdf_dir_name
             with SECConverter() as converter:
                 pdf_files = converter.convert(
-                    ticker=ticker,
+                    ticker=identifier,
                     input_path=filing_dir,
                     output_path=ticker_pdf_path,
                     filing_type=filing_type,
@@ -384,13 +446,13 @@ class AnalysisService:
                 )
 
             if not pdf_files:
-                self.logger.warning(f"No PDFs generated for {ticker}")
+                self.logger.warning(f"No PDFs generated for {identifier}")
                 return pdf_paths
 
             # Build year->pdf mapping from converted files
             available_pdfs = {pdf_info['year']: pdf_info for pdf_info in pdf_files}
             available_years_sorted = sorted(available_pdfs.keys(), reverse=True)
-            self.logger.info(f"Converted {len(pdf_files)} {filing_type} filings for {ticker}. Available years: {available_years_sorted}")
+            self.logger.info(f"Converted {len(pdf_files)} {filing_type} filings for {identifier}. Available years: {available_years_sorted}")
 
             # Match requested years with available PDFs
             for year in years_to_download:
@@ -402,13 +464,13 @@ class AnalysisService:
 
                     # Cache it with filing_date for future lookups
                     self.db.cache_file(
-                        ticker, year, filing_type, str(pdf_path),
+                        identifier, year, filing_type, str(pdf_path),
                         filing_date=filing_date
                     )
-                    self.logger.info(f"Matched and cached {ticker} {year} (filed {filing_date}): {pdf_path}")
+                    self.logger.info(f"Matched and cached {identifier} {year} (filed {filing_date}): {pdf_path}")
                 else:
                     self.logger.info(
-                        f"Year {year} not available for {ticker}. "
+                        f"Year {year} not available for {identifier}. "
                         f"Available years: {available_years_sorted}"
                     )
 
@@ -429,11 +491,11 @@ class AnalysisService:
 
                         # Cache it with filing_date
                         self.db.cache_file(
-                            ticker, avail_year, filing_type, str(pdf_path),
+                            identifier, avail_year, filing_type, str(pdf_path),
                             filing_date=filing_date
                         )
                         self.logger.info(
-                            f"Flexible match: using {ticker} {avail_year} "
+                            f"Flexible match: using {identifier} {avail_year} "
                             f"(requested year not available): {pdf_path}"
                         )
                         needed_count -= 1
@@ -448,7 +510,8 @@ class AnalysisService:
         ticker: str,
         filing_type: str,
         count: int,
-        run_id: str
+        run_id: str,
+        input_mode: str = 'ticker'
     ) -> Dict[str, Path]:
         """
         Get N most recent event-based filings (8-K, 4, DEF 14A, etc.).
@@ -457,15 +520,17 @@ class AnalysisService:
         multiple filings per year. This ensures unique identification.
 
         Args:
-            ticker: Company ticker
+            ticker: Company ticker or CIK (based on input_mode)
             filing_type: Filing type (8-K, 4, DEF 14A, etc.)
             count: Number of filings to fetch
             run_id: Analysis run ID for progress updates
+            input_mode: 'ticker' or 'cik' - determines download method
 
         Returns:
             Dictionary mapping filing_date (or index) to PDF path
         """
-        self.logger.info(f"Getting {count} most recent {filing_type} filings for {ticker}")
+        identifier = ticker.zfill(10) if input_mode == 'cik' else ticker
+        self.logger.info(f"Getting {count} most recent {filing_type} filings for {identifier} (mode: {input_mode})")
 
         pdf_paths = {}
 
@@ -476,15 +541,22 @@ class AnalysisService:
                 progress_percent=15
             )
 
-            # Use download_with_metadata for event filings
-            filing_dir, filing_metadata = self.downloader.download_with_metadata(
-                ticker=ticker,
-                num_filings=count,
-                filing_type=filing_type
-            )
+            # Use CIK-direct download method if in CIK mode
+            if input_mode == 'cik':
+                filing_dir, filing_metadata = self.downloader.download_with_metadata_by_cik(
+                    cik=identifier,
+                    num_filings=count,
+                    filing_type=filing_type
+                )
+            else:
+                filing_dir, filing_metadata = self.downloader.download_with_metadata(
+                    ticker=identifier,
+                    num_filings=count,
+                    filing_type=filing_type
+                )
 
             if not filing_dir:
-                self.logger.error(f"Failed to download filings for {ticker}")
+                self.logger.error(f"Failed to download filings for {identifier}")
                 return pdf_paths
 
             self.db.update_run_progress(
@@ -493,10 +565,11 @@ class AnalysisService:
                 progress_percent=30
             )
 
-            ticker_pdf_path = self.config.get_data_path("pdfs") / ticker.upper()
+            pdf_dir_name = identifier.upper() if input_mode == 'ticker' else f"CIK_{identifier}"
+            ticker_pdf_path = self.config.get_data_path("pdfs") / pdf_dir_name
             with SECConverter() as converter:
                 pdf_files = converter.convert(
-                    ticker=ticker,
+                    ticker=identifier,
                     input_path=filing_dir,
                     output_path=ticker_pdf_path,
                     filing_type=filing_type,
@@ -504,7 +577,7 @@ class AnalysisService:
                 )
 
             if not pdf_files:
-                self.logger.warning(f"No PDFs generated for {ticker}")
+                self.logger.warning(f"No PDFs generated for {identifier}")
                 return pdf_paths
 
             # For event filings, use filing_date as key (or index if no date)

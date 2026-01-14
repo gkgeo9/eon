@@ -49,6 +49,36 @@ st.markdown("Manage large-scale analysis jobs that run overnight or over multipl
 
 st.markdown("---")
 
+# Check for stale running batches (crashed but still showing as running)
+stale_batches = queue.get_stale_running_batches(stale_minutes=5)
+for stale in stale_batches:
+    queue.mark_batch_as_crashed(stale['batch_id'])
+    st.info(f"Detected crashed batch '{stale['name']}' - marked for resume")
+
+# Check for interrupted batches that need attention
+all_batches = queue.get_all_batches()
+interrupted_batches = [
+    b for b in all_batches
+    if b['status'] in ['stopped', 'failed'] and b['completed_tickers'] > 0 and b['completed_tickers'] < b['total_tickers']
+]
+
+if interrupted_batches:
+    st.warning(f"**{len(interrupted_batches)} batch(es) were interrupted and can be resumed**")
+    for batch in interrupted_batches:
+        pending = batch['total_tickers'] - batch['completed_tickers'] - batch['failed_tickers']
+        col1, col2, col3 = st.columns([3, 2, 1])
+        with col1:
+            st.markdown(f"**{batch['name']}** - {batch['completed_tickers']}/{batch['total_tickers']} completed")
+        with col2:
+            st.caption(f"{pending} companies remaining")
+        with col3:
+            if st.button("Resume", key=f"quick_resume_{batch['batch_id']}", type="primary"):
+                queue.start_batch_job(batch['batch_id'])
+                st.success(f"Resumed from company {batch['completed_tickers'] + 1}")
+                time.sleep(1)
+                st.rerun()
+    st.markdown("---")
+
 # Queue status overview
 queue_state = queue.get_queue_state()
 
@@ -263,7 +293,8 @@ st.markdown("---")
 # Show existing batches
 st.subheader("Batch Jobs")
 
-batches = queue.get_all_batches()
+# Reuse all_batches from interrupted check above
+batches = all_batches
 
 if not batches:
     st.info("No batch jobs yet. Create one above.")
@@ -318,8 +349,24 @@ else:
             # Status-specific info
             if batch['status'] == 'waiting_reset':
                 st.info("Waiting for midnight PST rate limit reset...")
+            elif batch['status'] == 'stopped':
+                batch_details = queue.get_batch_status(batch['batch_id'])
+                if batch['completed_tickers'] > 0:
+                    pending_count = batch['total_tickers'] - batch['completed_tickers'] - batch['failed_tickers']
+                    st.info(
+                        f"Batch was interrupted. **{batch['completed_tickers']} companies completed**, "
+                        f"**{pending_count} remaining**. Click Resume to continue from where it left off."
+                    )
+                if batch_details and batch_details.get('error_message'):
+                    st.caption(f"Reason: {batch_details['error_message']}")
             elif batch['status'] == 'failed':
                 batch_details = queue.get_batch_status(batch['batch_id'])
+                if batch['completed_tickers'] > 0:
+                    pending_count = batch['total_tickers'] - batch['completed_tickers'] - batch['failed_tickers']
+                    st.info(
+                        f"Batch failed but **{batch['completed_tickers']} companies are saved**. "
+                        f"Resume will continue from company {batch['completed_tickers'] + 1}."
+                    )
                 if batch_details and batch_details.get('error_message'):
                     st.error(f"Error: {batch_details['error_message']}")
 
@@ -341,9 +388,15 @@ else:
                         time.sleep(1)
                         st.rerun()
                 elif batch['status'] in ['stopped', 'failed']:
-                    if st.button("Restart", key=f"restart_{batch['batch_id']}", type="primary"):
+                    # Calculate remaining items for clearer messaging
+                    pending_count = batch['total_tickers'] - batch['completed_tickers'] - batch['failed_tickers']
+                    resume_label = "Resume" if batch['completed_tickers'] > 0 else "Start"
+                    if st.button(resume_label, key=f"restart_{batch['batch_id']}", type="primary"):
                         queue.start_batch_job(batch['batch_id'])
-                        st.success("Restarted")
+                        if batch['completed_tickers'] > 0:
+                            st.success(f"Resumed - continuing from company {batch['completed_tickers'] + 1} ({pending_count} remaining)")
+                        else:
+                            st.success("Started")
                         time.sleep(1)
                         st.rerun()
 
@@ -444,7 +497,7 @@ if 'export_batch_id' in st.session_state:
                             row['years_analyzed'] = run_details.get('years_analyzed', '')
 
                             # Get brief result summary if available
-                            year_analyses = db.get_year_analyses(run_id)
+                            year_analyses = db.get_analysis_results(run_id)
                             if year_analyses:
                                 row['years_completed'] = len(year_analyses)
                     except:

@@ -208,6 +208,17 @@ class BatchQueueService:
             self.logger.warning("Worker thread already running")
             return False
 
+        # Reset any items stuck in 'running' status back to 'pending'
+        # This handles the case where a previous run crashed mid-process
+        reset_query = """
+            UPDATE batch_items
+            SET status = 'pending', started_at = NULL
+            WHERE batch_id = ? AND status = 'running'
+        """
+        result = self.db._execute_with_retry(reset_query, (batch_id,))
+        if result and result > 0:
+            self.logger.info(f"Reset {result} stale 'running' items to 'pending' for batch {batch_id}")
+
         # Update job status
         query = """
             UPDATE batch_jobs
@@ -344,6 +355,9 @@ class BatchQueueService:
                             item, api_key = futures[future]
                             try:
                                 future.result()  # Raises if the thread raised
+                                # Update batch progress immediately after each item completes
+                                # This ensures the UI shows real-time progress
+                                self._update_batch_progress(batch_id)
                             except AnalysisCancelledException:
                                 self.logger.info(f"Batch job {batch_id} cancelled")
                                 self._mark_batch_stopped(batch_id, "Cancelled by user")
@@ -351,6 +365,8 @@ class BatchQueueService:
                                 return
                             except Exception as e:
                                 self._handle_item_error(item, str(e), batch_id)
+                                # Also update progress after errors so failed count updates
+                                self._update_batch_progress(batch_id)
 
                 finally:
                     # Release any keys that weren't released by workers
@@ -359,9 +375,6 @@ class BatchQueueService:
                             if key not in released_keys:
                                 self.api_key_manager.release_key(key)
                                 self.logger.debug(f"Released unreleased key in finally block")
-
-                # Update batch progress after each parallel batch completes
-                self._update_batch_progress(batch_id)
 
                 # Small delay between parallel batches
                 time.sleep(1)
@@ -809,6 +822,8 @@ class BatchQueueService:
         if self._worker_thread:
             self._worker_thread.join(timeout=10)
         self._mark_batch_stopped(batch_id, "Stopped by user")
+        # Explicitly cleanup worker state to ensure is_running is set to False
+        self._cleanup_worker(batch_id)
         self.logger.info(f"Stopped batch {batch_id}")
 
     def get_batch_status(self, batch_id: str) -> Optional[Dict]:
@@ -891,7 +906,8 @@ class BatchQueueService:
         """Get all batch jobs."""
         query = """
             SELECT batch_id, name, total_tickers, completed_tickers, failed_tickers,
-                   status, analysis_type, created_at, estimated_completion
+                   status, analysis_type, filing_type, num_years,
+                   created_at, estimated_completion, last_activity_at
             FROM batch_jobs
             ORDER BY created_at DESC
             LIMIT ?
@@ -908,11 +924,78 @@ class BatchQueueService:
                 'failed_tickers': row['failed_tickers'],
                 'status': row['status'],
                 'analysis_type': row['analysis_type'],
+                'filing_type': row['filing_type'],
+                'num_years': row['num_years'],
                 'created_at': row['created_at'],
                 'estimated_completion': row['estimated_completion'],
+                'last_activity_at': row['last_activity_at'],
                 'progress_percent': round((row['completed_tickers'] / row['total_tickers']) * 100, 1) if row['total_tickers'] > 0 else 0
             })
         return batches
+
+    def get_stale_running_batches(self, stale_minutes: int = 5) -> List[Dict]:
+        """
+        Get batches that appear stuck in 'running' status with no recent activity.
+
+        Args:
+            stale_minutes: Consider batch stale if no activity for this many minutes
+
+        Returns:
+            List of stale batch dictionaries
+        """
+        query = """
+            SELECT batch_id, name, total_tickers, completed_tickers, failed_tickers,
+                   status, analysis_type, created_at, last_activity_at
+            FROM batch_jobs
+            WHERE status = 'running'
+            AND (
+                last_activity_at IS NULL
+                OR (julianday('now') - julianday(last_activity_at)) * 24 * 60 > ?
+            )
+            ORDER BY created_at DESC
+        """
+        rows = self.db._execute_with_retry(query, (stale_minutes,), fetch_all=True)
+
+        batches = []
+        for row in rows:
+            batches.append({
+                'batch_id': row['batch_id'],
+                'name': row['name'],
+                'total_tickers': row['total_tickers'],
+                'completed_tickers': row['completed_tickers'],
+                'failed_tickers': row['failed_tickers'],
+                'status': row['status'],
+                'analysis_type': row['analysis_type'],
+                'created_at': row['created_at'],
+                'last_activity_at': row['last_activity_at'],
+                'progress_percent': round((row['completed_tickers'] / row['total_tickers']) * 100, 1) if row['total_tickers'] > 0 else 0
+            })
+        return batches
+
+    def mark_batch_as_crashed(self, batch_id: str) -> None:
+        """
+        Mark a stale running batch as stopped due to crash.
+
+        Args:
+            batch_id: Batch to mark as crashed
+        """
+        now = datetime.utcnow().isoformat()
+
+        # Reset running items to pending
+        reset_query = """
+            UPDATE batch_items
+            SET status = 'pending', started_at = NULL
+            WHERE batch_id = ? AND status = 'running'
+        """
+        self.db._execute_with_retry(reset_query, (batch_id,))
+
+        # Update batch status
+        query = """
+            UPDATE batch_jobs
+            SET status = 'stopped', error_message = 'Worker process crashed - click Resume to continue', last_activity_at = ?
+            WHERE batch_id = ?
+        """
+        self.db._execute_with_retry(query, (now, batch_id))
 
     def get_queue_state(self) -> Dict:
         """Get current queue state."""
@@ -1282,52 +1365,193 @@ Be concise but comprehensive. Focus on actionable insights.
     def create_per_company_synthesis(
         self,
         batch_id: str,
-        synthesis_prompt: Optional[str] = None
+        synthesis_prompt: Optional[str] = None,
+        resume: bool = True
     ) -> List[str]:
         """
-        Create per-company multi-year synthesis for all companies in a batch.
+        Create per-company multi-year synthesis with checkpoint support.
+
+        Features:
+        - Saves checkpoint after each company is synthesized
+        - Can resume from last checkpoint on crash/restart
+        - Tracks which companies have been synthesized
 
         For batches with multiple years per company, this creates a separate
         synthesis document for each company that analyzes their longitudinal
         trends across all analyzed years.
 
-        Example: Batch with A, B, C companies × 4 years each produces:
-        - Synthesis A: 4 years → 1 longitudinal analysis
-        - Synthesis B: 4 years → 1 longitudinal analysis
-        - Synthesis C: 4 years → 1 longitudinal analysis
-
         Args:
             batch_id: Batch to create syntheses for
             synthesis_prompt: Optional custom prompt for synthesis
+            resume: If True, attempt to resume incomplete synthesis job
 
         Returns:
             List of synthesis run_ids (one per company with 2+ years)
         """
         from fintel.ui.services.analysis_service import AnalysisService
 
-        # Get batch info
-        batch = self.get_batch_status(batch_id)
-        if not batch:
-            self.logger.error(f"Batch {batch_id} not found")
-            return []
+        # Check for existing incomplete synthesis job
+        synthesis_job_id = None
+        pending_items = []
 
-        if batch['status'] != 'completed':
-            self.logger.warning(f"Batch {batch_id} is not completed (status: {batch['status']})")
+        if resume:
+            incomplete_jobs = self.db.get_incomplete_synthesis_jobs(batch_id)
+            if incomplete_jobs:
+                job = incomplete_jobs[0]
+                synthesis_job_id = job['synthesis_job_id']
+                pending_items = self.db.get_pending_synthesis_items(synthesis_job_id)
 
-        # Get all completed items grouped by ticker
-        completed_items = self.get_batch_items(batch_id, status='completed', limit=1000)
+                if pending_items:
+                    self.logger.info(
+                        f"Resuming synthesis job {synthesis_job_id} with "
+                        f"{len(pending_items)} remaining companies"
+                    )
+                    self.db.update_synthesis_job_status(synthesis_job_id, 'running')
+                else:
+                    # All items done, mark complete
+                    self.db.update_synthesis_job_status(synthesis_job_id, 'completed')
+                    synthesis_job_id = None
 
-        if not completed_items:
-            self.logger.error(f"No completed items found for batch {batch_id}")
-            return []
+        # If not resuming, create new synthesis job
+        if not synthesis_job_id:
+            synthesis_job_id = str(uuid.uuid4())
+
+            # Get batch info
+            batch = self.get_batch_status(batch_id)
+            if not batch:
+                self.logger.error(f"Batch {batch_id} not found")
+                return []
+
+            if batch['status'] != 'completed':
+                self.logger.warning(f"Batch {batch_id} is not completed (status: {batch['status']})")
+
+            # Get all completed items grouped by ticker
+            completed_items = self.get_batch_items(batch_id, status='completed', limit=1000)
+
+            if not completed_items:
+                self.logger.error(f"No completed items found for batch {batch_id}")
+                return []
+
+            # Group by ticker and prepare synthesis items
+            ticker_results = self._group_batch_items_by_ticker(completed_items)
+
+            # Filter to companies with 2+ years
+            eligible_tickers = {
+                ticker: data for ticker, data in ticker_results.items()
+                if data['num_years'] >= 2
+            }
+
+            if not eligible_tickers:
+                self.logger.info("No companies with 2+ years for synthesis")
+                return []
+
+            # Create synthesis job
+            self.db.create_synthesis_job(
+                synthesis_job_id=synthesis_job_id,
+                batch_id=batch_id,
+                total_companies=len(eligible_tickers),
+                synthesis_prompt=synthesis_prompt
+            )
+
+            # Link to batch
+            self.db.link_synthesis_to_batch(batch_id, synthesis_job_id)
+
+            # Create synthesis items for each company
+            items_to_create = [
+                {
+                    'ticker': ticker,
+                    'company_name': data['company_name'],
+                    'run_id': data['run_id'],
+                    'num_years': data['num_years']
+                }
+                for ticker, data in eligible_tickers.items()
+            ]
+            self.db.create_synthesis_items(synthesis_job_id, items_to_create)
+
+            # Get pending items for processing
+            pending_items = self.db.get_pending_synthesis_items(synthesis_job_id)
+
+            self.db.update_synthesis_job_status(synthesis_job_id, 'running')
+
+            self.logger.info(
+                f"Created synthesis job {synthesis_job_id} with "
+                f"{len(pending_items)} companies"
+            )
+
+        # Process each pending company with checkpointing
+        synthesis_run_ids = []
+        analysis_service = AnalysisService(self.db)
+
+        total_items = len(pending_items)
+        for idx, item in enumerate(pending_items, 1):
+            ticker = item['ticker']
+            source_run_id = item['source_run_id']
+
+            # Update progress
+            progress_pct = int((idx / total_items) * 100)
+            self.logger.info(
+                f"Synthesizing {ticker} ({idx}/{total_items}) - {progress_pct}%"
+            )
+
+            # Mark item as running (checkpoint)
+            self.db.update_synthesis_item_status(
+                synthesis_job_id, ticker, 'running'
+            )
+
+            try:
+                synthesis_run_id = analysis_service.create_multi_year_synthesis(
+                    run_id=source_run_id,
+                    synthesis_prompt=synthesis_prompt
+                )
+
+                if synthesis_run_id:
+                    # SUCCESS CHECKPOINT
+                    self.db.update_synthesis_item_status(
+                        synthesis_job_id, ticker, 'completed',
+                        synthesis_run_id=synthesis_run_id
+                    )
+                    synthesis_run_ids.append(synthesis_run_id)
+                    self.logger.info(f"Checkpoint: {ticker} synthesis completed")
+                else:
+                    # Failed but not exception
+                    self.db.update_synthesis_item_status(
+                        synthesis_job_id, ticker, 'failed',
+                        error_message="Synthesis returned None"
+                    )
+                    self.logger.warning(f"Checkpoint: {ticker} synthesis returned None")
+
+            except Exception as e:
+                # FAILURE CHECKPOINT
+                error_msg = str(e)
+                self.db.update_synthesis_item_status(
+                    synthesis_job_id, ticker, 'failed',
+                    error_message=error_msg
+                )
+                self.logger.error(
+                    f"Checkpoint: {ticker} synthesis failed: {error_msg}",
+                    exc_info=True
+                )
+
+        # Mark job complete
+        progress = self.db.get_synthesis_progress(synthesis_job_id)
+        if progress.get('pending_companies', 0) == 0:
+            self.db.update_synthesis_job_status(synthesis_job_id, 'completed')
 
         self.logger.info(
-            f"Creating per-company synthesis for batch {batch_id} "
-            f"with {len(completed_items)} completed items"
+            f"Synthesis job {synthesis_job_id} finished: "
+            f"{len(synthesis_run_ids)} completed, "
+            f"{progress.get('failed_companies', 0)} failed"
         )
 
-        # Group results by ticker
+        return synthesis_run_ids
+
+    def _group_batch_items_by_ticker(
+        self,
+        completed_items: List[Dict]
+    ) -> Dict[str, Dict]:
+        """Group completed batch items by ticker with metadata."""
         ticker_results: Dict[str, Dict] = {}
+
         for item in completed_items:
             ticker = item['ticker']
             run_id = item.get('run_id')
@@ -1335,7 +1559,6 @@ Be concise but comprehensive. Focus on actionable insights.
             if not run_id:
                 continue
 
-            # Get the analysis results for this run
             run_results = self.db.get_analysis_results(run_id)
 
             if run_results:
@@ -1345,57 +1568,44 @@ Be concise but comprehensive. Focus on actionable insights.
                         'run_id': run_id,
                         'num_years': len(run_results)
                     }
-                else:
-                    # Update if this run has more years
-                    if len(run_results) > ticker_results[ticker]['num_years']:
-                        ticker_results[ticker]['run_id'] = run_id
-                        ticker_results[ticker]['num_years'] = len(run_results)
+                elif len(run_results) > ticker_results[ticker]['num_years']:
+                    ticker_results[ticker]['run_id'] = run_id
+                    ticker_results[ticker]['num_years'] = len(run_results)
 
-        self.logger.info(
-            f"Found {len(ticker_results)} unique tickers for synthesis"
-        )
+        return ticker_results
 
-        # Create synthesis for each ticker with 2+ years
-        synthesis_run_ids = []
-        analysis_service = AnalysisService(self.db)
+    def get_synthesis_job_status(self, batch_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get the status of the most recent synthesis job for a batch.
 
-        for ticker, data in ticker_results.items():
-            if data['num_years'] < 2:
-                self.logger.info(
-                    f"Skipping {ticker}: only {data['num_years']} year(s) "
-                    f"(need 2+ for synthesis)"
-                )
-                continue
+        Args:
+            batch_id: Batch ID
 
-            self.logger.info(
-                f"Creating synthesis for {ticker} with {data['num_years']} years"
-            )
+        Returns:
+            Synthesis job status dict with progress, or None
+        """
+        incomplete = self.db.get_incomplete_synthesis_jobs(batch_id)
+        if incomplete:
+            job = incomplete[0]
+            progress = self.db.get_synthesis_progress(job['synthesis_job_id'])
+            return {**job, **progress}
+        return None
 
-            try:
-                synthesis_run_id = analysis_service.create_multi_year_synthesis(
-                    run_id=data['run_id'],
-                    synthesis_prompt=synthesis_prompt
-                )
+    def resume_synthesis(self, batch_id: str, synthesis_prompt: Optional[str] = None) -> List[str]:
+        """
+        Resume an interrupted synthesis job.
 
-                if synthesis_run_id:
-                    synthesis_run_ids.append(synthesis_run_id)
-                    self.logger.info(
-                        f"Created synthesis for {ticker}: {synthesis_run_id}"
-                    )
-                else:
-                    self.logger.warning(f"Synthesis returned None for {ticker}")
+        This is a convenience method that calls create_per_company_synthesis
+        with resume=True.
 
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to create synthesis for {ticker}: {e}",
-                    exc_info=True
-                )
+        Args:
+            batch_id: Batch ID
+            synthesis_prompt: Optional synthesis prompt
 
-        self.logger.info(
-            f"Created {len(synthesis_run_ids)} synthesis documents for batch {batch_id}"
-        )
-
-        return synthesis_run_ids
+        Returns:
+            List of synthesis run_ids
+        """
+        return self.create_per_company_synthesis(batch_id, synthesis_prompt=synthesis_prompt, resume=True)
 
     def get_batch_num_years(self, batch_id: str) -> int:
         """

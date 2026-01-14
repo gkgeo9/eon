@@ -305,22 +305,39 @@ else:
     if analysis_mode == "Single Company":
         st.subheader("Single Company Analysis")
 
-        # Ticker input
+        # Input mode toggle (Ticker vs CIK)
+        input_mode = st.radio(
+            "Input Mode",
+            options=["Ticker", "CIK"],
+            horizontal=True,
+            key="input_mode_radio",
+            help="Ticker: Stock symbol (e.g., AAPL). CIK: SEC's 10-digit company ID (e.g., 0001018724 for Enron)"
+        )
+
+        # Ticker/CIK input - adapts based on mode
         col1, col2, col3 = st.columns([2, 1, 1])
 
         with col1:
-            ticker = st.text_input(
-                "Company Ticker",
-                placeholder="e.g., AAPL, MSFT, GOOGL",
-                help="Enter the stock ticker symbol",
-                key="ticker_input"
-            ).upper().strip()
+            if input_mode == "Ticker":
+                ticker = st.text_input(
+                    "Company Ticker",
+                    placeholder="e.g., AAPL, MSFT, GOOGL",
+                    help="Enter the stock ticker symbol",
+                    key="ticker_input"
+                ).upper().strip()
+            else:
+                ticker = st.text_input(
+                    "CIK Number",
+                    placeholder="e.g., 0001018724 (Enron)",
+                    help="Enter the SEC Central Index Key (10 digits, leading zeros optional)",
+                    key="cik_input"
+                ).strip()
 
         with col2:
             company_name = st.text_input(
                 "Company Name (Optional)",
                 placeholder="e.g., Apple Inc.",
-                help="Optional - for display purposes",
+                help="Optional - for display purposes. Auto-filled for CIK lookups.",
                 key="company_name_input"
             )
 
@@ -330,12 +347,30 @@ else:
             if st.button("📋 Get Filing Types", help="Query SEC to find available filing types"):
                 if ticker:
                     with st.spinner(f"Querying SEC for {ticker}..."):
-                        filing_types = get_available_filing_types(ticker, st.session_state.db)
+                        if input_mode == "CIK":
+                            # Use CIK-direct method
+                            from fintel.data.sources.sec import SECDownloader
+                            downloader = SECDownloader()
+                            filing_types = downloader.get_available_filing_types_by_cik(ticker)
+                        else:
+                            filing_types = get_available_filing_types(ticker, st.session_state.db)
                         st.session_state.available_filing_types = filing_types
                         st.session_state.last_queried_ticker = ticker
                         st.success(f"Found {len(filing_types)} filing types")
                 else:
-                    st.warning("Please enter a ticker first")
+                    st.warning("Please enter a ticker or CIK first")
+
+        # Show company info preview for CIK mode
+        if input_mode == "CIK" and ticker and len(ticker) >= 1:
+            # Check cache first
+            cached = st.session_state.db.get_cached_cik_company(ticker)
+            if cached:
+                st.info(f"**Company:** {cached['company_name']}")
+                if cached.get('former_names'):
+                    former_names = cached['former_names']
+                    if isinstance(former_names, list) and former_names:
+                        names = [n.get('name', str(n)) if isinstance(n, dict) else str(n) for n in former_names[:3]]
+                        st.caption(f"Former names: {', '.join(names)}")
 
         # Auto-query filing types if ticker changed (with debounce)
         if ticker and ticker != st.session_state.last_queried_ticker:
@@ -348,7 +383,12 @@ else:
             time_since_change = time.time() - st.session_state.ticker_last_changed
             if time_since_change >= FILING_TYPES_DEBOUNCE_DELAY:
                 with st.spinner(f"Fetching available filing types for {ticker}..."):
-                    filing_types = get_available_filing_types(ticker, st.session_state.db)
+                    if input_mode == "CIK":
+                        from fintel.data.sources.sec import SECDownloader
+                        downloader = SECDownloader()
+                        filing_types = downloader.get_available_filing_types_by_cik(ticker)
+                    else:
+                        filing_types = get_available_filing_types(ticker, st.session_state.db)
                     st.session_state.available_filing_types = filing_types
                     st.session_state.last_queried_ticker = ticker
                     st.session_state.pending_ticker = None
@@ -676,11 +716,16 @@ They can occur multiple times per year. Fintel will fetch the N most recent fili
         # Submit button
         if st.button("🚀 Run Analysis", type="primary", width="stretch", key="single_submit"):
             if not ticker:
-                st.error("❌ Please enter a ticker symbol")
+                st.error("❌ Please enter a ticker symbol or CIK")
             else:
-                is_valid, error_msg = validate_ticker(ticker)
+                # Use mode-aware validation
+                from fintel.ui.utils.validators import validate_company_identifier
+                is_valid, error_msg = validate_company_identifier(
+                    ticker,
+                    mode='cik' if input_mode == "CIK" else 'ticker'
+                )
                 if not is_valid:
-                    st.error(f"❌ Invalid ticker: {error_msg}")
+                    st.error(f"❌ Invalid {'CIK' if input_mode == 'CIK' else 'ticker'}: {error_msg}")
                 elif years is None and num_years is None:
                     st.error("❌ Please select a valid time period")
                 else:
@@ -691,7 +736,8 @@ They can occur multiple times per year. Fintel will fetch the N most recent fili
                         'years': years,
                         'num_years': num_years,
                         'custom_prompt': custom_prompt_template,
-                        'company_name': company_name if company_name else None
+                        'company_name': company_name if company_name else None,
+                        'input_mode': 'cik' if input_mode == "CIK" else 'ticker'
                     }
 
                     # Use a result container to avoid st.session_state access from thread
