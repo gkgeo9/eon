@@ -53,7 +53,8 @@ class FundamentalAnalyzer:
         rate_limiter: RateLimiter,
         model: str = None,
         thinking_budget: int = None,
-        use_structured_output: bool = True
+        use_structured_output: bool = True,
+        api_key: str = None
     ):
         """
         Initialize the fundamental analyzer.
@@ -64,10 +65,12 @@ class FundamentalAnalyzer:
             model: LLM model name (default from config)
             thinking_budget: Thinking budget (default from config)
             use_structured_output: Use Pydantic structured output
+            api_key: Optional pre-reserved API key (for batch queue optimization)
         """
         self.api_key_manager = api_key_manager
         self.rate_limiter = rate_limiter
         self.use_structured_output = use_structured_output
+        self._pre_reserved_key = api_key  # Store pre-reserved key for batch processing
 
         # Load configuration
         config = get_config()
@@ -277,8 +280,13 @@ class FundamentalAnalyzer:
         Returns:
             Validated Pydantic model instance, or None on failure
         """
-        # Reserve a key atomically to prevent race conditions in batch processing
-        api_key = self.api_key_manager.reserve_key()
+        # Use pre-reserved key if available (batch queue optimization), otherwise reserve new
+        if self._pre_reserved_key:
+            api_key = self._pre_reserved_key
+            key_was_pre_reserved = True
+        else:
+            api_key = self.api_key_manager.reserve_key()
+            key_was_pre_reserved = False
 
         if api_key is None:
             raise AnalysisError(
@@ -316,8 +324,9 @@ class FundamentalAnalyzer:
             raise AnalysisError(f"AI analysis failed: {e}") from e
 
         finally:
-            # Always release the key, even on error
-            self.api_key_manager.release_key(api_key)
+            # Only release the key if we reserved it (not if pre-reserved by caller)
+            if not key_was_pre_reserved:
+                self.api_key_manager.release_key(api_key)
 
     def _save_result(
         self,

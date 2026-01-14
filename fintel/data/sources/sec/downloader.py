@@ -6,7 +6,7 @@ Extracted and refactored from standardized_sec_ai/tenk_processor.py
 """
 
 from pathlib import Path
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional, Set, Tuple
 from sec_edgar_downloader import Downloader
 import requests
 import time
@@ -102,6 +102,51 @@ class SECDownloader:
             error_msg = f"Error downloading {ticker}: {str(e)}"
             self.logger.error(error_msg)
             raise DownloadError(error_msg) from e
+
+    def download_with_metadata(
+        self,
+        ticker: str,
+        num_filings: int = 5,
+        filing_type: str = "10-K"
+    ) -> Tuple[Optional[Path], List[Dict]]:
+        """
+        Download filings and return both path and metadata.
+
+        This is the preferred method for downloading as it returns the filing
+        metadata needed for unique filename generation (filing_date, etc.).
+
+        Args:
+            ticker: Stock ticker symbol
+            num_filings: Number of recent filings to download
+            filing_type: Type of filing (default: 10-K)
+
+        Returns:
+            Tuple of (filing_path, metadata_list) where:
+            - filing_path: Path to downloaded filings directory, or None if failed
+            - metadata_list: List of filing metadata dicts with:
+                - accession_number: Unique filing identifier
+                - filing_date: When filed with SEC (YYYY-MM-DD)
+                - report_date: Period end date
+                - fiscal_year: Fiscal year (derived from report_date)
+                - primary_document: Main document filename
+
+        Raises:
+            DownloadError: If download fails
+        """
+        ticker = ticker.upper()
+        self.logger.info(f"Downloading {num_filings} {filing_type} filings with metadata for {ticker}")
+
+        # First, get metadata for the filings we're about to download
+        try:
+            metadata = self.get_available_filings(ticker, filing_type, limit=num_filings)
+        except Exception as e:
+            self.logger.warning(f"Could not fetch metadata for {ticker}: {e}")
+            metadata = []
+
+        # Then download the filings
+        filing_path = self.download(ticker, num_filings, filing_type)
+
+        return filing_path, metadata
 
     def download_batch(
         self,

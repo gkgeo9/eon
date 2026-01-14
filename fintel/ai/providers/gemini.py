@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from fintel.core import get_logger, AIProviderError
 from .base import LLMProvider
 from fintel.ai.rate_limiter import RateLimiter
+from fintel.ai.request_queue import get_gemini_request_queue
 
 
 class GeminiProvider(LLMProvider):
@@ -83,6 +84,9 @@ class GeminiProvider(LLMProvider):
         """
         Generate a response from Gemini.
 
+        Uses global request queue to serialize all API calls, ensuring rate limits
+        are not exceeded even when running multiple analyses in parallel.
+
         Args:
             prompt: The prompt to send
             schema: Optional Pydantic schema for structured output
@@ -95,39 +99,46 @@ class GeminiProvider(LLMProvider):
         Raises:
             AIProviderError: If generation fails
         """
+        # Build configuration
+        config_params = {}
+
+        # Add thinking configuration (Gemini 2 vs Gemini 3)
+        if self.thinking_level:
+            # Gemini 3 style (thinkingConfig with thinkingLevel)
+            config_params['thinkingConfig'] = {
+                'thinkingLevel': self.thinking_level
+            }
+        elif not schema:
+            # Gemini 2 style (ThinkingConfig with thinking_budget)
+            # Only for unstructured output
+            config_params['thinking_config'] = types.ThinkingConfig(
+                thinking_budget=self.thinking_budget
+            )
+
+        # Add Google Search tool if enabled
+        tools = []
+        if self.use_google_search:
+            tools.append(types.Tool(googleSearch=types.GoogleSearch()))
+            config_params['tools'] = tools
+            self.logger.debug("Google Search tool enabled")
+
+        # Add response format
+        config_params['response_mime_type'] = "application/json"
+
+        # Use global request queue to serialize the API call
+        # This prevents concurrent requests from different threads/keys
+        request_queue = get_gemini_request_queue()
+
         try:
-            # Build configuration
-            config_params = {}
-
-            # Add thinking configuration (Gemini 2 vs Gemini 3)
-            if self.thinking_level:
-                # Gemini 3 style (thinkingConfig with thinkingLevel)
-                config_params['thinkingConfig'] = {
-                    'thinkingLevel': self.thinking_level
-                }
-            elif not schema:
-                # Gemini 2 style (ThinkingConfig with thinking_budget)
-                # Only for unstructured output
-                config_params['thinking_config'] = types.ThinkingConfig(
-                    thinking_budget=self.thinking_budget
-                )
-
-            # Add Google Search tool if enabled
-            tools = []
-            if self.use_google_search:
-                tools.append(types.Tool(googleSearch=types.GoogleSearch()))
-                config_params['tools'] = tools
-                self.logger.debug("Google Search tool enabled")
-
-            # Add response format
-            config_params['response_mime_type'] = "application/json"
-
             if schema:
                 # Structured output with Pydantic validation
                 self.logger.debug(f"Generating with schema: {schema.__name__}")
                 config_params['response_schema'] = schema
 
-                response = self.client.models.generate_content(
+                # Execute API call through global queue for serialization
+                response = request_queue.execute_with_lock(
+                    request_func=self.client.models.generate_content,
+                    api_key=self.api_key,
                     model=self.model,
                     contents=prompt,
                     config=types.GenerateContentConfig(**config_params, **kwargs),
@@ -137,9 +148,11 @@ class GeminiProvider(LLMProvider):
                 result = schema.model_validate_json(response.text)
                 self.logger.debug("Successfully generated structured response")
 
-                # Record API usage and sleep (if rate limiter configured)
+                # Record API usage in rate limiter
+                # Note: Do NOT call record_and_sleep() because the request queue already
+                # handled the mandatory 65s sleep. Instead, record directly to the tracker.
                 if self.rate_limiter:
-                    self.rate_limiter.record_and_sleep(self.api_key)
+                    self.rate_limiter.tracker.record_request(self.api_key, error=False)
 
                 return result
 
@@ -147,7 +160,10 @@ class GeminiProvider(LLMProvider):
                 # Unstructured JSON output
                 self.logger.debug("Generating unstructured response")
 
-                response = self.client.models.generate_content(
+                # Execute API call through global queue for serialization
+                response = request_queue.execute_with_lock(
+                    request_func=self.client.models.generate_content,
+                    api_key=self.api_key,
                     model=self.model,
                     contents=prompt,
                     config=types.GenerateContentConfig(**config_params, **kwargs),
@@ -168,9 +184,11 @@ class GeminiProvider(LLMProvider):
                 result = json.loads(response_text)
                 self.logger.debug("Successfully generated unstructured response")
 
-                # Record API usage and sleep (if rate limiter configured)
+                # Record API usage in rate limiter
+                # Note: Do NOT call record_and_sleep() because the request queue already
+                # handled the mandatory 65s sleep. Instead, record directly to the tracker.
                 if self.rate_limiter:
-                    self.rate_limiter.record_and_sleep(self.api_key)
+                    self.rate_limiter.tracker.record_request(self.api_key, error=False)
 
                 return result
 
@@ -236,14 +254,24 @@ class GeminiProvider(LLMProvider):
         """
         Validate that the API key is working.
 
+        Uses the global request queue to respect rate limits and serialization.
+
         Returns:
             True if API key is valid, False otherwise
         """
         try:
-            # Simple test prompt
-            self.client.models.generate_content(
-                model=self.model,
-                contents="Hello, respond with 'OK'",
+            # Use request queue to respect rate limiting
+            request_queue = get_gemini_request_queue()
+
+            def _validation_request():
+                return self.client.models.generate_content(
+                    model=self.model,
+                    contents="Hello, respond with 'OK'",
+                )
+
+            request_queue.execute_with_lock(
+                request_func=_validation_request,
+                api_key=self.api_key,
             )
             self.logger.info("API key validation successful")
             return True

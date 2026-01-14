@@ -26,16 +26,19 @@ Fintel is a production-ready platform that analyzes SEC 10-K filings using Googl
 
 ## Key Features
 
-| Feature                        | Description                                      |
-| ------------------------------ | ------------------------------------------------ |
-| **Multi-Perspective Analysis** | Buffett, Taleb, and Contrarian investment lenses |
-| **Custom Workflows**           | Auto-discovered Python-based analysis workflows  |
-| **Batch Processing**           | Analyze 1-1000+ companies in parallel            |
-| **Contrarian Scanner**         | 6-dimension hidden gem scoring (0-600 scale)     |
-| **Compounder DNA**             | Compare against top 50 proven performers         |
-| **Resume Support**             | Continue interrupted analyses automatically      |
-| **API Key Rotation**           | Distribute load across 25+ Gemini API keys       |
-| **Web + CLI**                  | Both Streamlit UI and command-line interface     |
+| Feature                         | Description                                       |
+| ------------------------------- | ------------------------------------------------- |
+| **Multi-Perspective Analysis**  | Buffett, Taleb, and Contrarian investment lenses  |
+| **Custom Workflows**            | Auto-discovered Python-based analysis workflows   |
+| **Batch Processing**            | Analyze 1-1000+ companies in parallel             |
+| **Contrarian Scanner**          | 6-dimension hidden gem scoring (0-600 scale)      |
+| **Compounder DNA**              | Compare against top 50 proven performers          |
+| **Resume Support**              | Continue interrupted analyses automatically       |
+| **API Key Rotation**            | Distribute load across 25+ Gemini API keys        |
+| **Web + CLI**                   | Both Streamlit UI and command-line interface      |
+| **Batch Queue**                 | Multi-day batch processing with progress tracking |
+| **Analysis Cancellation**       | Cancel running analyses gracefully                |
+| **Cross-Process Rate Limiting** | File-based locking prevents API quota errors      |
 
 ---
 
@@ -192,6 +195,7 @@ See [docs/CUSTOM_WORKFLOWS.md](docs/CUSTOM_WORKFLOWS.md) for the complete develo
 | **Analysis History** | Search, filter, and manage past analyses               |
 | **Results Viewer**   | Explore results in formatted or JSON view, export      |
 | **Settings**         | API usage, database viewer, custom prompts, cache      |
+| **Batch Queue**      | Multi-day batch processing with rate limit monitoring  |
 
 ### Screenshots
 
@@ -269,6 +273,7 @@ fintel/
 │   │   └── gemini.py            # Google Gemini implementation
 │   ├── key_manager.py           # API key rotation (25+ keys)
 │   ├── rate_limiter.py          # Request rate limiting
+│   ├── request_queue.py         # Global cross-process request serialization
 │   └── usage_tracker.py         # Persistent API usage tracking
 │
 ├── data/                        # Data acquisition & storage
@@ -283,9 +288,11 @@ fintel/
 ├── ui/                          # Streamlit web interface
 │   ├── database/                # Data access layer
 │   │   ├── repository.py        # DatabaseRepository (SQLite)
-│   │   └── migrations/          # Schema migration files (v001-v006)
+│   │   └── migrations/          # Schema migration files (v001-v010)
 │   ├── services/                # Business logic
-│   │   └── analysis_service.py  # AnalysisService (main orchestrator)
+│   │   ├── analysis_service.py  # AnalysisService (main orchestrator)
+│   │   ├── batch_queue.py       # Multi-day batch processing service
+│   │   └── cancellation.py      # Analysis cancellation token system
 │   └── components/              # Reusable UI components
 │
 ├── cli/                         # Command-line interface
@@ -314,7 +321,8 @@ pages/                           # Streamlit pages
 ├── 1_📊_Analysis.py             # Single/batch analysis
 ├── 2_📈_Analysis_History.py     # History and filtering
 ├── 3_🔍_Results_Viewer.py       # Results exploration
-└── 4_⚙️_Settings.py             # Settings and database viewer
+├── 5_⚙️_Settings.py             # Settings and database viewer
+└── 5_🌙_Batch_Queue.py          # Multi-day batch processing
 
 streamlit_app.py                 # Home page / dashboard
 ```
@@ -416,6 +424,50 @@ All settings are configured via `.env` file or environment variables:
 | `GeminiProvider`     | LLM integration with structured output support             |
 | `SECDownloader`      | Downloads filings from SEC Edgar with caching              |
 | `CustomWorkflow`     | Base class for user-defined analysis workflows             |
+| `RequestQueue`       | Cross-process API request serialization with file locking  |
+| `BatchQueueService`  | Multi-day batch job management and scheduling              |
+| `CancellationToken`  | Graceful analysis cancellation system                      |
+
+---
+
+## Technical Achievements
+
+This project demonstrates several advanced engineering solutions:
+
+### Cross-Process Rate Limiting
+
+**Problem:** Parallel analyses across threads, processes, and simultaneous CLI/UI execution exceeded Gemini API rate limits (503 UNAVAILABLE, 429 RESOURCE_EXHAUSTED).
+
+**Solution:** File-based locking using `fcntl` that serializes all API requests across the entire system:
+
+- Lock file at `data/api_usage/gemini_request.lock`
+- Mandatory 65-second sleep between requests (Gemini requirement)
+- Works across ThreadPool workers, ProcessPoolExecutor, and mixed execution modes
+- Automatic cleanup on process crash
+- Zero external dependencies (uses Python standard library)
+
+### Intelligent API Key Rotation
+
+- **25+ API key support** with atomic reservation preventing collisions
+- **Least-used strategy** for load balancing across keys
+- **Persistent usage tracking** survives restarts via JSON files
+- **Daily limit enforcement** per key with real-time availability checking
+- **Thread-safe + Process-safe** operations using file locking
+
+### Fault-Tolerant Architecture
+
+- **Resume capability** - Interrupted analyses continue from last completed year
+- **Exponential backoff retry** - Up to 3 retries with configurable delays
+- **SQLite WAL mode** - Concurrent read/write without locking conflicts
+- **Completed years tracking** - Prevents re-analyzing already processed data
+- **Graceful cancellation** - Stop running analyses without data corruption
+
+### Type-Safe AI Outputs
+
+- **Pydantic v2 structured outputs** ensure 99%+ format consistency
+- **Validation at extraction time** not post-processing
+- **Custom exception hierarchy** for granular error handling
+- **Schema enforcement** reduces hallucination and format errors
 
 ---
 

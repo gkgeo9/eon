@@ -6,6 +6,7 @@ with various analysis types.
 """
 
 import click
+from datetime import datetime
 from pathlib import Path
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -108,7 +109,14 @@ def analyze(
                 task = progress.add_task(f"Converting HTML to PDF...", total=None)
 
                 with SECConverter() as converter:
-                    pdf_paths = converter.convert_batch(ticker, filing_path)
+                    # convert() returns list of dicts with pdf_path, year, etc.
+                    pdf_info = converter.convert(
+                        ticker=ticker,
+                        input_path=filing_path,
+                        filing_type="10-K"
+                    )
+                    # Extract paths for analysis
+                    pdf_paths = [Path(p['pdf_path']) for p in pdf_info if p.get('pdf_path')]
 
                 progress.update(task, completed=True)
                 console.print(f" Converted {len(pdf_paths)} filings to PDF", style="green")
@@ -137,12 +145,13 @@ def analyze(
                     rate_limiter=rate_limiter
                 )
 
+                current_year = datetime.now().year
                 for i, pdf_path in enumerate(sorted(pdf_paths)[:years]):
                     # Extract year from filename if possible
                     try:
                         year = int(pdf_path.stem.split("-")[0])
                     except (ValueError, IndexError):
-                        year = 2024 - i
+                        year = current_year - i
 
                     result = analyzer.analyze_filing(
                         pdf_path=pdf_path,
@@ -169,11 +178,12 @@ def analyze(
                     rate_limiter=rate_limiter
                 )
 
+                current_year = datetime.now().year
                 for i, pdf_path in enumerate(sorted(pdf_paths)[:years]):
                     try:
                         year = int(pdf_path.stem.split("-")[0])
                     except (ValueError, IndexError):
-                        year = 2024 - i
+                        year = current_year - i
 
                     result = perspective_analyzer.analyze_multi_perspective(
                         pdf_path=pdf_path,

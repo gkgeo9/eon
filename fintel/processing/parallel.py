@@ -93,15 +93,15 @@ def _process_single_company(
         # Step 2: Convert to PDF
         logger.info(f"Converting filings to PDF for {ticker}")
         with SECConverter() as converter:
-            pdf_paths = converter.convert(ticker, filing_path)
+            pdf_info_list = converter.convert(ticker, filing_path)
 
-        if not pdf_paths:
+        if not pdf_info_list:
             raise Exception(f"Failed to convert filings to PDF for {ticker}")
 
-        logger.info(f"Converted {len(pdf_paths)} filings to PDF for {ticker}")
+        logger.info(f"Converted {len(pdf_info_list)} filings to PDF for {ticker}")
 
         # Step 3: Analyze each filing
-        logger.info(f"Analyzing {len(pdf_paths)} filings for {ticker}")
+        logger.info(f"Analyzing {len(pdf_info_list)} filings for {ticker}")
 
         # Create rate limiter for this worker
         rate_limiter = RateLimiter(sleep_after_request=65)
@@ -122,13 +122,18 @@ def _process_single_company(
         ticker_output_dir.mkdir(parents=True, exist_ok=True)
 
         analyses = {}
-        for pdf_path in pdf_paths:
-            # Extract year from filename (assumes format like "AAPL_FILING-TYPE_2024.pdf")
-            try:
-                year = int(pdf_path.stem.split("_")[-1])
-            except (ValueError, IndexError):
-                logger.warning(f"Could not extract year from {pdf_path.name}, skipping")
-                continue
+        for pdf_info in pdf_info_list:
+            # Extract year from the pdf_info dict (converter now returns structured data)
+            pdf_path = Path(pdf_info['pdf_path'])
+            year = pdf_info.get('year')
+
+            if year is None:
+                # Fallback: try to extract year from filename
+                try:
+                    year = int(pdf_path.stem.split("_")[-1])
+                except (ValueError, IndexError):
+                    logger.warning(f"Could not extract year from {pdf_path.name}, skipping")
+                    continue
 
             logger.info(f"Analyzing {ticker} {year}")
 

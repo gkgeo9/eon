@@ -96,8 +96,41 @@ if run_id:
 
             st.markdown("---")
 
+            # Actions section - Synthesize and Export
+            st.subheader("Actions")
+
+            # Show synthesize button for multi-year analyses (2+ years)
+            # Don't show for synthesis results themselves
+            analysis_type = run_details.get('analysis_type', '')
+            is_synthesis = analysis_type in ['multi_year_synthesis', 'synthesis']
+            if len(results) >= 2 and not is_synthesis:
+                st.markdown("**Synthesize Years**")
+                st.caption(
+                    f"Combine all {len(results)} year analyses into a comprehensive longitudinal assessment"
+                )
+
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    if st.button("Create Multi-Year Synthesis", type="primary", key="create_synthesis"):
+                        from fintel.ui.services.analysis_service import AnalysisService
+                        import time
+
+                        with st.spinner("Creating synthesis analysis... This may take a minute."):
+                            analysis_service = AnalysisService(db)
+                            synthesis_run_id = analysis_service.create_multi_year_synthesis(run_id)
+
+                            if synthesis_run_id:
+                                st.success("Multi-year synthesis created!")
+                                time.sleep(1)
+                                st.session_state.view_run_id = synthesis_run_id
+                                st.rerun()
+                            else:
+                                st.error("Failed to create synthesis. Check logs for details.")
+
+                st.markdown("---")
+
             # Export section
-            st.subheader("Export")
+            st.markdown("**Export**")
             col1, col2 = st.columns(2)
 
             with col1:

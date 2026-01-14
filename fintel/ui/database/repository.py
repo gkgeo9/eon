@@ -54,7 +54,7 @@ class DatabaseRepository:
                         raise
             conn.commit()
 
-    def _execute_with_retry(self, query: str, params: tuple = (), max_retries: int = 5):
+    def _execute_with_retry(self, query: str, params: tuple = (), max_retries: int = 5, fetch_one: bool = False, fetch_all: bool = False):
         """
         Execute query with retry logic for database locks.
 
@@ -62,9 +62,13 @@ class DatabaseRepository:
             query: SQL query string
             params: Query parameters
             max_retries: Maximum number of retry attempts (default: 5, increased from 3)
+            fetch_one: If True, return the first row as a dict (or None)
+            fetch_all: If True, return all rows as a list of dicts
 
         Returns:
-            Cursor object
+            If fetch_one: dict or None
+            If fetch_all: list of dicts
+            Otherwise: lastrowid for INSERT, rowcount for UPDATE/DELETE
 
         Raises:
             sqlite3.OperationalError: If all retries fail
@@ -73,14 +77,24 @@ class DatabaseRepository:
 
         for attempt in range(max_retries):
             try:
-                with sqlite3.connect(self.db_path, timeout=10.0) as conn:  # Add 10s timeout
+                with sqlite3.connect(self.db_path, timeout=10.0) as conn:
                     # Enable WAL mode for better concurrency
                     conn.execute("PRAGMA journal_mode=WAL")
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
                     cursor.execute(query, params)
                     conn.commit()
-                    return cursor
+
+                    # Fetch data while connection is still open
+                    if fetch_one:
+                        row = cursor.fetchone()
+                        return dict(row) if row else None
+                    elif fetch_all:
+                        rows = cursor.fetchall()
+                        return [dict(row) for row in rows]
+                    else:
+                        # For INSERT/UPDATE/DELETE, return useful metadata
+                        return cursor.lastrowid if cursor.lastrowid else cursor.rowcount
             except sqlite3.OperationalError as e:
                 if "locked" in str(e) and attempt < max_retries - 1:
                     wait_time = 0.5 * (2 ** attempt)  # Exponential backoff: 0.5s, 1s, 2s, 4s, 8s
@@ -206,19 +220,14 @@ class DatabaseRepository:
     def get_run_status(self, run_id: str) -> Optional[str]:
         """Get status of an analysis run."""
         query = "SELECT status FROM analysis_runs WHERE run_id = ?"
-        cursor = self._execute_with_retry(query, (run_id,))
-        row = cursor.fetchone()
+        row = self._execute_with_retry(query, (run_id,), fetch_one=True)
         return row['status'] if row else None
 
     def get_run_details(self, run_id: str) -> Optional[Dict[str, Any]]:
         """Get full details of an analysis run."""
         query = "SELECT * FROM analysis_runs WHERE run_id = ?"
-        cursor = self._execute_with_retry(query, (run_id,))
-        row = cursor.fetchone()
-
-        if row:
-            return dict(row)
-        return None
+        row = self._execute_with_retry(query, (run_id,), fetch_one=True)
+        return row if row else None
 
     def get_recent_analyses(self, limit: int = 10) -> pd.DataFrame:
         """
@@ -364,14 +373,14 @@ class DatabaseRepository:
             WHERE run_id = ?
             ORDER BY fiscal_year DESC
         """
-        cursor = self._execute_with_retry(query, (run_id,))
+        rows = self._execute_with_retry(query, (run_id,), fetch_all=True)
 
         results = []
-        for row in cursor.fetchall():
+        for row in rows:
             results.append({
-                'year': row[0],
-                'type': row[1],
-                'data': json.loads(row[2])
+                'year': row['fiscal_year'],
+                'type': row['result_type'],
+                'data': json.loads(row['result_json'])
             })
         return results
 
@@ -458,14 +467,13 @@ class DatabaseRepository:
             ORDER BY ar.completed_at DESC
             LIMIT 1
         """
-        cursor = self._execute_with_retry(query, (ticker.upper(), analysis_type))
-        row = cursor.fetchone()
+        row = self._execute_with_retry(query, (ticker.upper(), analysis_type), fetch_one=True)
 
         if row:
-            run_id = row[0]
+            run_id = row['run_id']
             return {
                 'run_id': run_id,
-                'completed_at': row[1],
+                'completed_at': row['completed_at'],
                 'results': self.get_analysis_results(run_id)
             }
         return None
@@ -498,8 +506,7 @@ class DatabaseRepository:
             INSERT INTO custom_prompts (name, description, prompt_template, analysis_type)
             VALUES (?, ?, ?, ?)
         """
-        cursor = self._execute_with_retry(query, (name, description, template, analysis_type))
-        return cursor.lastrowid
+        return self._execute_with_retry(query, (name, description, template, analysis_type))
 
     def get_prompts_by_type(self, analysis_type: str) -> List[Dict[str, Any]]:
         """Get all active prompts for an analysis type."""
@@ -509,28 +516,24 @@ class DatabaseRepository:
             WHERE analysis_type = ? AND is_active = 1
             ORDER BY created_at DESC
         """
-        cursor = self._execute_with_retry(query, (analysis_type,))
+        rows = self._execute_with_retry(query, (analysis_type,), fetch_all=True)
 
         prompts = []
-        for row in cursor.fetchall():
+        for row in rows:
             prompts.append({
-                'id': row[0],
-                'name': row[1],
-                'description': row[2],
-                'template': row[3],
-                'created_at': row[4]
+                'id': row['id'],
+                'name': row['name'],
+                'description': row['description'],
+                'template': row['prompt_template'],
+                'created_at': row['created_at']
             })
         return prompts
 
     def get_prompt_by_name(self, name: str) -> Optional[Dict[str, Any]]:
         """Get prompt by name."""
         query = "SELECT * FROM custom_prompts WHERE name = ? AND is_active = 1"
-        cursor = self._execute_with_retry(query, (name,))
-        row = cursor.fetchone()
-
-        if row:
-            return dict(row)
-        return None
+        row = self._execute_with_retry(query, (name,), fetch_one=True)
+        return row if row else None
 
     def update_prompt(self, prompt_id: int, **fields) -> None:
         """Update prompt fields."""
@@ -564,13 +567,24 @@ class DatabaseRepository:
         fiscal_year: int,
         filing_type: str,
         file_path: str,
-        file_hash: Optional[str] = None
+        file_hash: Optional[str] = None,
+        filing_date: Optional[str] = None
     ) -> None:
-        """Cache downloaded file information."""
+        """
+        Cache downloaded file information.
+
+        Args:
+            ticker: Company ticker symbol
+            fiscal_year: Fiscal year of the filing
+            filing_type: Type of filing (10-K, 10-Q, 8-K, etc.)
+            file_path: Path to the cached file
+            file_hash: Optional SHA256 hash for integrity
+            filing_date: Optional filing date (YYYY-MM-DD) for unique identification
+        """
         query = """
             INSERT OR REPLACE INTO file_cache
-            (ticker, fiscal_year, filing_type, file_path, file_hash, downloaded_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (ticker, fiscal_year, filing_type, file_path, file_hash, filing_date, downloaded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """
         self._execute_with_retry(query, (
             ticker.upper(),
@@ -578,6 +592,7 @@ class DatabaseRepository:
             filing_type,
             file_path,
             file_hash,
+            filing_date,
             datetime.utcnow().isoformat()
         ))
 
@@ -593,9 +608,36 @@ class DatabaseRepository:
             FROM file_cache
             WHERE ticker = ? AND fiscal_year = ? AND filing_type = ?
         """
-        cursor = self._execute_with_retry(query, (ticker.upper(), fiscal_year, filing_type))
-        row = cursor.fetchone()
-        return row[0] if row else None
+        row = self._execute_with_retry(query, (ticker.upper(), fiscal_year, filing_type), fetch_one=True)
+        return row['file_path'] if row else None
+
+    def get_cached_file_by_date(
+        self,
+        ticker: str,
+        filing_date: str,
+        filing_type: str
+    ) -> Optional[str]:
+        """
+        Get cached file path by filing_date.
+
+        This is useful for event-based filings (8-K, 4, etc.) where multiple
+        filings can exist in the same year.
+
+        Args:
+            ticker: Company ticker symbol
+            filing_date: Filing date in YYYY-MM-DD format
+            filing_type: Type of filing
+
+        Returns:
+            File path if cached, None otherwise
+        """
+        query = """
+            SELECT file_path
+            FROM file_cache
+            WHERE ticker = ? AND filing_date = ? AND filing_type = ?
+        """
+        row = self._execute_with_retry(query, (ticker.upper(), filing_date, filing_type), fetch_one=True)
+        return row['file_path'] if row else None
 
     def clear_file_cache(self, older_than_days: Optional[int] = None) -> int:
         """
@@ -612,12 +654,10 @@ class DatabaseRepository:
                 DELETE FROM file_cache
                 WHERE julianday('now') - julianday(downloaded_at) > ?
             """
-            cursor = self._execute_with_retry(query, (older_than_days,))
+            return self._execute_with_retry(query, (older_than_days,))
         else:
             query = "DELETE FROM file_cache"
-            cursor = self._execute_with_retry(query)
-
-        return cursor.rowcount
+            return self._execute_with_retry(query)
 
     def get_cache_count(self) -> int:
         """
@@ -626,9 +666,9 @@ class DatabaseRepository:
         Returns:
             Number of cached files in the database
         """
-        query = "SELECT COUNT(*) FROM file_cache"
-        cursor = self._execute_with_retry(query)
-        return cursor.fetchone()[0]
+        query = "SELECT COUNT(*) as cnt FROM file_cache"
+        row = self._execute_with_retry(query, fetch_one=True)
+        return row['cnt'] if row else 0
 
     def cache_filing_types(self, ticker: str, filing_types: List[str]) -> None:
         """
@@ -669,13 +709,12 @@ class DatabaseRepository:
             FROM filing_types_cache
             WHERE ticker = ?
         """
-        cursor = self._execute_with_retry(query, (ticker.upper(),))
-        row = cursor.fetchone()
+        row = self._execute_with_retry(query, (ticker.upper(),), fetch_one=True)
 
         if not row:
             return None
 
-        filing_types_json, cached_at_str = row[0], row[1]
+        filing_types_json, cached_at_str = row['filing_types'], row['cached_at']
 
         # Check if cache is still fresh
         cached_at = datetime.fromisoformat(cached_at_str)
@@ -698,12 +737,10 @@ class DatabaseRepository:
         """
         if ticker:
             query = "DELETE FROM filing_types_cache WHERE ticker = ?"
-            cursor = self._execute_with_retry(query, (ticker.upper(),))
+            return self._execute_with_retry(query, (ticker.upper(),))
         else:
             query = "DELETE FROM filing_types_cache"
-            cursor = self._execute_with_retry(query)
-
-        return cursor.rowcount
+            return self._execute_with_retry(query)
 
     # ==================== User Settings ====================
 
@@ -736,11 +773,10 @@ class DatabaseRepository:
         """
         # Get current completed years
         query = "SELECT completed_years FROM analysis_runs WHERE run_id = ?"
-        cursor = self._execute_with_retry(query, (run_id,))
-        row = cursor.fetchone()
+        row = self._execute_with_retry(query, (run_id,), fetch_one=True)
 
         if row:
-            completed = json.loads(row[0]) if row[0] else []
+            completed = json.loads(row['completed_years']) if row['completed_years'] else []
             if year not in completed:
                 completed.append(year)
                 completed.sort(reverse=True)
@@ -760,11 +796,10 @@ class DatabaseRepository:
     def get_completed_years(self, run_id: str) -> List[int]:
         """Get list of years already completed for a run."""
         query = "SELECT completed_years FROM analysis_runs WHERE run_id = ?"
-        cursor = self._execute_with_retry(query, (run_id,))
-        row = cursor.fetchone()
+        row = self._execute_with_retry(query, (run_id,), fetch_one=True)
 
-        if row and row[0]:
-            return json.loads(row[0])
+        if row and row['completed_years']:
+            return json.loads(row['completed_years'])
         return []
 
     def get_interrupted_runs(self, stale_minutes: int = 10) -> List[Dict[str, Any]]:
@@ -861,15 +896,14 @@ class DatabaseRepository:
             FROM analysis_runs
             WHERE run_id = ?
         """
-        cursor = self._execute_with_retry(query, (run_id,))
-        row = cursor.fetchone()
+        row = self._execute_with_retry(query, (run_id,), fetch_one=True)
 
         if not row:
             return False
 
-        status = row[0]
-        years = json.loads(row[1]) if row[1] else []
-        completed = json.loads(row[2]) if row[2] else []
+        status = row['status']
+        years = json.loads(row['years_analyzed']) if row['years_analyzed'] else []
+        completed = json.loads(row['completed_years']) if row['completed_years'] else []
 
         # Only resume if there's remaining work
         remaining = [y for y in years if y not in completed]
@@ -894,27 +928,27 @@ class DatabaseRepository:
 
     def get_total_analyses(self) -> int:
         """Get total number of analyses."""
-        query = "SELECT COUNT(*) FROM analysis_runs"
-        cursor = self._execute_with_retry(query)
-        return cursor.fetchone()[0]
+        query = "SELECT COUNT(*) as cnt FROM analysis_runs"
+        row = self._execute_with_retry(query, fetch_one=True)
+        return row['cnt'] if row else 0
 
     def get_running_analyses_count(self) -> int:
         """Get number of currently running analyses."""
-        query = "SELECT COUNT(*) FROM analysis_runs WHERE status = 'running'"
-        cursor = self._execute_with_retry(query)
-        return cursor.fetchone()[0]
+        query = "SELECT COUNT(*) as cnt FROM analysis_runs WHERE status = 'running'"
+        row = self._execute_with_retry(query, fetch_one=True)
+        return row['cnt'] if row else 0
 
     def get_analyses_today(self) -> int:
         """Get number of analyses created today."""
-        query = "SELECT COUNT(*) FROM analysis_runs WHERE DATE(created_at) = DATE('now')"
-        cursor = self._execute_with_retry(query)
-        return cursor.fetchone()[0]
+        query = "SELECT COUNT(*) as cnt FROM analysis_runs WHERE DATE(created_at) = DATE('now')"
+        row = self._execute_with_retry(query, fetch_one=True)
+        return row['cnt'] if row else 0
 
     def get_unique_tickers_count(self) -> int:
         """Get number of unique tickers analyzed."""
-        query = "SELECT COUNT(DISTINCT ticker) FROM analysis_runs WHERE status = 'completed'"
-        cursor = self._execute_with_retry(query)
-        return cursor.fetchone()[0]
+        query = "SELECT COUNT(DISTINCT ticker) as cnt FROM analysis_runs WHERE status = 'completed'"
+        row = self._execute_with_retry(query, fetch_one=True)
+        return row['cnt'] if row else 0
 
     def get_stats_by_type(self) -> pd.DataFrame:
         """Get analysis statistics by type."""
@@ -956,8 +990,7 @@ class DatabaseRepository:
         Returns:
             Number of rows affected
         """
-        cursor = self._execute_with_retry(query, params)
-        return cursor.rowcount
+        return self._execute_with_retry(query, params)
 
     # ==================== User Settings ====================
 
@@ -973,9 +1006,8 @@ class DatabaseRepository:
             Setting value or default
         """
         query = "SELECT value FROM user_settings WHERE key = ?"
-        cursor = self._execute_with_retry(query, (key,))
-        row = cursor.fetchone()
-        return row[0] if row else default
+        row = self._execute_with_retry(query, (key,), fetch_one=True)
+        return row['value'] if row else default
 
     def save_setting(self, key: str, value: str) -> None:
         """
@@ -1031,14 +1063,12 @@ class DatabaseRepository:
         if api_key:
             key_suffix = api_key[-4:] if len(api_key) >= 4 else "****"
             query = "SELECT request_count FROM api_usage WHERE api_key_suffix = ? AND usage_date = ?"
-            cursor = self._execute_with_retry(query, (key_suffix, today))
-            row = cursor.fetchone()
-            return row[0] if row else 0
+            row = self._execute_with_retry(query, (key_suffix, today), fetch_one=True)
+            return row['request_count'] if row else 0
         else:
-            query = "SELECT SUM(request_count) FROM api_usage WHERE usage_date = ?"
-            cursor = self._execute_with_retry(query, (today,))
-            row = cursor.fetchone()
-            return row[0] if row and row[0] else 0
+            query = "SELECT SUM(request_count) as total FROM api_usage WHERE usage_date = ?"
+            row = self._execute_with_retry(query, (today,), fetch_one=True)
+            return row['total'] if row and row['total'] else 0
 
     def get_api_usage_history(self, days: int = 30) -> pd.DataFrame:
         """
