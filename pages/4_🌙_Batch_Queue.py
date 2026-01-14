@@ -381,7 +381,17 @@ else:
             with col2:
                 # Synthesis analysis for completed batches with 2+ results
                 if batch['completed_tickers'] >= 2:
-                    if st.button("Synthesize", key=f"synth_{batch['batch_id']}", help="Create a synthesis analysis combining all results"):
+                    num_years = batch.get('num_years', 1)
+                    if num_years >= 2:
+                        # Multi-year batch: per-company longitudinal synthesis
+                        synth_help = "Create per-company multi-year synthesis (one per company)"
+                        synth_label = "Synthesize"
+                    else:
+                        # Single-year batch: cross-company comparison
+                        synth_help = "Create cross-company comparative synthesis"
+                        synth_label = "Synthesize"
+
+                    if st.button(synth_label, key=f"synth_{batch['batch_id']}", help=synth_help):
                         st.session_state.synthesis_batch_id = batch['batch_id']
                         st.rerun()
 
@@ -515,20 +525,45 @@ if 'synthesis_batch_id' in st.session_state:
     batch = queue.get_batch_status(batch_id)
 
     if batch:
+        num_years = batch.get('num_years', 1)
+        is_multi_year = num_years >= 2
+
         st.markdown(f"""
         **Batch:** {batch['name']}
         **Completed Analyses:** {batch['completed_tickers']}
+        **Years Per Company:** {num_years}
         """)
 
-        st.info("""
-        Synthesis analysis will combine all completed individual analyses into a single comprehensive
-        report with:
-        - Executive summary across all companies
-        - Common themes and patterns
-        - Outliers and standout companies
-        - Investment insights and recommendations
-        - Company rankings
-        """)
+        if is_multi_year:
+            # Multi-year batch: per-company longitudinal synthesis
+            st.info(f"""
+            **Per-Company Multi-Year Synthesis**
+
+            This will create a separate synthesis document for EACH company, analyzing their
+            longitudinal trends across all {num_years} years:
+
+            - Trajectory and evolution over time
+            - Key turning points and pivotal moments
+            - Consistent strengths and weaknesses
+            - Risk evolution and forward outlook
+            - Year-over-year trend analysis
+
+            **Output:** One synthesis document per company (e.g., 3 companies = 3 synthesis documents)
+            """)
+        else:
+            # Single-year batch: cross-company comparison
+            st.info("""
+            **Cross-Company Comparative Synthesis**
+
+            This will combine all completed analyses into a single comprehensive
+            report comparing companies:
+
+            - Executive summary across all companies
+            - Common themes and patterns
+            - Outliers and standout companies
+            - Investment insights and recommendations
+            - Company rankings
+            """)
 
         # Custom synthesis prompt option
         use_custom_synthesis = st.checkbox("Use custom synthesis prompt", key="use_custom_synthesis")
@@ -546,21 +581,38 @@ if 'synthesis_batch_id' in st.session_state:
 
         with col1:
             if st.button("Create Synthesis", type="primary", key="create_synthesis"):
-                with st.spinner("Creating synthesis analysis... This may take a minute."):
-                    run_id = queue.create_synthesis_analysis(
-                        batch_id,
-                        synthesis_prompt=custom_synthesis_prompt if use_custom_synthesis else None
-                    )
-                    if run_id:
-                        st.success(f"Synthesis created successfully!")
-                        st.session_state.synthesis_run_id = run_id
-                        del st.session_state.synthesis_batch_id
-                        time.sleep(1)
-                        # Option to view results
-                        st.session_state.view_run_id = run_id
-                        st.switch_page("pages/3_🔍_Results_Viewer.py")
-                    else:
-                        st.error("Failed to create synthesis. Check logs for details.")
+                if is_multi_year:
+                    # Per-company multi-year synthesis
+                    with st.spinner(f"Creating per-company synthesis for {batch['completed_tickers']} companies... This may take a few minutes."):
+                        run_ids = queue.create_per_company_synthesis(
+                            batch_id,
+                            synthesis_prompt=custom_synthesis_prompt if use_custom_synthesis else None
+                        )
+                        if run_ids:
+                            st.success(f"Created {len(run_ids)} synthesis documents!")
+                            del st.session_state.synthesis_batch_id
+                            time.sleep(1)
+                            # Go to results viewer
+                            st.switch_page("pages/3_🔍_Results_Viewer.py")
+                        else:
+                            st.error("Failed to create synthesis. Each company needs 2+ years of data.")
+                else:
+                    # Single cross-company synthesis
+                    with st.spinner("Creating cross-company synthesis... This may take a minute."):
+                        run_id = queue.create_synthesis_analysis(
+                            batch_id,
+                            synthesis_prompt=custom_synthesis_prompt if use_custom_synthesis else None
+                        )
+                        if run_id:
+                            st.success(f"Synthesis created successfully!")
+                            st.session_state.synthesis_run_id = run_id
+                            del st.session_state.synthesis_batch_id
+                            time.sleep(1)
+                            # Option to view results
+                            st.session_state.view_run_id = run_id
+                            st.switch_page("pages/3_🔍_Results_Viewer.py")
+                        else:
+                            st.error("Failed to create synthesis. Check logs for details.")
 
         with col2:
             if st.button("Cancel", key="cancel_synthesis"):

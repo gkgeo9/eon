@@ -1279,6 +1279,139 @@ Be concise but comprehensive. Focus on actionable insights.
             self.db.update_run_status(run_id, 'failed', error_msg)
             return None
 
+    def create_per_company_synthesis(
+        self,
+        batch_id: str,
+        synthesis_prompt: Optional[str] = None
+    ) -> List[str]:
+        """
+        Create per-company multi-year synthesis for all companies in a batch.
+
+        For batches with multiple years per company, this creates a separate
+        synthesis document for each company that analyzes their longitudinal
+        trends across all analyzed years.
+
+        Example: Batch with A, B, C companies × 4 years each produces:
+        - Synthesis A: 4 years → 1 longitudinal analysis
+        - Synthesis B: 4 years → 1 longitudinal analysis
+        - Synthesis C: 4 years → 1 longitudinal analysis
+
+        Args:
+            batch_id: Batch to create syntheses for
+            synthesis_prompt: Optional custom prompt for synthesis
+
+        Returns:
+            List of synthesis run_ids (one per company with 2+ years)
+        """
+        from fintel.ui.services.analysis_service import AnalysisService
+
+        # Get batch info
+        batch = self.get_batch_status(batch_id)
+        if not batch:
+            self.logger.error(f"Batch {batch_id} not found")
+            return []
+
+        if batch['status'] != 'completed':
+            self.logger.warning(f"Batch {batch_id} is not completed (status: {batch['status']})")
+
+        # Get all completed items grouped by ticker
+        completed_items = self.get_batch_items(batch_id, status='completed', limit=1000)
+
+        if not completed_items:
+            self.logger.error(f"No completed items found for batch {batch_id}")
+            return []
+
+        self.logger.info(
+            f"Creating per-company synthesis for batch {batch_id} "
+            f"with {len(completed_items)} completed items"
+        )
+
+        # Group results by ticker
+        ticker_results: Dict[str, Dict] = {}
+        for item in completed_items:
+            ticker = item['ticker']
+            run_id = item.get('run_id')
+
+            if not run_id:
+                continue
+
+            # Get the analysis results for this run
+            run_results = self.db.get_analysis_results(run_id)
+
+            if run_results:
+                if ticker not in ticker_results:
+                    ticker_results[ticker] = {
+                        'company_name': item.get('company_name', ticker),
+                        'run_id': run_id,
+                        'num_years': len(run_results)
+                    }
+                else:
+                    # Update if this run has more years
+                    if len(run_results) > ticker_results[ticker]['num_years']:
+                        ticker_results[ticker]['run_id'] = run_id
+                        ticker_results[ticker]['num_years'] = len(run_results)
+
+        self.logger.info(
+            f"Found {len(ticker_results)} unique tickers for synthesis"
+        )
+
+        # Create synthesis for each ticker with 2+ years
+        synthesis_run_ids = []
+        analysis_service = AnalysisService(self.db)
+
+        for ticker, data in ticker_results.items():
+            if data['num_years'] < 2:
+                self.logger.info(
+                    f"Skipping {ticker}: only {data['num_years']} year(s) "
+                    f"(need 2+ for synthesis)"
+                )
+                continue
+
+            self.logger.info(
+                f"Creating synthesis for {ticker} with {data['num_years']} years"
+            )
+
+            try:
+                synthesis_run_id = analysis_service.create_multi_year_synthesis(
+                    run_id=data['run_id'],
+                    synthesis_prompt=synthesis_prompt
+                )
+
+                if synthesis_run_id:
+                    synthesis_run_ids.append(synthesis_run_id)
+                    self.logger.info(
+                        f"Created synthesis for {ticker}: {synthesis_run_id}"
+                    )
+                else:
+                    self.logger.warning(f"Synthesis returned None for {ticker}")
+
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to create synthesis for {ticker}: {e}",
+                    exc_info=True
+                )
+
+        self.logger.info(
+            f"Created {len(synthesis_run_ids)} synthesis documents for batch {batch_id}"
+        )
+
+        return synthesis_run_ids
+
+    def get_batch_num_years(self, batch_id: str) -> int:
+        """
+        Get the num_years setting for a batch.
+
+        Args:
+            batch_id: Batch ID
+
+        Returns:
+            Number of years configured for the batch, or 1 if not found
+        """
+        batch = self.get_batch_status(batch_id)
+        if batch:
+            return batch.get('num_years', 1)
+        return 1
+
     def export_batch_to_csv(self, batch_id: str) -> str:
         """
         Export batch results to CSV format.

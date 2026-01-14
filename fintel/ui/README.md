@@ -342,4 +342,4 @@ For issues or questions:
 
 ---
 
-Built with Streamlit, powered by Google Gemini AI.
+Built with Streamlit.

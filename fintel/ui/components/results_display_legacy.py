@@ -58,11 +58,11 @@ def display_results(run_details: Dict[str, Any], results: List[Dict[str, Any]]):
     # Copy All Years expander (only show if multiple years)
     if len(results) > 1:
         with st.expander("📋 Copy All Years"):
-            copy_tab1, copy_tab2 = st.tabs(["Formatted Text", "JSON"])
-            with copy_tab1:
+            copy_tab1, copy_tab2 = st.tabs(["JSON", "Formatted Text"])
+            with copy_tab2:
                 all_formatted = format_all_years_text(results, ticker)
                 st.code(all_formatted, language=None)
-            with copy_tab2:
+            with copy_tab1:
                 all_json = json.dumps(
                     {r['year']: r['data'] for r in results},
                     indent=2,

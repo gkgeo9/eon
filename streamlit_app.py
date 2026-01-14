@@ -175,7 +175,7 @@ def main():
 
     # Footer
     st.markdown("---")
-    st.caption("Fintel v0.1.0 - Powered by Google Gemini AI")
+    st.caption("Fintel v0.1.0")
 
 
 if __name__ == "__main__":
