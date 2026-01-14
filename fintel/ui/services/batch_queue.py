@@ -822,6 +822,8 @@ class BatchQueueService:
         if self._worker_thread:
             self._worker_thread.join(timeout=10)
         self._mark_batch_stopped(batch_id, "Stopped by user")
+        # Explicitly cleanup worker state to ensure is_running is set to False
+        self._cleanup_worker(batch_id)
         self.logger.info(f"Stopped batch {batch_id}")
 
     def get_batch_status(self, batch_id: str) -> Optional[Dict]:
@@ -904,7 +906,8 @@ class BatchQueueService:
         """Get all batch jobs."""
         query = """
             SELECT batch_id, name, total_tickers, completed_tickers, failed_tickers,
-                   status, analysis_type, created_at, estimated_completion, last_activity_at
+                   status, analysis_type, filing_type, num_years,
+                   created_at, estimated_completion, last_activity_at
             FROM batch_jobs
             ORDER BY created_at DESC
             LIMIT ?
@@ -921,6 +924,8 @@ class BatchQueueService:
                 'failed_tickers': row['failed_tickers'],
                 'status': row['status'],
                 'analysis_type': row['analysis_type'],
+                'filing_type': row['filing_type'],
+                'num_years': row['num_years'],
                 'created_at': row['created_at'],
                 'estimated_completion': row['estimated_completion'],
                 'last_activity_at': row['last_activity_at'],
