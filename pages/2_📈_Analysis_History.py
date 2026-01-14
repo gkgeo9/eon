@@ -132,9 +132,12 @@ else:
 
         # For running analyses, add progress percentage if available
         if status == 'running' and 'progress_percent' in analyses_df.columns:
-            progress = row.get('progress_percent', 0)
-            if progress and progress > 0:
+            progress = row.get('progress_percent')
+            if progress is not None and progress > 0:
                 return f"{emoji} {label} ({progress}%)"
+            else:
+                # Show that analysis is running but progress not yet reported
+                return f"{emoji} {label}..."
 
         return f"{emoji} {label}"
 
@@ -178,8 +181,8 @@ else:
             with st.expander(f"{row['ticker'].upper()} - {row['analysis_type'].capitalize()} (Running)", expanded=True):
                 run_details = db.get_run_details(row['run_id'])
                 if run_details:
-                    progress_msg = run_details.get('progress_message', 'Processing...')
-                    progress_pct = run_details.get('progress_percent', 0)
+                    progress_msg = run_details.get('progress_message') or 'Initializing analysis...'
+                    progress_pct = run_details.get('progress_percent') or 0
                     current_step = run_details.get('current_step')
                     total_steps = run_details.get('total_steps')
 
@@ -189,9 +192,13 @@ else:
                     with col_info:
                         st.markdown(f"**Status:** {progress_msg}")
 
-                        if progress_pct:
-                            st.progress(progress_pct / 100.0)
+                        # Always show progress bar for running analyses
+                        progress_value = (progress_pct or 0) / 100.0
+                        st.progress(progress_value)
+                        if progress_pct and progress_pct > 0:
                             st.caption(f"{progress_pct}% complete")
+                        else:
+                            st.caption("Starting...")
 
                         if current_step and total_steps:
                             st.caption(f"Current: {current_step} ({total_steps} year{'s' if total_steps > 1 else ''} total)")
@@ -209,6 +216,10 @@ else:
                                     st.warning("Could not cancel cleanly - marked as cancelled")
                                 time.sleep(1)
                                 st.rerun()
+                else:
+                    # Run details not found - show basic info
+                    st.warning(f"Unable to fetch details for run {row['run_id']}")
+                    st.caption("The analysis may still be initializing...")
 
         col1, col2 = st.columns([1, 1])
         with col1:

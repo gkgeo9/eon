@@ -532,3 +532,297 @@ class SECDownloader:
         except Exception as e:
             self.logger.error(f"Error getting fiscal year end for {ticker}: {str(e)}")
             return None
+
+    # ==================== CIK-Direct Methods ====================
+    # These methods bypass ticker lookup and query SEC directly with CIK.
+    # Essential for delisted companies like Enron that don't appear in
+    # company_tickers.json (which only lists active companies).
+
+    def get_company_info_from_cik(self, cik: str) -> Optional[Dict]:
+        """
+        Get company information directly from SEC using CIK.
+
+        This bypasses company_tickers.json and queries SEC directly,
+        allowing access to delisted companies like Enron.
+
+        Args:
+            cik: CIK number (will be zero-padded to 10 digits)
+
+        Returns:
+            Dictionary with company info:
+            - cik: Zero-padded CIK
+            - company_name: Official company name
+            - sic_code: Standard Industrial Classification code
+            - sic_description: SIC description
+            - state_of_incorporation: State where incorporated
+            - former_names: List of former company names
+            - fiscal_year_end: MMDD format
+            Or None if not found
+        """
+        cik_padded = cik.zfill(10)
+
+        try:
+            headers = {
+                'User-Agent': f'{self.company_name} {self.user_email}',
+                'Accept-Encoding': 'gzip, deflate',
+                'Host': 'data.sec.gov'
+            }
+
+            url = f"https://data.sec.gov/submissions/CIK{cik_padded}.json"
+            self.logger.info(f"Fetching company info for CIK {cik_padded}")
+
+            time.sleep(0.1)  # SEC rate limit
+
+            response = requests.get(url, headers=headers, timeout=10)
+
+            if response.status_code == 404:
+                self.logger.warning(f"CIK {cik} not found in SEC database")
+                return None
+
+            response.raise_for_status()
+            data = response.json()
+
+            return {
+                'cik': cik_padded,
+                'company_name': data.get('name', 'Unknown'),
+                'sic_code': data.get('sic'),
+                'sic_description': data.get('sicDescription'),
+                'state_of_incorporation': data.get('stateOfIncorporation'),
+                'former_names': data.get('formerNames', []),
+                'fiscal_year_end': data.get('fiscalYearEnd', '1231')
+            }
+
+        except requests.RequestException as e:
+            self.logger.error(f"Error fetching company info for CIK {cik}: {e}")
+            return None
+
+    def download_by_cik(
+        self,
+        cik: str,
+        num_filings: int = 5,
+        filing_type: str = "10-K"
+    ) -> Optional[Path]:
+        """
+        Download filings using CIK directly (bypasses ticker lookup).
+
+        This is essential for delisted companies that don't appear
+        in company_tickers.json.
+
+        Args:
+            cik: CIK number (will be zero-padded)
+            num_filings: Number of recent filings to download
+            filing_type: Type of filing (default: 10-K)
+
+        Returns:
+            Path to downloaded filings directory, or None if failed
+
+        Raises:
+            DownloadError: If download fails
+        """
+        cik_padded = cik.zfill(10)
+        self.logger.info(f"Downloading {num_filings} {filing_type} filings for CIK {cik_padded}")
+
+        try:
+            dl = Downloader(
+                self.company_name,
+                self.user_email,
+                str(self.base_path)
+            )
+
+            # The sec_edgar_downloader library accepts CIK as the identifier
+            num_downloaded = dl.get(
+                filing_type,
+                cik_padded,
+                limit=num_filings,
+                download_details=True
+            )
+
+            if num_downloaded > 0:
+                # Filings are stored under CIK directory
+                filing_path = self.base_path / "sec-edgar-filings" / cik_padded / filing_type
+                self.logger.info(f"Downloaded {num_downloaded} filings to {filing_path}")
+                return filing_path
+            else:
+                self.logger.warning(f"No {filing_type} filings found for CIK {cik_padded}")
+                return None
+
+        except Exception as e:
+            error_msg = f"Error downloading CIK {cik}: {str(e)}"
+            self.logger.error(error_msg)
+            raise DownloadError(error_msg) from e
+
+    def download_with_metadata_by_cik(
+        self,
+        cik: str,
+        num_filings: int = 5,
+        filing_type: str = "10-K"
+    ) -> Tuple[Optional[Path], List[Dict]]:
+        """
+        Download filings by CIK and return both path and metadata.
+
+        Similar to download_with_metadata but uses CIK directly.
+
+        Args:
+            cik: CIK number (will be zero-padded)
+            num_filings: Number of recent filings to download
+            filing_type: Type of filing (default: 10-K)
+
+        Returns:
+            Tuple of (filing_path, metadata_list)
+        """
+        cik_padded = cik.zfill(10)
+        self.logger.info(f"Downloading {num_filings} {filing_type} filings with metadata for CIK {cik_padded}")
+
+        # Get metadata using CIK directly
+        try:
+            metadata = self.get_available_filings_by_cik(cik_padded, filing_type, limit=num_filings)
+        except Exception as e:
+            self.logger.warning(f"Could not fetch metadata for CIK {cik}: {e}")
+            metadata = []
+
+        # Download filings
+        filing_path = self.download_by_cik(cik_padded, num_filings, filing_type)
+
+        return filing_path, metadata
+
+    def get_available_filings_by_cik(
+        self,
+        cik: str,
+        filing_type: str,
+        limit: int = 20
+    ) -> List[Dict]:
+        """
+        Get available filings metadata using CIK directly.
+
+        Mirrors get_available_filings() but skips ticker->CIK lookup.
+
+        Args:
+            cik: CIK number (will be zero-padded)
+            filing_type: Type of filing (e.g., 10-K, 10-Q, 8-K)
+            limit: Maximum number of filings to return
+
+        Returns:
+            List of filing metadata dicts
+        """
+        cik_padded = cik.zfill(10)
+        filing_type_upper = filing_type.upper()
+
+        try:
+            headers = {
+                'User-Agent': f'{self.company_name} {self.user_email}',
+                'Accept-Encoding': 'gzip, deflate',
+                'Host': 'data.sec.gov'
+            }
+
+            url = f"https://data.sec.gov/submissions/CIK{cik_padded}.json"
+            time.sleep(0.1)
+
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+            fiscal_year_end = data.get('fiscalYearEnd', '1231')
+
+            if 'filings' not in data or 'recent' not in data['filings']:
+                return []
+
+            recent = data['filings']['recent']
+            forms = recent.get('form', [])
+            filing_dates = recent.get('filingDate', [])
+            report_dates = recent.get('reportDate', [])
+            accession_numbers = recent.get('accessionNumber', [])
+            primary_docs = recent.get('primaryDocument', [])
+
+            filings = []
+            for i, form in enumerate(forms):
+                if form.upper() == filing_type_upper or form.upper() == f"{filing_type_upper}/A":
+                    if i >= len(report_dates) or not report_dates[i]:
+                        continue
+
+                    report_date = report_dates[i]
+                    fiscal_year = self._get_fiscal_year(report_date, fiscal_year_end)
+                    fiscal_quarter = self._get_fiscal_quarter(report_date, fiscal_year_end, filing_type_upper)
+
+                    filings.append({
+                        'accession_number': accession_numbers[i] if i < len(accession_numbers) else None,
+                        'filing_date': filing_dates[i] if i < len(filing_dates) else None,
+                        'report_date': report_date,
+                        'fiscal_year': fiscal_year,
+                        'fiscal_quarter': fiscal_quarter,
+                        'primary_document': primary_docs[i] if i < len(primary_docs) else None,
+                        'form': form
+                    })
+
+                    if len(filings) >= limit:
+                        break
+
+            self.logger.info(f"Found {len(filings)} {filing_type} filings for CIK {cik_padded}")
+            return filings
+
+        except requests.RequestException as e:
+            self.logger.error(f"Error querying SEC API for CIK {cik}: {str(e)}")
+            raise DownloadError(f"Error querying SEC API: {str(e)}") from e
+
+    def get_available_filing_types_by_cik(self, cik: str) -> List[str]:
+        """
+        Query SEC API to get all available filing types for a CIK.
+
+        Args:
+            cik: CIK number (will be zero-padded)
+
+        Returns:
+            List of available filing types sorted by frequency
+        """
+        cik_padded = cik.zfill(10)
+        self.logger.info(f"Querying available filing types for CIK {cik_padded}")
+
+        try:
+            headers = {
+                'User-Agent': f'{self.company_name} {self.user_email}',
+                'Accept-Encoding': 'gzip, deflate',
+                'Host': 'data.sec.gov'
+            }
+
+            url = f"https://data.sec.gov/submissions/CIK{cik_padded}.json"
+            time.sleep(0.1)
+
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+
+            filing_types: Dict[str, int] = {}
+
+            if 'filings' in data and 'recent' in data['filings']:
+                recent = data['filings']['recent']
+                if 'form' in recent:
+                    for form in recent['form']:
+                        filing_types[form] = filing_types.get(form, 0) + 1
+
+            if not filing_types:
+                self.logger.warning(f"No filings found for CIK {cik_padded}")
+                return []
+
+            sorted_types = sorted(filing_types.items(), key=lambda x: x[1], reverse=True)
+            result = [form for form, _ in sorted_types]
+
+            self.logger.info(f"Found {len(result)} filing types for CIK {cik_padded}: {result[:10]}")
+            return result
+
+        except requests.RequestException as e:
+            error_msg = f"Error querying SEC API for CIK {cik}: {str(e)}"
+            self.logger.error(error_msg)
+            raise DownloadError(error_msg) from e
+
+    def get_filing_path_by_cik(self, cik: str, filing_type: str = "10-K") -> Path:
+        """
+        Get the path where filings for a CIK would be stored.
+
+        Args:
+            cik: CIK number (will be zero-padded)
+            filing_type: Type of filing (default: 10-K)
+
+        Returns:
+            Path to filing directory
+        """
+        return self.base_path / "sec-edgar-filings" / cik.zfill(10) / filing_type
