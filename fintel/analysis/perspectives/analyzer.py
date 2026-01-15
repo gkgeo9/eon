@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional, Union, Dict
 from pydantic import BaseModel
 
-from fintel.core import get_logger, get_config, AnalysisError
+from fintel.core import get_logger, get_config, AnalysisError, mask_api_key
 from fintel.data.sources.sec import PDFExtractor
 from fintel.ai import APIKeyManager, RateLimiter
 from fintel.ai.providers import GeminiProvider
@@ -324,8 +324,8 @@ class PerspectiveAnalyzer:
             )
 
         try:
-            key_suffix = api_key[-4:] if len(api_key) >= 4 else "****"
-            self.logger.debug(f"Using reserved API key: ...{key_suffix}")
+            masked_key = mask_api_key(api_key)
+            self.logger.debug(f"Using reserved API key: {masked_key}")
 
             # Create provider with rate limiter
             provider = GeminiProvider(

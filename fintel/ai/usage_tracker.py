@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass, field, asdict
 
-from fintel.core import get_logger, get_config
+from fintel.core import get_logger, get_config, mask_api_key
 from .api_config import get_api_limits, API_LIMITS
 
 
@@ -141,8 +141,8 @@ class APIUsageTracker:
         )
 
     def _get_key_id(self, api_key: str) -> str:
-        """Get masked key identifier (last 4 characters)."""
-        return api_key[-4:] if len(api_key) >= 4 else "****"
+        """Get masked key identifier using shared utility."""
+        return mask_api_key(api_key)
 
     def _get_key_hash(self, api_key: str) -> str:
         """Get SHA256 hash of the key for unique file naming."""

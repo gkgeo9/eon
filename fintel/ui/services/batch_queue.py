@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
 
-from fintel.core import get_logger, get_config
+from fintel.core import get_logger, get_config, IKeyManager, IRateLimiter, FintelConfig
 from fintel.ai import APIKeyManager, RateLimiter
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services.cancellation import AnalysisCancelledException
@@ -52,16 +52,34 @@ class BatchQueueService:
     - Automatically pauses when rate limits exhausted
     - Resumes at midnight PST when limits reset
     - Survives crashes with persistent state
+
+    Supports dependency injection for testability. All dependencies are optional
+    and will be created with sensible defaults if not provided.
     """
 
-    def __init__(self, db: DatabaseRepository):
+    def __init__(
+        self,
+        db: DatabaseRepository,
+        config: Optional[FintelConfig] = None,
+        key_manager: Optional[IKeyManager] = None,
+        rate_limiter: Optional[IRateLimiter] = None,
+    ):
+        """
+        Initialize the batch queue service.
+
+        Args:
+            db: Database repository (required)
+            config: Configuration (optional, uses get_config() if not provided)
+            key_manager: API key manager (optional, creates default if not provided)
+            rate_limiter: Rate limiter (optional, creates default if not provided)
+        """
         self.db = db
-        self.config = get_config()
+        self.config = config or get_config()
         self.logger = get_logger(f"{__name__}.BatchQueueService")
 
-        # Initialize components
-        self.api_key_manager = APIKeyManager(self.config.google_api_keys)
-        self.rate_limiter = RateLimiter()
+        # Initialize components - use injected or create defaults
+        self.api_key_manager = key_manager or APIKeyManager(self.config.google_api_keys)
+        self.rate_limiter = rate_limiter or RateLimiter()
 
         # Worker thread control
         self._worker_thread: Optional[threading.Thread] = None
@@ -1697,3 +1715,29 @@ Be concise but comprehensive. Focus on actionable insights.
         }
 
         return json.dumps(export_data, indent=2, default=str)
+
+
+def create_batch_queue_service(
+    db: DatabaseRepository,
+    config: Optional[FintelConfig] = None
+) -> BatchQueueService:
+    """
+    Factory function to create a BatchQueueService with default dependencies.
+
+    This is the recommended way to create a BatchQueueService for production use.
+    For testing, use the BatchQueueService constructor directly with mock dependencies.
+
+    Args:
+        db: Database repository (required)
+        config: Optional configuration (uses get_config() if not provided)
+
+    Returns:
+        Configured BatchQueueService instance
+    """
+    config = config or get_config()
+    return BatchQueueService(
+        db=db,
+        config=config,
+        key_manager=APIKeyManager(config.google_api_keys),
+        rate_limiter=RateLimiter(),
+    )

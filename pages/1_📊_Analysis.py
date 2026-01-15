@@ -15,21 +15,7 @@ from fintel.ui.services import AnalysisService
 from fintel.ui.theme import apply_theme
 from fintel.ui.utils.validators import validate_ticker
 from fintel.data.sources.sec import SECDownloader
-
-# Filing type periodicities
-ANNUAL_FILINGS = {'10-K', '20-F', 'DEF 14A', '40-F', 'N-CSR', 'N-CSRS', 'ARS'}
-QUARTERLY_FILINGS = {'10-Q', '6-K'}
-# Everything else is event-based
-
-def get_filing_periodicity(filing_type: str) -> str:
-    """Get the periodicity of a filing type."""
-    ft = filing_type.upper().replace("/A", "")
-    if ft in ANNUAL_FILINGS:
-        return 'annual'
-    elif ft in QUARTERLY_FILINGS:
-        return 'quarterly'
-    else:
-        return 'event'
+from fintel.core import get_filing_category
 
 # Import custom workflows discovery
 try:
@@ -500,7 +486,7 @@ else:
         years = None
         num_years = None
         quarters = None  # For quarterly filings
-        filing_periodicity = get_filing_periodicity(filing_type)
+        filing_periodicity = get_filing_category(filing_type)
 
         # Show filing type hint
         if filing_periodicity == 'quarterly':

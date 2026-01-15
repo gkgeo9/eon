@@ -11,7 +11,7 @@ import time
 from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
 
-from fintel.core import get_logger
+from fintel.core import get_logger, mask_api_key
 from .api_config import get_api_limits, API_LIMITS
 from .usage_tracker import get_usage_tracker, APIUsageTracker
 
@@ -83,10 +83,10 @@ class RateLimiter:
         usage_today = self.tracker.get_usage_today(api_key)
         remaining = self.tracker.get_remaining_today(api_key)
 
-        # Only log last 4 characters of API key for security
-        key_suffix = api_key[-4:] if len(api_key) >= 4 else "****"
+        # Use shared utility for secure key masking
+        masked_key = mask_api_key(api_key)
         self.logger.info(
-            f"API call recorded for key ...{key_suffix} "
+            f"API call recorded for key {masked_key} "
             f"(usage today: {usage_today}/{self.limits.DAILY_LIMIT_PER_KEY}, "
             f"remaining: {remaining})"
         )
@@ -94,7 +94,7 @@ class RateLimiter:
         # Warn if near limit
         if self.tracker.is_near_limit(api_key):
             self.logger.warning(
-                f"Key ...{key_suffix} is approaching daily limit! "
+                f"Key {masked_key} is approaching daily limit! "
                 f"Only {remaining} requests remaining."
             )
 

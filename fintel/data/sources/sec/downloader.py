@@ -11,7 +11,7 @@ from sec_edgar_downloader import Downloader
 import requests
 import time
 
-from fintel.core import get_logger, DownloadError
+from fintel.core import get_logger, DownloadError, is_annual_filing, is_quarterly_filing
 
 
 class SECDownloader:
@@ -324,15 +324,10 @@ class SECDownloader:
         Returns:
             One of: 'annual', 'quarterly', 'event'
         """
-        filing_type = filing_type.upper().replace("/A", "")  # Remove amendment suffix
-
-        annual_types = {'10-K', '20-F', 'DEF 14A', '40-F', 'N-CSR', 'N-CSRS', 'ARS'}
-        quarterly_types = {'10-Q', '6-K'}
-        # Everything else (8-K, etc.) is event-based
-
-        if filing_type in annual_types:
+        # Use shared utilities for consistent filing type classification
+        if is_annual_filing(filing_type):
             return 'annual'
-        elif filing_type in quarterly_types:
+        elif is_quarterly_filing(filing_type):
             return 'quarterly'
         else:
             return 'event'

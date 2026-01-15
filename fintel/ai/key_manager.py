@@ -10,7 +10,7 @@ multiple processes and sessions.
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 
-from fintel.core import get_logger, ConfigurationError
+from fintel.core import get_logger, ConfigurationError, mask_api_key
 from .api_config import get_api_limits
 from .usage_tracker import get_usage_tracker, APIUsageTracker
 
@@ -156,18 +156,16 @@ class APIKeyManager:
             error: Whether the request resulted in an error
         """
         if api_key not in self.api_keys:
-            key_id = api_key[-4:] if len(api_key) >= 4 else "****"
-            self.logger.warning(f"Unknown API key: ...{key_id}")
+            self.logger.warning(f"Unknown API key: {mask_api_key(api_key)}")
             return
 
         self.tracker.record_request(api_key, error=error)
 
         # Log warning if near limit
         if self.tracker.is_near_limit(api_key):
-            key_id = api_key[-4:] if len(api_key) >= 4 else "****"
             remaining = self.tracker.get_remaining_today(api_key)
             self.logger.warning(
-                f"Key ...{key_id} is near daily limit! "
+                f"Key {mask_api_key(api_key)} is near daily limit! "
                 f"Remaining: {remaining}/{self.limits.DAILY_LIMIT_PER_KEY}"
             )
 
