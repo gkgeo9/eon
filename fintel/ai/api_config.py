@@ -64,10 +64,69 @@ class APILimits:
         }
 
 
-# Global instance - import this to use the limits
+@dataclass(frozen=True)
+class SECLimits:
+    """
+    Configuration for SEC EDGAR rate limits.
+
+    SEC's fair access policy recommends no more than 10 requests per second.
+    For batch processing, more conservative limits are recommended to avoid
+    overwhelming SEC servers when running with multiple workers.
+
+    All values are configurable via environment variables.
+    """
+
+    # Delay between SEC requests (seconds)
+    # Min: 0.5 (aggressive) | Recommended: 2.0 | Max: 10.0 (very conservative)
+    REQUEST_DELAY: float = 2.0
+
+    # Maximum concurrent SEC requests
+    # Limits parallel downloads to avoid overwhelming SEC servers
+    # Min: 1 (sequential) | Recommended: 5 | Max: 10 (aggressive)
+    MAX_CONCURRENT_REQUESTS: int = 5
+
+    # Stagger delay between batch worker starts (seconds)
+    # Prevents thundering herd when multiple workers start batch processing
+    # Min: 0 (no stagger) | Recommended: 30 | Max: 120 (very conservative)
+    WORKER_STAGGER_DELAY: int = 30
+
+    # Directory for SEC lock files (same as Gemini for simplicity)
+    LOCK_DIR: str = "data/api_usage"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            'request_delay': self.REQUEST_DELAY,
+            'max_concurrent_requests': self.MAX_CONCURRENT_REQUESTS,
+            'worker_stagger_delay': self.WORKER_STAGGER_DELAY,
+            'lock_dir': self.LOCK_DIR,
+        }
+
+
+# Global instances - import these to use the limits
 API_LIMITS = APILimits()
 
 
 def get_api_limits() -> APILimits:
     """Get the global API limits configuration."""
     return API_LIMITS
+
+
+def get_sec_limits() -> SECLimits:
+    """
+    Get SEC limits from environment variables or use defaults.
+
+    Environment variables:
+        FINTEL_SEC_REQUEST_DELAY: Seconds between SEC requests (default: 2.0)
+        FINTEL_SEC_MAX_CONCURRENT: Max parallel SEC requests (default: 5)
+        FINTEL_SEC_WORKER_STAGGER_DELAY: Seconds between worker starts (default: 30)
+
+    Returns:
+        SECLimits instance with configured values
+    """
+    import os
+    return SECLimits(
+        REQUEST_DELAY=float(os.getenv('FINTEL_SEC_REQUEST_DELAY', 2.0)),
+        MAX_CONCURRENT_REQUESTS=int(os.getenv('FINTEL_SEC_MAX_CONCURRENT', 5)),
+        WORKER_STAGGER_DELAY=int(os.getenv('FINTEL_SEC_WORKER_STAGGER_DELAY', 30)),
+    )

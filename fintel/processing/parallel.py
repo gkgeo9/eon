@@ -18,6 +18,7 @@ from datetime import datetime
 
 from fintel.core import get_logger, get_config
 from fintel.ai import APIKeyManager, RateLimiter
+from fintel.ai.api_config import get_sec_limits
 from fintel.data.sources.sec import SECDownloader, SECConverter
 from fintel.processing.progress import ProgressTracker
 
@@ -31,7 +32,8 @@ def _process_single_company(
     session_id: str,
     progress_dir: Path,
     output_dir: Path,
-    analysis_function: str = None
+    analysis_function: str = None,
+    stagger_delay: float = 0
 ) -> Dict[str, Any]:
     """
     Worker function to process a single company.
@@ -46,6 +48,7 @@ def _process_single_company(
         progress_dir: Progress tracking directory
         output_dir: Output directory for results
         analysis_function: Optional custom analysis function name
+        stagger_delay: Seconds to wait before starting (prevents SEC thundering herd)
 
     Returns:
         Dictionary with processing results
@@ -58,6 +61,11 @@ def _process_single_company(
     from fintel.processing.progress import ProgressTracker
 
     logger = get_logger(f"{__name__}.worker.{ticker}")
+
+    # Apply stagger delay to prevent thundering herd on SEC EDGAR API
+    if stagger_delay > 0:
+        logger.info(f"Worker for {ticker} waiting {stagger_delay}s (staggered start)")
+        time.sleep(stagger_delay)
 
     result = {
         "ticker": ticker,
@@ -217,10 +225,14 @@ class ParallelProcessor:
         # Initialize progress tracker
         self.tracker = ProgressTracker(session_id, self.progress_dir)
 
+        # SEC rate limiting configuration for staggered worker starts
+        sec_limits = get_sec_limits()
+        self._worker_stagger_delay = sec_limits.WORKER_STAGGER_DELAY
+
         self.logger = get_logger(f"{__name__}.ParallelProcessor")
         self.logger.info(
             f"Initialized parallel processor: {self.max_workers} workers, "
-            f"session {session_id}"
+            f"session {session_id}, stagger_delay={self._worker_stagger_delay}s"
         )
 
     def process_batch(
@@ -272,12 +284,17 @@ class ParallelProcessor:
 
         # Use ProcessPoolExecutor for parallel processing
         with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
-            # Submit all tasks
+            # Submit all tasks with staggered starts to prevent SEC thundering herd
             futures = []
+            worker_count = 0
             for worker_id, ticker_batch in enumerate(ticker_batches):
                 api_key = self.api_keys[worker_id % len(self.api_keys)]
 
                 for ticker in ticker_batch:
+                    # Calculate stagger delay based on worker order
+                    stagger_delay = worker_count * self._worker_stagger_delay
+                    worker_count += 1
+
                     future = executor.submit(
                         _process_single_company,
                         ticker=ticker,
@@ -285,7 +302,8 @@ class ParallelProcessor:
                         num_filings=num_filings,
                         session_id=self.session_id,
                         progress_dir=self.progress_dir,
-                        output_dir=output_dir
+                        output_dir=output_dir,
+                        stagger_delay=stagger_delay
                     )
                     futures.append((ticker, future))
 

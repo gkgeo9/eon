@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 
 from fintel.core import get_logger, get_config, IKeyManager, IRateLimiter, FintelConfig
 from fintel.ai import APIKeyManager, RateLimiter
+from fintel.ai.api_config import get_sec_limits
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services.cancellation import AnalysisCancelledException
 
@@ -81,6 +82,10 @@ class BatchQueueService:
         self.api_key_manager = key_manager or APIKeyManager(self.config.google_api_keys)
         self.rate_limiter = rate_limiter or RateLimiter()
 
+        # SEC rate limiting configuration for staggered worker starts
+        sec_limits = get_sec_limits()
+        self._worker_stagger_delay = sec_limits.WORKER_STAGGER_DELAY
+
         # Worker thread control
         self._worker_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
@@ -89,7 +94,9 @@ class BatchQueueService:
         # Fix #4: Cleanup stale worker state from crashed processes
         self._cleanup_stale_worker()
 
-        self.logger.info("BatchQueueService initialized")
+        self.logger.info(
+            f"BatchQueueService initialized (worker_stagger_delay={self._worker_stagger_delay}s)"
+        )
 
     def _cleanup_stale_worker(self):
         """
@@ -352,14 +359,20 @@ class BatchQueueService:
                     # Process items in parallel using thread pool
                     with ThreadPoolExecutor(max_workers=len(items_with_keys)) as executor:
                         # Submit all items with their pre-reserved keys
+                        # NOTE: When stagger delay > 0, workers will release their key
+                        # during the stagger wait and re-acquire after, so they don't
+                        # hold keys while waiting.
                         futures: Dict[Future, tuple] = {}
-                        for item, api_key in items_with_keys:
+                        for worker_idx, (item, api_key) in enumerate(items_with_keys):
+                            stagger_delay = worker_idx * self._worker_stagger_delay
                             future = executor.submit(
-                                self._process_item_with_key,
+                                self._process_item_with_staggered_start,
                                 item,
                                 batch_id,
                                 api_key,
-                                mark_key_released
+                                mark_key_released,
+                                stagger_delay,
+                                worker_idx  # Pass index for logging
                             )
                             futures[future] = (item, api_key)
 
@@ -630,6 +643,88 @@ class BatchQueueService:
             # Always release the key and notify
             self.api_key_manager.release_key(api_key)
             release_callback(api_key)
+
+    def _process_item_with_staggered_start(
+        self,
+        item: Dict,
+        batch_id: str,
+        api_key: str,
+        release_callback,
+        stagger_delay: float,
+        worker_idx: int = 0
+    ):
+        """
+        Process a batch item with staggered start for SEC rate limiting.
+
+        This wrapper adds a delay before starting the actual processing to prevent
+        all workers from hitting the SEC EDGAR API simultaneously (thundering herd).
+
+        IMPORTANT: To avoid holding API keys during the stagger wait (which would
+        exhaust all keys immediately), workers with stagger_delay > 0 will:
+        1. Release their pre-reserved key immediately
+        2. Wait for the stagger delay
+        3. Re-acquire a key after the delay
+        4. Then proceed with processing
+
+        With 25 workers and a 30-second stagger:
+        - Worker 0: starts immediately (keeps pre-reserved key)
+        - Worker 1: releases key, waits 30s, re-acquires key, starts
+        - Worker 2: releases key, waits 60s, re-acquires key, starts
+        - ...
+        - Worker 24: releases key, waits 720s, re-acquires key, starts
+
+        Args:
+            item: Item dictionary with id, ticker, company_name, attempts
+            batch_id: Parent batch ID
+            api_key: Pre-reserved API key to use for this analysis
+            release_callback: Callback function to mark key as released
+            stagger_delay: Seconds to wait before starting (based on worker index)
+            worker_idx: Worker index for logging
+        """
+        if stagger_delay > 0:
+            # Release the pre-reserved key during the wait so other workers can use it
+            self.logger.info(
+                f"Worker {worker_idx} for {item['ticker']}: releasing key, "
+                f"waiting {stagger_delay}s (staggered start)"
+            )
+            self.api_key_manager.release_key(api_key)
+            release_callback(api_key)
+
+            # Sleep in chunks to allow stop event to interrupt
+            remaining = stagger_delay
+            chunk_size = 5.0  # Check stop event every 5 seconds
+            while remaining > 0 and not self._stop_event.is_set():
+                sleep_time = min(chunk_size, remaining)
+                time.sleep(sleep_time)
+                remaining -= sleep_time
+
+            if self._stop_event.is_set():
+                self.logger.info(f"Stop event received during stagger wait for {item['ticker']}")
+                # Reset item to pending since we didn't process it
+                self._reset_item_to_pending(item['id'])
+                return
+
+            # Re-acquire a key after the stagger delay
+            self.logger.info(f"Worker {worker_idx} for {item['ticker']}: stagger complete, acquiring key")
+            new_api_key = self.api_key_manager.reserve_key()
+
+            if new_api_key is None:
+                self.logger.warning(
+                    f"Worker {worker_idx} for {item['ticker']}: no key available after stagger, "
+                    "resetting to pending"
+                )
+                self._reset_item_to_pending(item['id'])
+                return
+
+            # Use a no-op callback since we're managing the key ourselves
+            def noop_callback(key: str):
+                pass
+
+            # Process with the newly acquired key
+            return self._process_item_with_key(item, batch_id, new_api_key, noop_callback)
+        else:
+            # Worker 0: start immediately with pre-reserved key
+            return self._process_item_with_key(item, batch_id, api_key, release_callback)
 
     def _process_item(self, item: Dict, service, batch_id: str):
         """Process a single batch item."""

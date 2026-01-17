@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import List, Dict, Optional, Set, Tuple
 from sec_edgar_downloader import Downloader
 import requests
-import time
 
 from fintel.core import get_logger, DownloadError, is_annual_filing, is_quarterly_filing
+from fintel.data.sources.sec.request_queue import get_sec_request_queue
 
 
 class SECDownloader:
@@ -52,6 +52,34 @@ class SECDownloader:
 
         self.base_path.mkdir(parents=True, exist_ok=True)
         self.logger = get_logger(f"{__name__}.SECDownloader")
+
+    def _make_sec_request(
+        self,
+        url: str,
+        headers: Dict[str, str],
+        timeout: int = 10
+    ) -> requests.Response:
+        """
+        Make a rate-limited request to SEC EDGAR.
+
+        All SEC API calls should go through this method to ensure
+        proper rate limiting and cross-process coordination.
+
+        Args:
+            url: SEC API URL to request
+            headers: Request headers (must include User-Agent for SEC compliance)
+            timeout: Request timeout in seconds
+
+        Returns:
+            Response object from the SEC API
+
+        Raises:
+            requests.RequestException: If the request fails
+        """
+        queue = get_sec_request_queue()
+        return queue.execute_with_lock(
+            lambda: requests.get(url, headers=headers, timeout=timeout)
+        )
 
     def download(
         self,
@@ -220,10 +248,7 @@ class SECDownloader:
             url = f"https://data.sec.gov/submissions/CIK{cik}.json"
             self.logger.debug(f"Fetching submissions from {url}")
 
-            # SEC requires a delay between requests
-            time.sleep(0.1)
-
-            response = requests.get(url, headers=headers, timeout=10)
+            response = self._make_sec_request(url, headers)
             response.raise_for_status()
 
             data = response.json()
@@ -279,10 +304,7 @@ class SECDownloader:
             # Use the company tickers endpoint
             url = "https://www.sec.gov/files/company_tickers.json"
 
-            # SEC requires a delay between requests
-            time.sleep(0.1)
-
-            response = requests.get(url, headers=headers, timeout=10)
+            response = self._make_sec_request(url, headers)
             response.raise_for_status()
 
             data = response.json()
@@ -373,9 +395,8 @@ class SECDownloader:
             }
 
             url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-            time.sleep(0.1)  # SEC rate limit
 
-            response = requests.get(url, headers=headers, timeout=10)
+            response = self._make_sec_request(url, headers)
             response.raise_for_status()
 
             data = response.json()
@@ -516,9 +537,8 @@ class SECDownloader:
             }
 
             url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-            time.sleep(0.1)
 
-            response = requests.get(url, headers=headers, timeout=10)
+            response = self._make_sec_request(url, headers)
             response.raise_for_status()
 
             data = response.json()
@@ -566,9 +586,7 @@ class SECDownloader:
             url = f"https://data.sec.gov/submissions/CIK{cik_padded}.json"
             self.logger.info(f"Fetching company info for CIK {cik_padded}")
 
-            time.sleep(0.1)  # SEC rate limit
-
-            response = requests.get(url, headers=headers, timeout=10)
+            response = self._make_sec_request(url, headers)
 
             if response.status_code == 404:
                 self.logger.warning(f"CIK {cik} not found in SEC database")
@@ -710,9 +728,8 @@ class SECDownloader:
             }
 
             url = f"https://data.sec.gov/submissions/CIK{cik_padded}.json"
-            time.sleep(0.1)
 
-            response = requests.get(url, headers=headers, timeout=10)
+            response = self._make_sec_request(url, headers)
             response.raise_for_status()
 
             data = response.json()
@@ -779,9 +796,8 @@ class SECDownloader:
             }
 
             url = f"https://data.sec.gov/submissions/CIK{cik_padded}.json"
-            time.sleep(0.1)
 
-            response = requests.get(url, headers=headers, timeout=10)
+            response = self._make_sec_request(url, headers)
             response.raise_for_status()
 
             data = response.json()
