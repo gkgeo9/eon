@@ -55,6 +55,12 @@ VERDICT: BUY / HOLD / PASS
 - BUY = Wide moat + great management + margin of safety
 - Explain in 2-3 clear sentences
 
+ACTION SIGNAL: PRIORITY / INVESTIGATE / PASS
+- PRIORITY = Exceptional opportunity - wide moat, great management, significant margin of safety
+- INVESTIGATE = Promising but needs more due diligence - some concerns or missing information
+- PASS = Does not meet Buffett criteria - weak moat, poor management, or no margin of safety
+- Provide ONE WORD only
+
 ═══════════════════════════════════════════════════════════════════════════════
 CRITICAL RULES:
 ═══════════════════════════════════════════════════════════════════════════════

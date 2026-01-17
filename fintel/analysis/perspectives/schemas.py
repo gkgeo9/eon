@@ -46,6 +46,9 @@ class BuffettAnalysis(BaseModel):
     buffett_verdict: str = Field(
         description="BUY (wide moat + great management + 30% margin of safety) / HOLD (good business, fair price) / PASS (no moat, bad management, or overvalued). Explain in 2-3 sentences with clear logic."
     )
+    action_signal: str = Field(
+        description="PRIORITY (exceptional opportunity - wide moat, great management, significant margin of safety) / INVESTIGATE (promising but needs more due diligence - some concerns or missing information) / PASS (does not meet Buffett criteria - weak moat, poor management, or no margin of safety). One word only."
+    )
 
 
 class TalebAnalysis(BaseModel):
@@ -80,6 +83,9 @@ class TalebAnalysis(BaseModel):
     taleb_verdict: str = Field(
         description="EMBRACE (antifragile + asymmetric upside) / NEUTRAL (robust, no edge) / AVOID (fragile + tail risk). Explain reasoning in 2-3 sentences."
     )
+    action_signal: str = Field(
+        description="PRIORITY (antifragile with asymmetric upside and strong skin in the game) / INVESTIGATE (robust but needs deeper tail risk analysis or has some fragility concerns) / PASS (fragile, high tail risk exposure, or poor skin in the game). One word only."
+    )
 
 
 class ContrarianAnalysis(BaseModel):
@@ -113,6 +119,9 @@ class ContrarianAnalysis(BaseModel):
     )
     conviction_level: str = Field(
         description="Low / Medium / High. How confident are you in this contrarian thesis? What's your edge? What could prove you wrong?"
+    )
+    action_signal: str = Field(
+        description="PRIORITY (strong variant perception with high conviction and clear catalysts) / INVESTIGATE (interesting contrarian thesis but lower conviction or unclear timing) / PASS (no meaningful variant perception or consensus appears correct). One word only."
     )
 
 

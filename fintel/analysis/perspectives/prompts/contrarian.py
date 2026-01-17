@@ -50,6 +50,12 @@ YOUR VARIANT PERCEPTION:
 
 RATING: Strong Contrarian BUY / Weak Buy / Neutral / Contrarian SELL
 
+ACTION SIGNAL: PRIORITY / INVESTIGATE / PASS
+- PRIORITY = Strong variant perception with high conviction and clear catalysts
+- INVESTIGATE = Interesting contrarian thesis but lower conviction or unclear timing
+- PASS = No meaningful variant perception or consensus appears correct
+- Provide ONE WORD only
+
 ═══════════════════════════════════════════════════════════════════════════════
 CRITICAL RULES:
 ═══════════════════════════════════════════════════════════════════════════════
