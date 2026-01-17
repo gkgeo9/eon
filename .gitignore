@@ -36,6 +36,7 @@ coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
+/tests/data
 
 # Type checking
 .mypy_cache/
