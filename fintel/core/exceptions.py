@@ -50,6 +50,11 @@ class RateLimitError(AIProviderError):
     pass
 
 
+class KeyQuotaExhaustedError(AIProviderError):
+    """Raised when all API keys have exhausted their daily quota."""
+    pass
+
+
 class StorageError(FintelException):
     """Raised when there's an error with data storage."""
     pass

@@ -14,6 +14,7 @@ from typing import Optional, Union, Dict
 from pydantic import BaseModel
 
 from fintel.core import get_logger, get_config, AnalysisError, mask_api_key
+from fintel.core.exceptions import KeyQuotaExhaustedError
 from fintel.data.sources.sec import PDFExtractor
 from fintel.ai import APIKeyManager, RateLimiter
 from fintel.ai.providers import GeminiProvider
@@ -319,9 +320,9 @@ class PerspectiveAnalyzer:
         api_key = self.api_key_manager.reserve_key()
 
         if api_key is None:
-            raise AnalysisError(
-                "No API keys available after waiting. All keys have either "
-                "reached their daily limits or timed out waiting for availability."
+            raise KeyQuotaExhaustedError(
+                "All API keys have exhausted their daily quota. "
+                "Batch will wait until midnight PST for quota reset."
             )
 
         try:

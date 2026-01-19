@@ -220,8 +220,22 @@ class APIUsageTracker:
             raise
 
     def _get_today(self) -> str:
-        """Get today's date string in YYYY-MM-DD format."""
-        return datetime.now().strftime('%Y-%m-%d')
+        """
+        Get today's date string in YYYY-MM-DD format using RESET_TIMEZONE.
+
+        Uses the same timezone as the API rate limit reset (America/Los_Angeles)
+        to ensure daily usage tracking aligns with when quotas actually reset.
+        """
+        try:
+            import pytz
+            tz = pytz.timezone(self.limits.RESET_TIMEZONE)
+            return datetime.now(tz).strftime('%Y-%m-%d')
+        except ImportError:
+            self.logger.warning(
+                "pytz not installed. Using local timezone instead. "
+                "Install pytz for accurate timezone-aware date tracking."
+            )
+            return datetime.now().strftime('%Y-%m-%d')
 
     def record_request(self, api_key: str, error: bool = False) -> bool:
         """

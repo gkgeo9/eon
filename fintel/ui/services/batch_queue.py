@@ -26,6 +26,7 @@ from fintel.ai import APIKeyManager, RateLimiter
 from fintel.ai.api_config import get_sec_limits
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services.cancellation import AnalysisCancelledException
+from fintel.core.exceptions import KeyQuotaExhaustedError
 
 
 @dataclass
@@ -396,6 +397,14 @@ class BatchQueueService:
                                 self._mark_batch_stopped(batch_id, "Cancelled by user")
                                 executor.shutdown(wait=False, cancel_futures=True)
                                 return
+                            except KeyQuotaExhaustedError as e:
+                                # Quota exhaustion - reset to pending WITHOUT incrementing retry counter
+                                # This is not a real failure, just need to wait for quota reset
+                                self.logger.warning(
+                                    f"Quota exhausted for {item['ticker']}, resetting to pending (no retry increment)"
+                                )
+                                self._reset_item_to_pending_no_retry_increment(item['id'])
+                                self._update_batch_progress(batch_id)
                             except Exception as e:
                                 self._handle_item_error(item, str(e), batch_id)
                                 # Also update progress after errors so failed count updates
@@ -408,6 +417,16 @@ class BatchQueueService:
                             if key not in released_keys:
                                 self.api_key_manager.release_key(key)
                                 self.logger.debug(f"Released unreleased key in finally block")
+
+                # Check if all API keys were exhausted during this batch
+                # If so, wait for midnight reset instead of continuing to fail
+                available_keys = self.api_key_manager.get_available_keys()
+                if not available_keys:
+                    self.logger.info(
+                        "All API keys exhausted during batch processing - waiting for midnight PST reset"
+                    )
+                    self._wait_for_reset(batch_id)
+                    continue  # Resume main loop after reset
 
                 # Small delay between parallel batches
                 time.sleep(1)
@@ -1250,6 +1269,20 @@ class BatchQueueService:
                 f"Item {item['ticker']} will be retried "
                 f"(attempt {current_attempts}/{max_retries + 1})"
             )
+
+    def _reset_item_to_pending_no_retry_increment(self, item_id: int):
+        """
+        Reset item to pending without incrementing retry counter.
+
+        Used for quota exhaustion errors which are not real failures -
+        the item will succeed once API quotas reset at midnight PST.
+        """
+        query = """
+            UPDATE batch_items
+            SET status = 'pending'
+            WHERE id = ?
+        """
+        self.db._execute_with_retry(query, (item_id,))
 
     def _cleanup_worker(self, batch_id: str):
         """Cleanup worker state."""
