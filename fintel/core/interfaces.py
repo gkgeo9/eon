@@ -19,12 +19,15 @@ class IKeyManager(Protocol):
         """List of managed API keys."""
         ...
 
-    def reserve_key(self) -> Optional[str]:
+    def reserve_key(self, wait_timeout: Optional[float] = None) -> Optional[str]:
         """
         Atomically reserve and return the best available API key.
 
+        Args:
+            wait_timeout: Seconds to wait for a key (None = use default from config)
+
         Returns:
-            Reserved API key, or None if no keys available
+            Reserved API key, or None if no keys available after timeout
         """
         ...
 

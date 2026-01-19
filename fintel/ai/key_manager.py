@@ -113,25 +113,36 @@ class APIKeyManager:
 
         return key
 
-    def reserve_key(self) -> Optional[str]:
+    def reserve_key(self, wait_timeout: Optional[float] = None) -> Optional[str]:
         """
         Atomically reserve and return the best available API key.
 
         This is the RECOMMENDED method for parallel/batch operations.
         It ensures each thread gets a unique key by using atomic reservation.
 
+        If all keys are currently in use by other threads and wait_timeout > 0,
+        this will wait for a key to be released before returning.
+
+        Args:
+            wait_timeout: Seconds to wait for a key (None = use config default,
+                         0 = no waiting). Default reads from FINTEL_KEY_WAIT_TIMEOUT.
+
         Returns:
-            Reserved API key, or None if no keys available
+            Reserved API key, or None if no keys available after timeout
 
         Note:
             MUST call release_key() after the request is complete!
         """
-        key = self.tracker.reserve_and_get_key(self.api_keys)
+        # Use config default if not specified
+        if wait_timeout is None:
+            wait_timeout = self.limits.KEY_WAIT_TIMEOUT
+
+        key = self.tracker.reserve_and_get_key(self.api_keys, wait_timeout=wait_timeout)
 
         if key is None:
             self.logger.error(
-                f"No API keys available! All {len(self.api_keys)} keys are either "
-                f"reserved by other threads or have reached their daily limit."
+                f"No API keys available after waiting {wait_timeout:.0f}s! "
+                f"All {len(self.api_keys)} keys are either in use or exhausted."
             )
 
         return key

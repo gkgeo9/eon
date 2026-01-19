@@ -321,11 +321,13 @@ class BatchQueueService:
 
                 # Fix #1: PRE-RESERVE API keys before spawning threads
                 # This prevents race conditions where threads fail to get keys
+                # Use wait_timeout=0 for quick reservation - batch queue handles
+                # key exhaustion with _wait_for_reset() instead
                 items_with_keys = []
                 reserved_keys = []
 
                 for item in pending_items:
-                    key = self.api_key_manager.reserve_key()
+                    key = self.api_key_manager.reserve_key(wait_timeout=0)
                     if key is None:
                         # No more keys available - reset this item to pending
                         self._reset_item_to_pending(item['id'])

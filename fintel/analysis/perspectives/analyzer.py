@@ -315,12 +315,13 @@ class PerspectiveAnalyzer:
             Validated Pydantic model instance
         """
         # Reserve a key atomically to prevent race conditions in batch processing
+        # This will wait for a key to become available (configurable via FINTEL_KEY_WAIT_TIMEOUT)
         api_key = self.api_key_manager.reserve_key()
 
         if api_key is None:
             raise AnalysisError(
-                "No API keys available! All keys are either in use by other threads "
-                "or have reached their daily limits."
+                "No API keys available after waiting. All keys have either "
+                "reached their daily limits or timed out waiting for availability."
             )
 
         try:

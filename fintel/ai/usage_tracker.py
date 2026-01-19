@@ -12,6 +12,7 @@ import os
 import fcntl
 import hashlib
 import threading
+import time
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Set
@@ -120,8 +121,9 @@ class APIUsageTracker:
         self.logger = get_logger(f"{__name__}.APIUsageTracker")
         self.limits = get_api_limits()
 
-        # Thread-safe key reservation tracking
-        self._reservation_lock = threading.Lock()
+        # Thread-safe key reservation tracking with wait/notify support
+        # Using Condition instead of Lock allows threads to wait for key availability
+        self._reservation_condition = threading.Condition()
         self._reserved_keys: Set[str] = set()  # Keys currently in use by threads
         self._key_usage_counts: Dict[str, int] = {}  # In-flight request counts per key
 
@@ -349,7 +351,7 @@ class APIUsageTracker:
 
         return best_key
 
-    def reserve_and_get_key(self, api_keys: List[str]) -> Optional[str]:
+    def reserve_and_get_key(self, api_keys: List[str], wait_timeout: float = 0) -> Optional[str]:
         """
         Atomically reserve and return the best available API key.
 
@@ -357,70 +359,104 @@ class APIUsageTracker:
         It ensures each thread gets a different key by:
         1. Locking the reservation mutex
         2. Finding the least-used key that isn't currently reserved
-        3. Reserving it before releasing the lock
+        3. If no key available and wait_timeout > 0, waiting for one to be released
+        4. Reserving it before releasing the lock
 
         Args:
             api_keys: List of API keys to choose from
+            wait_timeout: Seconds to wait for a key to become available (0 = no wait)
 
         Returns:
-            Reserved API key, or None if no keys available
+            Reserved API key, or None if no keys available (after timeout)
 
         Note:
             MUST call release_key() after the request is complete!
         """
-        with self._reservation_lock:
-            if not api_keys:
-                return None
+        if not api_keys:
+            return None
 
-            best_key = None
-            min_usage = float('inf')
+        deadline = time.time() + wait_timeout if wait_timeout > 0 else 0
 
-            for key in api_keys:
-                # Skip keys already reserved by other threads
-                if key in self._reserved_keys:
-                    continue
+        with self._reservation_condition:
+            while True:
+                # Try to find the best available key
+                best_key = None
+                min_usage = float('inf')
 
-                usage = self.get_usage_today(key)
+                for key in api_keys:
+                    # Skip keys already reserved by other threads
+                    if key in self._reserved_keys:
+                        continue
 
-                # Also consider in-flight requests not yet recorded
-                in_flight = self._key_usage_counts.get(key, 0)
-                effective_usage = usage + in_flight
+                    usage = self.get_usage_today(key)
 
-                # Skip exhausted keys
-                if effective_usage >= self.limits.DAILY_LIMIT_PER_KEY:
-                    continue
+                    # Also consider in-flight requests not yet recorded
+                    in_flight = self._key_usage_counts.get(key, 0)
+                    effective_usage = usage + in_flight
 
-                if effective_usage < min_usage:
-                    min_usage = effective_usage
-                    best_key = key
+                    # Skip exhausted keys
+                    if effective_usage >= self.limits.DAILY_LIMIT_PER_KEY:
+                        continue
 
-            if best_key:
-                # Reserve the key
-                self._reserved_keys.add(best_key)
-                self._key_usage_counts[best_key] = self._key_usage_counts.get(best_key, 0) + 1
+                    if effective_usage < min_usage:
+                        min_usage = effective_usage
+                        best_key = key
 
-                key_id = self._get_key_id(best_key)
-                self.logger.info(
-                    f"Reserved key ...{key_id} "
-                    f"(effective usage: {min_usage}, reserved keys: {len(self._reserved_keys)})"
+                if best_key:
+                    # Reserve the key
+                    self._reserved_keys.add(best_key)
+                    self._key_usage_counts[best_key] = self._key_usage_counts.get(best_key, 0) + 1
+
+                    key_id = self._get_key_id(best_key)
+                    self.logger.info(
+                        f"Reserved key ...{key_id} "
+                        f"(effective usage: {min_usage}, reserved keys: {len(self._reserved_keys)})"
+                    )
+                    return best_key
+
+                # No key available - decide whether to wait
+                if wait_timeout <= 0:
+                    # No waiting requested
+                    self.logger.warning(
+                        f"No available keys! All {len(api_keys)} keys are either reserved or exhausted."
+                    )
+                    return None
+
+                # Check if any keys are reserved (vs all exhausted for the day)
+                if len(self._reserved_keys) == 0:
+                    # No keys reserved = all keys have hit daily limit
+                    self.logger.warning(
+                        f"All {len(api_keys)} API keys have reached their daily limit. "
+                        f"No point waiting - keys will reset at midnight."
+                    )
+                    return None
+
+                # Keys are in use by other threads - wait for one to be released
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    self.logger.warning(
+                        f"Timeout waiting for API key after {wait_timeout:.0f}s. "
+                        f"All {len(self._reserved_keys)} keys are in use."
+                    )
+                    return None
+
+                self.logger.debug(
+                    f"All keys in use ({len(self._reserved_keys)} reserved), "
+                    f"waiting for release ({remaining:.0f}s remaining)..."
                 )
-            else:
-                self.logger.warning(
-                    f"No available keys! All {len(api_keys)} keys are either reserved or exhausted."
-                )
-
-            return best_key
+                # Wait for notification or periodic check (every 5 seconds)
+                self._reservation_condition.wait(timeout=min(remaining, 5.0))
 
     def release_key(self, api_key: str):
         """
-        Release a previously reserved API key.
+        Release a previously reserved API key and notify waiting threads.
 
         Must be called after reserve_and_get_key() when the request is complete.
 
         Args:
             api_key: The API key to release
         """
-        with self._reservation_lock:
+        with self._reservation_condition:
             if api_key in self._reserved_keys:
                 self._reserved_keys.discard(api_key)
 
@@ -436,9 +472,12 @@ class APIUsageTracker:
                     f"(remaining reserved: {len(self._reserved_keys)})"
                 )
 
+                # Notify any threads waiting for a key
+                self._reservation_condition.notify_all()
+
     def get_reserved_count(self) -> int:
         """Get the number of currently reserved keys."""
-        with self._reservation_lock:
+        with self._reservation_condition:
             return len(self._reserved_keys)
 
     def get_available_keys(self, api_keys: List[str]) -> List[str]:

@@ -50,6 +50,11 @@ class APILimits:
     # Directory for storing usage data
     USAGE_DATA_DIR: str = "data/api_usage"
 
+    # Timeout for waiting for an API key to become available (seconds)
+    # When all keys are in use by other threads, wait this long before failing
+    # Set via FINTEL_KEY_WAIT_TIMEOUT env var (default: 600 = 10 minutes)
+    KEY_WAIT_TIMEOUT: int = 600
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
@@ -61,6 +66,7 @@ class APILimits:
             'reset_timezone': self.RESET_TIMEZONE,
             'warning_threshold': self.WARNING_THRESHOLD,
             'usage_data_dir': self.USAGE_DATA_DIR,
+            'key_wait_timeout': self.KEY_WAIT_TIMEOUT,
         }
 
 
@@ -103,13 +109,31 @@ class SECLimits:
         }
 
 
-# Global instances - import these to use the limits
-API_LIMITS = APILimits()
+# Cached instance for environment-based limits
+_api_limits_instance: APILimits = None
 
 
 def get_api_limits() -> APILimits:
-    """Get the global API limits configuration."""
-    return API_LIMITS
+    """
+    Get API limits from environment variables or use defaults.
+
+    Environment variables:
+        FINTEL_KEY_WAIT_TIMEOUT: Seconds to wait for API key (default: 600)
+
+    Returns:
+        APILimits instance with configured values
+    """
+    global _api_limits_instance
+    if _api_limits_instance is None:
+        import os
+        _api_limits_instance = APILimits(
+            KEY_WAIT_TIMEOUT=int(os.getenv('FINTEL_KEY_WAIT_TIMEOUT', 600)),
+        )
+    return _api_limits_instance
+
+
+# Keep for backward compatibility
+API_LIMITS = get_api_limits()
 
 
 def get_sec_limits() -> SECLimits:
