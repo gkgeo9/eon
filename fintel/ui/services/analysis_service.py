@@ -11,13 +11,15 @@ and progress tracking.
 import uuid
 import threading
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, TYPE_CHECKING
 from datetime import datetime
 
 from fintel.core import (
-    get_config, get_logger,
+    get_config, get_logger, FintelConfig,
     DownloadError, ConversionError, ExtractionError,
-    AnalysisError, AIProviderError, RateLimitError, ValidationError
+    AnalysisError, AIProviderError, RateLimitError, ValidationError,
+    IKeyManager, IRateLimiter, IDownloader, IExtractor,
+    is_annual_filing, is_quarterly_filing,
 )
 from fintel.ai import APIKeyManager, RateLimiter
 from fintel.data.sources.sec import SECDownloader, SECConverter, PDFExtractor
@@ -32,6 +34,9 @@ from fintel.ui.services.cancellation import (
     AnalysisCancelledException
 )
 
+if TYPE_CHECKING:
+    from fintel.core import IConfig
+
 
 class AnalysisService:
     """
@@ -44,26 +49,41 @@ class AnalysisService:
     - Progress tracking
     """
 
-    def __init__(self, db: DatabaseRepository):
+    def __init__(
+        self,
+        db: DatabaseRepository,
+        config: Optional[FintelConfig] = None,
+        key_manager: Optional[IKeyManager] = None,
+        rate_limiter: Optional[IRateLimiter] = None,
+        downloader: Optional[IDownloader] = None,
+        extractor: Optional[IExtractor] = None,
+    ):
         """
-        Initialize analysis service.
+        Initialize analysis service with dependency injection support.
+
+        All dependencies are optional for backward compatibility. If not provided,
+        they will be created using default implementations.
 
         Args:
             db: Database repository instance
+            config: Configuration object (defaults to get_config())
+            key_manager: API key manager (defaults to APIKeyManager)
+            rate_limiter: Rate limiter (defaults to RateLimiter)
+            downloader: SEC downloader (defaults to SECDownloader)
+            extractor: PDF extractor (defaults to PDFExtractor)
         """
         self.db = db
-        self.config = get_config()
+        self.config = config or get_config()
         self.logger = get_logger(__name__)
 
-        # Initialize shared components
-        # APIKeyManager and RateLimiter now use the persistent APIUsageTracker
-        # which stores usage data in JSON files for accurate cross-process tracking
-        self.api_key_manager = APIKeyManager(self.config.google_api_keys)
-        self.rate_limiter = RateLimiter()
-        self.downloader = SECDownloader()
+        # Initialize shared components with dependency injection
+        # If not provided, create defaults for backward compatibility
+        self.api_key_manager = key_manager or APIKeyManager(self.config.google_api_keys)
+        self.rate_limiter = rate_limiter or RateLimiter()
+        self.downloader = downloader or SECDownloader()
         # Note: converter is NOT shared - each thread needs its own browser instance
         # to avoid PDF mixing when running parallel analyses
-        self.extractor = PDFExtractor()
+        self.extractor = extractor or PDFExtractor()
 
         self.logger.info("AnalysisService initialized")
 
@@ -364,13 +384,13 @@ class AnalysisService:
 
         # Determine if this is an annual filing or event-based
         # Annual filings have one per year; event filings can have multiple per year
-        is_annual_filing = filing_type.upper() in ['10-K', '10-Q', '20-F', 'N-CSR', 'N-CSRS', '40-F', 'ARS']
-        is_quarterly_filing = filing_type.upper() in ['10-Q', '6-K']
+        annual = is_annual_filing(filing_type)
+        quarterly = is_quarterly_filing(filing_type)
 
-        self.logger.info(f"Filing type {filing_type} - Annual: {is_annual_filing}, Quarterly: {is_quarterly_filing}, Mode: {input_mode}")
+        self.logger.info(f"Filing type {filing_type} - Annual: {annual}, Quarterly: {quarterly}, Mode: {input_mode}")
 
         # For event-based filings, use count-based logic
-        if not is_annual_filing and not is_quarterly_filing:
+        if not annual and not quarterly:
             return self._get_event_filings(identifier, filing_type, len(years), run_id, input_mode=input_mode)
 
         # For annual/quarterly filings, try year-based matching
@@ -397,7 +417,7 @@ class AnalysisService:
             # For annual filings: one per year, so download len(years) + buffer
             # For quarterly: 4 per year, so download len(years) * 4 + buffer
             num_to_request = len(years_to_download)
-            if is_quarterly_filing:
+            if quarterly:
                 num_to_request = num_to_request * 4  # 4 quarters per year
             num_to_request = min(num_to_request + 5, 20)  # Add buffer, cap at 20
 
@@ -809,17 +829,41 @@ class AnalysisService:
 
         return {}
 
-    def _run_buffett_analysis(
+    def _run_perspective_analysis(
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
         run_id: str,
+        perspective: str,
         api_key: Optional[str] = None
     ) -> Dict[int, Any]:
-        """Run Buffett perspective analyzer."""
+        """
+        Run perspective analysis for a given perspective type.
+
+        This unified method handles all perspective-based analyses (Buffett, Taleb,
+        Contrarian, Multi-Perspective) with a single implementation.
+
+        Args:
+            ticker: Company ticker symbol
+            pdf_paths: Dictionary mapping year to PDF path
+            run_id: Analysis run ID for progress updates
+            perspective: Perspective type ('buffett', 'taleb', 'contrarian', 'multi')
+            api_key: Optional pre-reserved API key
+
+        Returns:
+            Dictionary mapping year to analysis result
+        """
+        perspective_names = {
+            'buffett': 'Buffett Lens',
+            'taleb': 'Taleb Lens',
+            'contrarian': 'Contrarian Lens',
+            'multi': 'Multi-Perspective',
+        }
+        display_name = perspective_names.get(perspective, perspective.title())
+
         # Validate PDF paths
         if not pdf_paths or len(pdf_paths) == 0:
-            self.logger.warning(f"No PDF files provided for Buffett analysis of {ticker}")
+            self.logger.warning(f"No PDF files provided for {display_name} analysis of {ticker}")
             return {}
 
         # Get cancellation token
@@ -830,6 +874,17 @@ class AnalysisService:
             rate_limiter=self.rate_limiter
         )
 
+        # Map perspective to analyzer method
+        analyze_methods = {
+            'buffett': analyzer.analyze_buffett,
+            'taleb': analyzer.analyze_taleb,
+            'contrarian': analyzer.analyze_contrarian,
+            'multi': analyzer.analyze_multi_perspective,
+        }
+        analyze_method = analyze_methods.get(perspective)
+        if not analyze_method:
+            raise ValueError(f"Unknown perspective: {perspective}")
+
         results = {}
         total_years = len(pdf_paths)
         for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
@@ -837,18 +892,18 @@ class AnalysisService:
             if token:
                 token.raise_if_cancelled()
 
-            self.logger.info(f"Analyzing {ticker} {year} (Buffett Lens)")
+            self.logger.info(f"Analyzing {ticker} {year} ({display_name})")
 
             progress_pct = 50 + int((idx / total_years) * 40)
             self.db.update_run_progress(
                 run_id,
-                progress_message=f"Analyzing {ticker} {year} (Buffett Lens)",
+                progress_message=f"Analyzing {ticker} {year} ({display_name})",
                 progress_percent=progress_pct,
                 current_step=f"Year {year}",
                 total_steps=total_years
             )
 
-            result = analyzer.analyze_buffett(
+            result = analyze_method(
                 pdf_path=pdf_path,
                 ticker=ticker,
                 year=year
@@ -857,6 +912,16 @@ class AnalysisService:
                 results[year] = result
 
         return results
+
+    def _run_buffett_analysis(
+        self,
+        ticker: str,
+        pdf_paths: Dict[int, Path],
+        run_id: str,
+        api_key: Optional[str] = None
+    ) -> Dict[int, Any]:
+        """Run Buffett perspective analyzer."""
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'buffett', api_key)
 
     def _run_taleb_analysis(
         self,
@@ -866,46 +931,7 @@ class AnalysisService:
         api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run Taleb perspective analyzer."""
-        # Validate PDF paths
-        if not pdf_paths or len(pdf_paths) == 0:
-            self.logger.warning(f"No PDF files provided for Taleb analysis of {ticker}")
-            return {}
-
-        # Get cancellation token
-        token = get_cancellation_registry().get_token(run_id)
-
-        analyzer = PerspectiveAnalyzer(
-            api_key_manager=self.api_key_manager,
-            rate_limiter=self.rate_limiter
-        )
-
-        results = {}
-        total_years = len(pdf_paths)
-        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
-            # Check for cancellation
-            if token:
-                token.raise_if_cancelled()
-
-            self.logger.info(f"Analyzing {ticker} {year} (Taleb Lens)")
-
-            progress_pct = 50 + int((idx / total_years) * 40)
-            self.db.update_run_progress(
-                run_id,
-                progress_message=f"Analyzing {ticker} {year} (Taleb Lens)",
-                progress_percent=progress_pct,
-                current_step=f"Year {year}",
-                total_steps=total_years
-            )
-
-            result = analyzer.analyze_taleb(
-                pdf_path=pdf_path,
-                ticker=ticker,
-                year=year
-            )
-            if result:
-                results[year] = result
-
-        return results
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'taleb', api_key)
 
     def _run_contrarian_analysis(
         self,
@@ -915,39 +941,7 @@ class AnalysisService:
         api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run Contrarian perspective analyzer."""
-        # Validate PDF paths
-        if not pdf_paths or len(pdf_paths) == 0:
-            self.logger.warning(f"No PDF files provided for Contrarian analysis of {ticker}")
-            return {}
-
-        analyzer = PerspectiveAnalyzer(
-            api_key_manager=self.api_key_manager,
-            rate_limiter=self.rate_limiter
-        )
-
-        results = {}
-        total_years = len(pdf_paths)
-        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
-            self.logger.info(f"Analyzing {ticker} {year} (Contrarian Lens)")
-
-            progress_pct = 50 + int((idx / total_years) * 40)
-            self.db.update_run_progress(
-                run_id,
-                progress_message=f"Analyzing {ticker} {year} (Contrarian Lens)",
-                progress_percent=progress_pct,
-                current_step=f"Year {year}",
-                total_steps=total_years
-            )
-
-            result = analyzer.analyze_contrarian(
-                pdf_path=pdf_path,
-                ticker=ticker,
-                year=year
-            )
-            if result:
-                results[year] = result
-
-        return results
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'contrarian', api_key)
 
     def _run_multi_perspective(
         self,
@@ -957,39 +951,7 @@ class AnalysisService:
         api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run multi-perspective analyzer (Buffett + Taleb + Contrarian)."""
-        # Validate PDF paths
-        if not pdf_paths or len(pdf_paths) == 0:
-            self.logger.warning(f"No PDF files provided for multi-perspective analysis of {ticker}")
-            return {}
-
-        analyzer = PerspectiveAnalyzer(
-            api_key_manager=self.api_key_manager,
-            rate_limiter=self.rate_limiter
-        )
-
-        results = {}
-        total_years = len(pdf_paths)
-        for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
-            self.logger.info(f"Analyzing {ticker} {year} (Multi-Perspective)")
-
-            progress_pct = 50 + int((idx / total_years) * 40)
-            self.db.update_run_progress(
-                run_id,
-                progress_message=f"Analyzing {ticker} {year} (Multi-Perspective)",
-                progress_percent=progress_pct,
-                current_step=f"Year {year}",
-                total_steps=total_years
-            )
-
-            result = analyzer.analyze_multi_perspective(
-                pdf_path=pdf_path,
-                ticker=ticker,
-                year=year
-            )
-            if result:
-                results[year] = result
-
-        return results
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'multi', api_key)
 
     def _run_contrarian_scanner(
         self,
@@ -1717,3 +1679,38 @@ Be comprehensive but focus on actionable insights from the longitudinal perspect
             self.logger.error(error_msg, exc_info=True)
             self.db.update_run_status(synthesis_run_id, 'failed', error_msg)
             return None
+
+
+def create_analysis_service(
+    db: DatabaseRepository,
+    config: Optional[FintelConfig] = None,
+) -> AnalysisService:
+    """
+    Factory function to create an AnalysisService with production dependencies.
+
+    This is the recommended way to create an AnalysisService for production use.
+    It creates all necessary dependencies using the provided or default configuration.
+
+    Args:
+        db: Database repository instance
+        config: Optional configuration (uses get_config() if not provided)
+
+    Returns:
+        Fully configured AnalysisService instance
+
+    Example:
+        >>> from fintel.ui.database import DatabaseRepository
+        >>> db = DatabaseRepository()
+        >>> service = create_analysis_service(db)
+        >>> run_id = service.run_analysis('AAPL', 'fundamental')
+    """
+    config = config or get_config()
+
+    return AnalysisService(
+        db=db,
+        config=config,
+        key_manager=APIKeyManager(config.google_api_keys),
+        rate_limiter=RateLimiter(),
+        downloader=SECDownloader(),
+        extractor=PDFExtractor(),
+    )

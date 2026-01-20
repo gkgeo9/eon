@@ -59,6 +59,12 @@ DEPENDENCY CHAINS:
 VERDICT: EMBRACE / NEUTRAL / AVOID
 - Explain in 2-3 sentences
 
+ACTION SIGNAL: PRIORITY / INVESTIGATE / PASS
+- PRIORITY = Antifragile with asymmetric upside and strong skin in the game
+- INVESTIGATE = Robust but needs deeper tail risk analysis or has some fragility concerns
+- PASS = Fragile, high tail risk exposure, or poor skin in the game
+- Provide ONE WORD only
+
 ═══════════════════════════════════════════════════════════════════════════════
 CRITICAL RULES:
 ═══════════════════════════════════════════════════════════════════════════════

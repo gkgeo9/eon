@@ -10,7 +10,7 @@ multiple processes and sessions.
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 
-from fintel.core import get_logger, ConfigurationError
+from fintel.core import get_logger, ConfigurationError, mask_api_key
 from .api_config import get_api_limits
 from .usage_tracker import get_usage_tracker, APIUsageTracker
 
@@ -113,25 +113,36 @@ class APIKeyManager:
 
         return key
 
-    def reserve_key(self) -> Optional[str]:
+    def reserve_key(self, wait_timeout: Optional[float] = None) -> Optional[str]:
         """
         Atomically reserve and return the best available API key.
 
         This is the RECOMMENDED method for parallel/batch operations.
         It ensures each thread gets a unique key by using atomic reservation.
 
+        If all keys are currently in use by other threads and wait_timeout > 0,
+        this will wait for a key to be released before returning.
+
+        Args:
+            wait_timeout: Seconds to wait for a key (None = use config default,
+                         0 = no waiting). Default reads from FINTEL_KEY_WAIT_TIMEOUT.
+
         Returns:
-            Reserved API key, or None if no keys available
+            Reserved API key, or None if no keys available after timeout
 
         Note:
             MUST call release_key() after the request is complete!
         """
-        key = self.tracker.reserve_and_get_key(self.api_keys)
+        # Use config default if not specified
+        if wait_timeout is None:
+            wait_timeout = self.limits.KEY_WAIT_TIMEOUT
+
+        key = self.tracker.reserve_and_get_key(self.api_keys, wait_timeout=wait_timeout)
 
         if key is None:
             self.logger.error(
-                f"No API keys available! All {len(self.api_keys)} keys are either "
-                f"reserved by other threads or have reached their daily limit."
+                f"No API keys available after waiting {wait_timeout:.0f}s! "
+                f"All {len(self.api_keys)} keys are either in use or exhausted."
             )
 
         return key
@@ -156,18 +167,16 @@ class APIKeyManager:
             error: Whether the request resulted in an error
         """
         if api_key not in self.api_keys:
-            key_id = api_key[-4:] if len(api_key) >= 4 else "****"
-            self.logger.warning(f"Unknown API key: ...{key_id}")
+            self.logger.warning(f"Unknown API key: {mask_api_key(api_key)}")
             return
 
         self.tracker.record_request(api_key, error=error)
 
         # Log warning if near limit
         if self.tracker.is_near_limit(api_key):
-            key_id = api_key[-4:] if len(api_key) >= 4 else "****"
             remaining = self.tracker.get_remaining_today(api_key)
             self.logger.warning(
-                f"Key ...{key_id} is near daily limit! "
+                f"Key {mask_api_key(api_key)} is near daily limit! "
                 f"Remaining: {remaining}/{self.limits.DAILY_LIMIT_PER_KEY}"
             )
 

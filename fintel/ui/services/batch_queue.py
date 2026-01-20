@@ -21,10 +21,12 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
 
-from fintel.core import get_logger, get_config
+from fintel.core import get_logger, get_config, IKeyManager, IRateLimiter, FintelConfig
 from fintel.ai import APIKeyManager, RateLimiter
+from fintel.ai.api_config import get_sec_limits
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services.cancellation import AnalysisCancelledException
+from fintel.core.exceptions import KeyQuotaExhaustedError
 
 
 @dataclass
@@ -52,16 +54,38 @@ class BatchQueueService:
     - Automatically pauses when rate limits exhausted
     - Resumes at midnight PST when limits reset
     - Survives crashes with persistent state
+
+    Supports dependency injection for testability. All dependencies are optional
+    and will be created with sensible defaults if not provided.
     """
 
-    def __init__(self, db: DatabaseRepository):
+    def __init__(
+        self,
+        db: DatabaseRepository,
+        config: Optional[FintelConfig] = None,
+        key_manager: Optional[IKeyManager] = None,
+        rate_limiter: Optional[IRateLimiter] = None,
+    ):
+        """
+        Initialize the batch queue service.
+
+        Args:
+            db: Database repository (required)
+            config: Configuration (optional, uses get_config() if not provided)
+            key_manager: API key manager (optional, creates default if not provided)
+            rate_limiter: Rate limiter (optional, creates default if not provided)
+        """
         self.db = db
-        self.config = get_config()
+        self.config = config or get_config()
         self.logger = get_logger(f"{__name__}.BatchQueueService")
 
-        # Initialize components
-        self.api_key_manager = APIKeyManager(self.config.google_api_keys)
-        self.rate_limiter = RateLimiter()
+        # Initialize components - use injected or create defaults
+        self.api_key_manager = key_manager or APIKeyManager(self.config.google_api_keys)
+        self.rate_limiter = rate_limiter or RateLimiter()
+
+        # SEC rate limiting configuration for staggered worker starts
+        sec_limits = get_sec_limits()
+        self._worker_stagger_delay = sec_limits.WORKER_STAGGER_DELAY
 
         # Worker thread control
         self._worker_thread: Optional[threading.Thread] = None
@@ -71,7 +95,9 @@ class BatchQueueService:
         # Fix #4: Cleanup stale worker state from crashed processes
         self._cleanup_stale_worker()
 
-        self.logger.info("BatchQueueService initialized")
+        self.logger.info(
+            f"BatchQueueService initialized (worker_stagger_delay={self._worker_stagger_delay}s)"
+        )
 
     def _cleanup_stale_worker(self):
         """
@@ -296,11 +322,13 @@ class BatchQueueService:
 
                 # Fix #1: PRE-RESERVE API keys before spawning threads
                 # This prevents race conditions where threads fail to get keys
+                # Use wait_timeout=0 for quick reservation - batch queue handles
+                # key exhaustion with _wait_for_reset() instead
                 items_with_keys = []
                 reserved_keys = []
 
                 for item in pending_items:
-                    key = self.api_key_manager.reserve_key()
+                    key = self.api_key_manager.reserve_key(wait_timeout=0)
                     if key is None:
                         # No more keys available - reset this item to pending
                         self._reset_item_to_pending(item['id'])
@@ -334,14 +362,20 @@ class BatchQueueService:
                     # Process items in parallel using thread pool
                     with ThreadPoolExecutor(max_workers=len(items_with_keys)) as executor:
                         # Submit all items with their pre-reserved keys
+                        # NOTE: When stagger delay > 0, workers will release their key
+                        # during the stagger wait and re-acquire after, so they don't
+                        # hold keys while waiting.
                         futures: Dict[Future, tuple] = {}
-                        for item, api_key in items_with_keys:
+                        for worker_idx, (item, api_key) in enumerate(items_with_keys):
+                            stagger_delay = worker_idx * self._worker_stagger_delay
                             future = executor.submit(
-                                self._process_item_with_key,
+                                self._process_item_with_staggered_start,
                                 item,
                                 batch_id,
                                 api_key,
-                                mark_key_released
+                                mark_key_released,
+                                stagger_delay,
+                                worker_idx  # Pass index for logging
                             )
                             futures[future] = (item, api_key)
 
@@ -363,6 +397,14 @@ class BatchQueueService:
                                 self._mark_batch_stopped(batch_id, "Cancelled by user")
                                 executor.shutdown(wait=False, cancel_futures=True)
                                 return
+                            except KeyQuotaExhaustedError as e:
+                                # Quota exhaustion - reset to pending WITHOUT incrementing retry counter
+                                # This is not a real failure, just need to wait for quota reset
+                                self.logger.warning(
+                                    f"Quota exhausted for {item['ticker']}, resetting to pending (no retry increment)"
+                                )
+                                self._reset_item_to_pending_no_retry_increment(item['id'])
+                                self._update_batch_progress(batch_id)
                             except Exception as e:
                                 self._handle_item_error(item, str(e), batch_id)
                                 # Also update progress after errors so failed count updates
@@ -375,6 +417,16 @@ class BatchQueueService:
                             if key not in released_keys:
                                 self.api_key_manager.release_key(key)
                                 self.logger.debug(f"Released unreleased key in finally block")
+
+                # Check if all API keys were exhausted during this batch
+                # If so, wait for midnight reset instead of continuing to fail
+                available_keys = self.api_key_manager.get_available_keys()
+                if not available_keys:
+                    self.logger.info(
+                        "All API keys exhausted during batch processing - waiting for midnight PST reset"
+                    )
+                    self._wait_for_reset(batch_id)
+                    continue  # Resume main loop after reset
 
                 # Small delay between parallel batches
                 time.sleep(1)
@@ -612,6 +664,88 @@ class BatchQueueService:
             # Always release the key and notify
             self.api_key_manager.release_key(api_key)
             release_callback(api_key)
+
+    def _process_item_with_staggered_start(
+        self,
+        item: Dict,
+        batch_id: str,
+        api_key: str,
+        release_callback,
+        stagger_delay: float,
+        worker_idx: int = 0
+    ):
+        """
+        Process a batch item with staggered start for SEC rate limiting.
+
+        This wrapper adds a delay before starting the actual processing to prevent
+        all workers from hitting the SEC EDGAR API simultaneously (thundering herd).
+
+        IMPORTANT: To avoid holding API keys during the stagger wait (which would
+        exhaust all keys immediately), workers with stagger_delay > 0 will:
+        1. Release their pre-reserved key immediately
+        2. Wait for the stagger delay
+        3. Re-acquire a key after the delay
+        4. Then proceed with processing
+
+        With 25 workers and a 30-second stagger:
+        - Worker 0: starts immediately (keeps pre-reserved key)
+        - Worker 1: releases key, waits 30s, re-acquires key, starts
+        - Worker 2: releases key, waits 60s, re-acquires key, starts
+        - ...
+        - Worker 24: releases key, waits 720s, re-acquires key, starts
+
+        Args:
+            item: Item dictionary with id, ticker, company_name, attempts
+            batch_id: Parent batch ID
+            api_key: Pre-reserved API key to use for this analysis
+            release_callback: Callback function to mark key as released
+            stagger_delay: Seconds to wait before starting (based on worker index)
+            worker_idx: Worker index for logging
+        """
+        if stagger_delay > 0:
+            # Release the pre-reserved key during the wait so other workers can use it
+            self.logger.info(
+                f"Worker {worker_idx} for {item['ticker']}: releasing key, "
+                f"waiting {stagger_delay}s (staggered start)"
+            )
+            self.api_key_manager.release_key(api_key)
+            release_callback(api_key)
+
+            # Sleep in chunks to allow stop event to interrupt
+            remaining = stagger_delay
+            chunk_size = 5.0  # Check stop event every 5 seconds
+            while remaining > 0 and not self._stop_event.is_set():
+                sleep_time = min(chunk_size, remaining)
+                time.sleep(sleep_time)
+                remaining -= sleep_time
+
+            if self._stop_event.is_set():
+                self.logger.info(f"Stop event received during stagger wait for {item['ticker']}")
+                # Reset item to pending since we didn't process it
+                self._reset_item_to_pending(item['id'])
+                return
+
+            # Re-acquire a key after the stagger delay
+            self.logger.info(f"Worker {worker_idx} for {item['ticker']}: stagger complete, acquiring key")
+            new_api_key = self.api_key_manager.reserve_key()
+
+            if new_api_key is None:
+                self.logger.warning(
+                    f"Worker {worker_idx} for {item['ticker']}: no key available after stagger, "
+                    "resetting to pending"
+                )
+                self._reset_item_to_pending(item['id'])
+                return
+
+            # Use a no-op callback since we're managing the key ourselves
+            def noop_callback(key: str):
+                pass
+
+            # Process with the newly acquired key
+            return self._process_item_with_key(item, batch_id, new_api_key, noop_callback)
+        else:
+            # Worker 0: start immediately with pre-reserved key
+            return self._process_item_with_key(item, batch_id, api_key, release_callback)
 
     def _process_item(self, item: Dict, service, batch_id: str):
         """Process a single batch item."""
@@ -1135,6 +1269,20 @@ class BatchQueueService:
                 f"Item {item['ticker']} will be retried "
                 f"(attempt {current_attempts}/{max_retries + 1})"
             )
+
+    def _reset_item_to_pending_no_retry_increment(self, item_id: int):
+        """
+        Reset item to pending without incrementing retry counter.
+
+        Used for quota exhaustion errors which are not real failures -
+        the item will succeed once API quotas reset at midnight PST.
+        """
+        query = """
+            UPDATE batch_items
+            SET status = 'pending'
+            WHERE id = ?
+        """
+        self.db._execute_with_retry(query, (item_id,))
 
     def _cleanup_worker(self, batch_id: str):
         """Cleanup worker state."""
@@ -1697,3 +1845,29 @@ Be concise but comprehensive. Focus on actionable insights.
         }
 
         return json.dumps(export_data, indent=2, default=str)
+
+
+def create_batch_queue_service(
+    db: DatabaseRepository,
+    config: Optional[FintelConfig] = None
+) -> BatchQueueService:
+    """
+    Factory function to create a BatchQueueService with default dependencies.
+
+    This is the recommended way to create a BatchQueueService for production use.
+    For testing, use the BatchQueueService constructor directly with mock dependencies.
+
+    Args:
+        db: Database repository (required)
+        config: Optional configuration (uses get_config() if not provided)
+
+    Returns:
+        Configured BatchQueueService instance
+    """
+    config = config or get_config()
+    return BatchQueueService(
+        db=db,
+        config=config,
+        key_manager=APIKeyManager(config.google_api_keys),
+        rate_limiter=RateLimiter(),
+    )

@@ -26,7 +26,7 @@ import threading
 from pathlib import Path
 from typing import Optional, Callable, Any, Dict
 
-from fintel.core import get_logger
+from fintel.core import get_logger, mask_api_key
 from fintel.ai.api_config import get_api_limits
 
 
@@ -146,7 +146,7 @@ class GeminiRequestQueue:
         Raises:
             Any exception raised by request_func (after mandatory sleep)
         """
-        key_suffix = api_key[-4:] if len(api_key) >= 4 else "****"
+        masked_key = mask_api_key(api_key)
         key_hash = self._get_key_hash(api_key)
         lock_file_path = self._get_lock_file_path(api_key)
 
@@ -156,7 +156,7 @@ class GeminiRequestQueue:
         wait_start = time.time()
 
         self.logger.debug(
-            f"Acquiring semaphore slot for key ...{key_suffix} "
+            f"Acquiring semaphore slot for key {masked_key} "
             f"(max concurrent: {self._max_concurrent})"
         )
 
@@ -167,12 +167,12 @@ class GeminiRequestQueue:
         try:
             semaphore_wait = time.time() - wait_start
             self.logger.debug(
-                f"Semaphore acquired for key ...{key_suffix} "
+                f"Semaphore acquired for key {masked_key} "
                 f"(waited {semaphore_wait:.2f}s)"
             )
 
             # Step 2: Acquire per-key lock
-            self.logger.debug(f"Acquiring per-key lock for ...{key_suffix}")
+            self.logger.debug(f"Acquiring per-key lock for {masked_key}")
 
             with open(lock_file_path, 'a+') as lock_file:
                 try:
@@ -181,7 +181,7 @@ class GeminiRequestQueue:
 
                     lock_wait = time.time() - wait_start
                     self.logger.debug(
-                        f"Per-key lock acquired for ...{key_suffix} "
+                        f"Per-key lock acquired for {masked_key} "
                         f"(total wait {lock_wait:.2f}s)"
                     )
 
@@ -192,10 +192,10 @@ class GeminiRequestQueue:
                         request_duration = time.time() - request_start
 
                         # Update statistics
-                        self._update_stats(key_hash, key_suffix, request_duration, False)
+                        self._update_stats(key_hash, masked_key, request_duration, False)
 
                         self.logger.debug(
-                            f"Request complete for key ...{key_suffix} "
+                            f"Request complete for key {masked_key} "
                             f"({request_duration:.2f}s), sleeping {self._sleep_duration}s"
                         )
 
@@ -206,10 +206,10 @@ class GeminiRequestQueue:
 
                     except Exception as e:
                         # Update statistics for failed request
-                        self._update_stats(key_hash, key_suffix, 0, True)
+                        self._update_stats(key_hash, masked_key, 0, True)
 
                         self.logger.warning(
-                            f"Request failed for key ...{key_suffix}: {e}, "
+                            f"Request failed for key {masked_key}: {e}, "
                             f"still sleeping {self._sleep_duration}s"
                         )
 
@@ -220,18 +220,18 @@ class GeminiRequestQueue:
                 finally:
                     # Release per-key lock
                     fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-                    self.logger.debug(f"Released per-key lock for ...{key_suffix}")
+                    self.logger.debug(f"Released per-key lock for {masked_key}")
 
         finally:
             # Always release semaphore
             if semaphore_acquired:
                 self._semaphore.release()
-                self.logger.debug(f"Released semaphore slot for key ...{key_suffix}")
+                self.logger.debug(f"Released semaphore slot for key {masked_key}")
 
     def _update_stats(
         self,
         key_hash: str,
-        key_suffix: str,
+        masked_key: str,
         duration: float,
         is_error: bool
     ):
@@ -241,7 +241,7 @@ class GeminiRequestQueue:
 
             if key_hash not in self._key_stats:
                 self._key_stats[key_hash] = {
-                    'key_suffix': key_suffix,
+                    'masked_key': masked_key,
                     'request_count': 0,
                     'error_count': 0,
                     'total_duration': 0.0,

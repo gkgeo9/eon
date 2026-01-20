@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Optional, Union, Dict
 from pydantic import BaseModel
 
-from fintel.core import get_logger, get_config, AnalysisError
+from fintel.core import get_logger, get_config, AnalysisError, mask_api_key
+from fintel.core.exceptions import KeyQuotaExhaustedError
 from fintel.data.sources.sec import PDFExtractor
 from fintel.ai import APIKeyManager, RateLimiter
 from fintel.ai.providers import GeminiProvider
@@ -315,17 +316,18 @@ class PerspectiveAnalyzer:
             Validated Pydantic model instance
         """
         # Reserve a key atomically to prevent race conditions in batch processing
+        # This will wait for a key to become available (configurable via FINTEL_KEY_WAIT_TIMEOUT)
         api_key = self.api_key_manager.reserve_key()
 
         if api_key is None:
-            raise AnalysisError(
-                "No API keys available! All keys are either in use by other threads "
-                "or have reached their daily limits."
+            raise KeyQuotaExhaustedError(
+                "All API keys have exhausted their daily quota. "
+                "Batch will wait until midnight PST for quota reset."
             )
 
         try:
-            key_suffix = api_key[-4:] if len(api_key) >= 4 else "****"
-            self.logger.debug(f"Using reserved API key: ...{key_suffix}")
+            masked_key = mask_api_key(api_key)
+            self.logger.debug(f"Using reserved API key: {masked_key}")
 
             # Create provider with rate limiter
             provider = GeminiProvider(
