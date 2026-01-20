@@ -64,7 +64,8 @@ class PerspectiveAnalyzer:
         api_key_manager: APIKeyManager,
         rate_limiter: RateLimiter,
         model: str = None,
-        thinking_budget: int = None
+        thinking_budget: int = None,
+        api_key: Optional[str] = None
     ):
         """
         Initialize the perspective analyzer.
@@ -77,6 +78,7 @@ class PerspectiveAnalyzer:
         """
         self.api_key_manager = api_key_manager
         self.rate_limiter = rate_limiter
+        self._pre_reserved_key = api_key
 
         # Load configuration
         config = get_config()
@@ -315,9 +317,14 @@ class PerspectiveAnalyzer:
         Returns:
             Validated Pydantic model instance
         """
-        # Reserve a key atomically to prevent race conditions in batch processing
-        # This will wait for a key to become available (configurable via FINTEL_KEY_WAIT_TIMEOUT)
-        api_key = self.api_key_manager.reserve_key()
+        if self._pre_reserved_key:
+            api_key = self._pre_reserved_key
+            key_was_pre_reserved = True
+        else:
+            # Reserve a key atomically to prevent race conditions in batch processing
+            # This will wait for a key to become available (configurable via FINTEL_KEY_WAIT_TIMEOUT)
+            api_key = self.api_key_manager.reserve_key()
+            key_was_pre_reserved = False
 
         if api_key is None:
             raise KeyQuotaExhaustedError(
@@ -356,7 +363,8 @@ class PerspectiveAnalyzer:
 
         finally:
             # Always release the key, even on error
-            self.api_key_manager.release_key(api_key)
+            if not key_was_pre_reserved:
+                self.api_key_manager.release_key(api_key)
 
     def _save_result(
         self,

@@ -714,7 +714,8 @@ class AnalysisService:
         # First, run fundamental analysis for each year
         fundamental_analyzer = FundamentalAnalyzer(
             api_key_manager=self.api_key_manager,
-            rate_limiter=self.rate_limiter
+            rate_limiter=self.rate_limiter,
+            api_key=api_key
         )
 
         fundamental_analyses = {}
@@ -750,7 +751,8 @@ class AnalysisService:
 
             excellent_analyzer = ExcellentCompanyAnalyzer(
                 api_key_manager=self.api_key_manager,
-                rate_limiter=self.rate_limiter
+                rate_limiter=self.rate_limiter,
+                api_key=api_key
             )
 
             self.logger.info(f"Running Excellent Company analysis for {ticker}")
@@ -780,7 +782,8 @@ class AnalysisService:
         # First, run fundamental analysis for each year
         fundamental_analyzer = FundamentalAnalyzer(
             api_key_manager=self.api_key_manager,
-            rate_limiter=self.rate_limiter
+            rate_limiter=self.rate_limiter,
+            api_key=api_key
         )
 
         fundamental_analyses = {}
@@ -815,7 +818,8 @@ class AnalysisService:
 
             objective_analyzer = ObjectiveCompanyAnalyzer(
                 api_key_manager=self.api_key_manager,
-                rate_limiter=self.rate_limiter
+                rate_limiter=self.rate_limiter,
+                api_key=api_key
             )
 
             self.logger.info(f"Running Objective Company analysis for {ticker}")
@@ -871,7 +875,8 @@ class AnalysisService:
 
         analyzer = PerspectiveAnalyzer(
             api_key_manager=self.api_key_manager,
-            rate_limiter=self.rate_limiter
+            rate_limiter=self.rate_limiter,
+            api_key=api_key
         )
 
         # Map perspective to analyzer method

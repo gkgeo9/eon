@@ -51,7 +51,8 @@ class _BaseSuccessAnalyzer:
         api_key_manager: APIKeyManager,
         rate_limiter: RateLimiter,
         model: str = None,
-        thinking_budget: int = None
+        thinking_budget: int = None,
+        api_key: Optional[str] = None
     ):
         """
         Initialize the success factor analyzer.
@@ -64,6 +65,7 @@ class _BaseSuccessAnalyzer:
         """
         self.api_key_manager = api_key_manager
         self.rate_limiter = rate_limiter
+        self._pre_reserved_key = api_key
 
         # Load configuration
         config = get_config()
@@ -288,7 +290,12 @@ class _BaseSuccessAnalyzer:
             raise ValueError("OUTPUT_MODEL not set in subclass")
 
         # Reserve a key atomically to prevent race conditions in batch processing
-        api_key = self.api_key_manager.reserve_key()
+        if self._pre_reserved_key:
+            api_key = self._pre_reserved_key
+            key_was_pre_reserved = True
+        else:
+            api_key = self.api_key_manager.reserve_key()
+            key_was_pre_reserved = False
 
         if api_key is None:
             raise AnalysisError(
@@ -327,7 +334,8 @@ class _BaseSuccessAnalyzer:
 
         finally:
             # Always release the key, even on error
-            self.api_key_manager.release_key(api_key)
+            if not key_was_pre_reserved:
+                self.api_key_manager.release_key(api_key)
 
     def _save_result(
         self,
