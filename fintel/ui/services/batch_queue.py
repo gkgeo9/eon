@@ -86,6 +86,8 @@ class BatchQueueService:
         # SEC rate limiting configuration for staggered worker starts
         sec_limits = get_sec_limits()
         self._worker_stagger_delay = sec_limits.WORKER_STAGGER_DELAY
+        self.worker_id = str(uuid.uuid4())
+        self._lease_minutes = int(os.getenv("FINTEL_BATCH_ITEM_LEASE_MINUTES", "180"))
 
         # Worker thread control
         self._worker_thread: Optional[threading.Thread] = None
@@ -96,7 +98,9 @@ class BatchQueueService:
         self._cleanup_stale_worker()
 
         self.logger.info(
-            f"BatchQueueService initialized (worker_stagger_delay={self._worker_stagger_delay}s)"
+            "BatchQueueService initialized "
+            f"(worker_id={self.worker_id}, lease_minutes={self._lease_minutes}, "
+            f"worker_stagger_delay={self._worker_stagger_delay}s)"
         )
 
     def _cleanup_stale_worker(self):
@@ -130,7 +134,10 @@ class BatchQueueService:
                     if batch_id:
                         query = """
                             UPDATE batch_items
-                            SET status = 'pending'
+                            SET status = 'pending',
+                                lease_owner = NULL,
+                                lease_expires_at = NULL,
+                                last_heartbeat_at = NULL
                             WHERE batch_id = ? AND status = 'running'
                         """
                         self.db._execute_with_retry(query, (batch_id,))
@@ -170,10 +177,45 @@ class BatchQueueService:
         """
         query = """
             UPDATE batch_items
-            SET status = 'pending', started_at = NULL
+            SET status = 'pending',
+                started_at = NULL,
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                last_heartbeat_at = NULL
             WHERE id = ?
         """
         self.db._execute_with_retry(query, (item_id,))
+
+    def _lease_expires_at(self) -> str:
+        """Calculate lease expiration time for a batch item."""
+        return (datetime.utcnow() + timedelta(minutes=self._lease_minutes)).isoformat()
+
+    def _refresh_item_lease(self, item_id: int):
+        """Refresh lease and heartbeat for an in-progress batch item."""
+        now = datetime.utcnow().isoformat()
+        query = """
+            UPDATE batch_items
+            SET last_heartbeat_at = ?, lease_expires_at = ?
+            WHERE id = ?
+        """
+        self.db._execute_with_retry(query, (now, self._lease_expires_at(), item_id))
+
+    def _start_lease_heartbeat(self, item_id: int) -> threading.Event:
+        """Start a background heartbeat to keep a batch item lease alive."""
+        stop_event = threading.Event()
+        interval_seconds = max(30, min(300, int(self._lease_minutes * 60 / 2)))
+
+        def _heartbeat_loop():
+            while not stop_event.wait(interval_seconds):
+                self._refresh_item_lease(item_id)
+
+        thread = threading.Thread(
+            target=_heartbeat_loop,
+            name=f"BatchLeaseHeartbeat-{item_id}",
+            daemon=True
+        )
+        thread.start()
+        return stop_event
 
     def create_batch_job(self, config: BatchJobConfig) -> str:
         """
@@ -238,7 +280,11 @@ class BatchQueueService:
         # This handles the case where a previous run crashed mid-process
         reset_query = """
             UPDATE batch_items
-            SET status = 'pending', started_at = NULL
+            SET status = 'pending',
+                started_at = NULL,
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                last_heartbeat_at = NULL
             WHERE batch_id = ? AND status = 'running'
         """
         result = self.db._execute_with_retry(reset_query, (batch_id,))
@@ -257,10 +303,14 @@ class BatchQueueService:
         # Update queue state
         query = """
             UPDATE queue_state
-            SET is_running = 1, current_batch_id = ?, worker_pid = ?, updated_at = ?
+            SET is_running = 1,
+                current_batch_id = ?,
+                worker_pid = ?,
+                worker_id = ?,
+                updated_at = ?
             WHERE id = 1
         """
-        self.db._execute_with_retry(query, (batch_id, os.getpid(), now))
+        self.db._execute_with_retry(query, (batch_id, os.getpid(), self.worker_id, now))
 
         # Start worker thread
         self._stop_event.clear()
@@ -486,6 +536,21 @@ class BatchQueueService:
                 # Start immediate transaction to lock for write
                 cursor.execute("BEGIN IMMEDIATE")
 
+                # Reset lease-expired running items back to pending
+                now = datetime.utcnow().isoformat()
+                cursor.execute("""
+                    UPDATE batch_items
+                    SET status = 'pending',
+                        started_at = NULL,
+                        lease_owner = NULL,
+                        lease_expires_at = NULL,
+                        last_heartbeat_at = NULL
+                    WHERE batch_id = ?
+                    AND status = 'running'
+                    AND lease_expires_at IS NOT NULL
+                    AND lease_expires_at < ?
+                """, (batch_id, now))
+
                 # SELECT pending items
                 cursor.execute("""
                     SELECT id, ticker, company_name, attempts
@@ -515,13 +580,16 @@ class BatchQueueService:
                 # Fix #6: Single batched UPDATE for all items
                 # Fix #3: Don't increment attempts here - do it on error
                 placeholders = ','.join('?' * len(item_ids))
-                now = datetime.utcnow().isoformat()
                 cursor.execute(f"""
                     UPDATE batch_items
-                    SET status = 'running', started_at = ?
+                    SET status = 'running',
+                        started_at = ?,
+                        lease_owner = ?,
+                        lease_expires_at = ?,
+                        last_heartbeat_at = ?
                     WHERE id IN ({placeholders})
                     AND status = 'pending'
-                """, [now] + item_ids)
+                """, [now, self.worker_id, self._lease_expires_at(), now] + item_ids)
 
                 # Verify we updated the expected number of rows
                 if cursor.rowcount != len(item_ids):
@@ -561,6 +629,9 @@ class BatchQueueService:
 
         self.logger.info(f"[Parallel] Processing batch item: {ticker}")
 
+        self._refresh_item_lease(item_id)
+        heartbeat_stop = self._start_lease_heartbeat(item_id)
+
         # Update batch last activity
         query = """
             UPDATE batch_jobs SET last_activity_at = ? WHERE batch_id = ?
@@ -584,7 +655,12 @@ class BatchQueueService:
             # Mark as completed
             query = """
                 UPDATE batch_items
-                SET status = 'completed', run_id = ?, completed_at = ?
+                SET status = 'completed',
+                    run_id = ?,
+                    completed_at = ?,
+                    lease_owner = NULL,
+                    lease_expires_at = NULL,
+                    last_heartbeat_at = NULL
                 WHERE id = ?
             """
             self.db._execute_with_retry(query, (run_id, datetime.utcnow().isoformat(), item_id))
@@ -594,6 +670,8 @@ class BatchQueueService:
         except Exception as e:
             self.logger.error(f"[Parallel] Failed batch item {ticker}: {e}")
             raise  # Let the caller handle error tracking
+        finally:
+            heartbeat_stop.set()
 
     def _process_item_with_key(
         self,
@@ -620,11 +698,15 @@ class BatchQueueService:
         item_id = item['id']
         ticker = item['ticker']
 
+        heartbeat_stop: Optional[threading.Event] = None
         try:
             # Create thread-local analysis service
             analysis_service = AnalysisService(self.db)
 
             self.logger.info(f"[Parallel] Processing {ticker} with pre-reserved API key")
+
+            self._refresh_item_lease(item_id)
+            heartbeat_stop = self._start_lease_heartbeat(item_id)
 
             # Update batch last activity
             query = """
@@ -649,7 +731,12 @@ class BatchQueueService:
             # Mark as completed
             query = """
                 UPDATE batch_items
-                SET status = 'completed', run_id = ?, completed_at = ?
+                SET status = 'completed',
+                    run_id = ?,
+                    completed_at = ?,
+                    lease_owner = NULL,
+                    lease_expires_at = NULL,
+                    last_heartbeat_at = NULL
                 WHERE id = ?
             """
             self.db._execute_with_retry(query, (run_id, datetime.utcnow().isoformat(), item_id))
@@ -661,6 +748,8 @@ class BatchQueueService:
             raise  # Let the caller handle error tracking
 
         finally:
+            if heartbeat_stop:
+                heartbeat_stop.set()
             # Always release the key and notify
             self.api_key_manager.release_key(api_key)
             release_callback(api_key)
@@ -741,10 +830,13 @@ class BatchQueueService:
             def noop_callback(key: str):
                 pass
 
+            self._refresh_item_lease(item['id'])
+
             # Process with the newly acquired key
             return self._process_item_with_key(item, batch_id, new_api_key, noop_callback)
         else:
             # Worker 0: start immediately with pre-reserved key
+            self._refresh_item_lease(item['id'])
             return self._process_item_with_key(item, batch_id, api_key, release_callback)
 
     def _process_item(self, item: Dict, service, batch_id: str):
@@ -757,10 +849,19 @@ class BatchQueueService:
         # Mark as running
         query = """
             UPDATE batch_items
-            SET status = 'running', started_at = ?, attempts = attempts + 1
+            SET status = 'running',
+                started_at = ?,
+                attempts = attempts + 1,
+                lease_owner = ?,
+                lease_expires_at = ?,
+                last_heartbeat_at = ?
             WHERE id = ?
         """
-        self.db._execute_with_retry(query, (datetime.utcnow().isoformat(), item_id))
+        now = datetime.utcnow().isoformat()
+        self.db._execute_with_retry(
+            query,
+            (now, self.worker_id, self._lease_expires_at(), now, item_id)
+        )
 
         # Update batch last activity
         query = """
@@ -770,6 +871,8 @@ class BatchQueueService:
 
         # Get batch config
         batch_config = self._get_batch_config(batch_id)
+
+        heartbeat_stop = self._start_lease_heartbeat(item_id)
 
         # Run analysis
         try:
@@ -785,7 +888,12 @@ class BatchQueueService:
             # Mark as completed
             query = """
                 UPDATE batch_items
-                SET status = 'completed', run_id = ?, completed_at = ?
+                SET status = 'completed',
+                    run_id = ?,
+                    completed_at = ?,
+                    lease_owner = NULL,
+                    lease_expires_at = NULL,
+                    last_heartbeat_at = NULL
                 WHERE id = ?
             """
             self.db._execute_with_retry(query, (run_id, datetime.utcnow().isoformat(), item_id))
@@ -794,6 +902,8 @@ class BatchQueueService:
 
         except Exception as e:
             raise  # Let caller handle
+        finally:
+            heartbeat_stop.set()
 
     def _wait_for_reset(self, batch_id: str):
         """
@@ -1118,7 +1228,11 @@ class BatchQueueService:
         # Reset running items to pending
         reset_query = """
             UPDATE batch_items
-            SET status = 'pending', started_at = NULL
+            SET status = 'pending',
+                started_at = NULL,
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                last_heartbeat_at = NULL
             WHERE batch_id = ? AND status = 'running'
         """
         self.db._execute_with_retry(reset_query, (batch_id,))
@@ -1135,7 +1249,7 @@ class BatchQueueService:
         """Get current queue state."""
         query = """
             SELECT is_running, current_batch_id, next_run_at, daily_requests_made,
-                   last_reset_date, worker_pid, updated_at
+                   last_reset_date, worker_pid, worker_id, updated_at
             FROM queue_state
             WHERE id = 1
         """
@@ -1149,6 +1263,7 @@ class BatchQueueService:
                 'daily_requests_made': row['daily_requests_made'],
                 'last_reset_date': row['last_reset_date'],
                 'worker_pid': row['worker_pid'],
+                'worker_id': row['worker_id'],
                 'updated_at': row['updated_at']
             }
         return {'is_running': False}
@@ -1249,7 +1364,11 @@ class BatchQueueService:
             # Mark as failed - we've exhausted all retries
             query = """
                 UPDATE batch_items
-                SET status = 'failed', error_message = ?
+                SET status = 'failed',
+                    error_message = ?,
+                    lease_owner = NULL,
+                    lease_expires_at = NULL,
+                    last_heartbeat_at = NULL
                 WHERE id = ?
             """
             self.db._execute_with_retry(query, (error, item_id))
@@ -1261,7 +1380,10 @@ class BatchQueueService:
             # Reset to pending for retry
             query = """
                 UPDATE batch_items
-                SET status = 'pending'
+                SET status = 'pending',
+                    lease_owner = NULL,
+                    lease_expires_at = NULL,
+                    last_heartbeat_at = NULL
                 WHERE id = ?
             """
             self.db._execute_with_retry(query, (item_id,))
@@ -1279,7 +1401,10 @@ class BatchQueueService:
         """
         query = """
             UPDATE batch_items
-            SET status = 'pending'
+            SET status = 'pending',
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                last_heartbeat_at = NULL
             WHERE id = ?
         """
         self.db._execute_with_retry(query, (item_id,))
@@ -1288,7 +1413,11 @@ class BatchQueueService:
         """Cleanup worker state."""
         query = """
             UPDATE queue_state
-            SET is_running = 0, current_batch_id = NULL, worker_pid = NULL, updated_at = ?
+            SET is_running = 0,
+                current_batch_id = NULL,
+                worker_pid = NULL,
+                worker_id = NULL,
+                updated_at = ?
             WHERE id = 1
         """
         self.db._execute_with_retry(query, (datetime.utcnow().isoformat(),))
