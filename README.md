@@ -86,6 +86,8 @@ FINTEL_SEC_COMPANY_NAME="Investment Research"
 
 ```bash
 streamlit run streamlit_app.py
+/Users/gkg/PycharmProjects/Fintel/.venv/bin/python -m streamlit run /Users/gkg/PycharmProjects/Fintel/streamlit_app.py
+
 ```
 
 Opens at `http://localhost:8501`
