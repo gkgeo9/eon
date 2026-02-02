@@ -12,14 +12,16 @@ This allows multiple API keys to make requests in parallel while:
 - Limiting overall concurrency to avoid overwhelming the API
 - Maintaining mandatory sleep between requests on each key
 
-Uses file-based locking (fcntl) for process-safe coordination across:
+Uses file-based locking (portalocker) for process-safe coordination across:
 - Single-threaded CLI
 - Multi-threaded UI
 - Multi-process batch processing
 - Mixed CLI + UI execution
+
+Cross-platform compatible (Windows, macOS, Linux).
 """
 
-import fcntl
+import portalocker
 import hashlib
 import time
 import threading
@@ -176,8 +178,8 @@ class GeminiRequestQueue:
 
             with open(lock_file_path, 'a+') as lock_file:
                 try:
-                    # Acquire exclusive lock for this specific key
-                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+                    # Acquire exclusive lock for this specific key (cross-platform)
+                    portalocker.lock(lock_file, portalocker.LOCK_EX)
 
                     lock_wait = time.time() - wait_start
                     self.logger.debug(
@@ -218,8 +220,8 @@ class GeminiRequestQueue:
                         raise
 
                 finally:
-                    # Release per-key lock
-                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                    # Release per-key lock (cross-platform)
+                    portalocker.unlock(lock_file)
                     self.logger.debug(f"Released per-key lock for {masked_key}")
 
         finally:

@@ -16,7 +16,7 @@ Designed and built a production-grade AI platform that transforms SEC 10-K filin
 
 - **Built AI-powered financial analysis platform** processing SEC 10-K filings through Google Gemini API with structured Pydantic v2 outputs, achieving 99%+ format consistency across all analysis types
 
-- **Engineered cross-process rate limiting system** using file-based locking (fcntl) to coordinate API calls across threads, processes, and simultaneous CLI/UI execution, eliminating 503 UNAVAILABLE and 429 RESOURCE_EXHAUSTED errors
+- **Engineered cross-process rate limiting system** using file-based locking (portalocker) to coordinate API calls across threads, processes, and simultaneous CLI/UI execution, eliminating 503 UNAVAILABLE and 429 RESOURCE_EXHAUSTED errors (cross-platform: Windows, macOS, Linux)
 
 - **Designed scalable batch processing engine** supporting 25+ API keys with intelligent least-used rotation, atomic reservation preventing collisions, and persistent JSON-based usage tracking that survives restarts
 
@@ -64,7 +64,7 @@ Designed and built a production-grade AI platform that transforms SEC 10-K filin
 | **AnalysisService** | Main orchestrator coordinating filing downloads, AI analysis, and result storage |
 | **GeminiProvider** | LLM integration with structured output, retry logic, and thinking budget configuration |
 | **APIKeyManager** | Intelligent rotation across 25+ keys with atomic reservation and usage tracking |
-| **RequestQueue** | Cross-process serialization using fcntl file locking for rate limit compliance |
+| **RequestQueue** | Cross-process serialization using portalocker file locking for rate limit compliance |
 | **DatabaseRepository** | SQLite data access with WAL mode, exponential backoff, and connection pooling |
 | **CustomWorkflow** | Plugin base class enabling zero-modification extensibility |
 
@@ -93,7 +93,7 @@ Streamlit UI / JSON Export / CLI Output
 - **Python 3.10+** - Core language with modern type hints
 - **SQLAlchemy** - ORM for database operations
 - **SQLite WAL** - Concurrent-access database with write-ahead logging
-- **fcntl** - File-based locking for cross-process synchronization
+- **portalocker** - Cross-platform file locking for cross-process synchronization (Windows, macOS, Linux)
 
 ### Frontend
 - **Streamlit 1.30+** - Interactive web dashboard
@@ -136,7 +136,7 @@ Streamlit UI / JSON Export / CLI Output
 
 **Problem:** Running batch analyses with multiple workers caused frequent 503 UNAVAILABLE and 429 RESOURCE_EXHAUSTED errors from Gemini API.
 
-**Solution:** Implemented global request serialization using `fcntl` file-based locking that works across:
+**Solution:** Implemented global request serialization using `portalocker` cross-platform file locking that works across:
 - Multiple threads (ThreadPoolExecutor)
 - Multiple processes (ProcessPoolExecutor)
 - Simultaneous CLI and UI execution

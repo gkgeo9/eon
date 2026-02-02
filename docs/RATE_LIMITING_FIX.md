@@ -14,21 +14,21 @@ Result: Multiple processes could call the Gemini API simultaneously, hitting rat
 
 ## Solution Implemented
 
-Replaced `threading.Lock` with **file-based locking using `fcntl`**, which:
+Replaced `threading.Lock` with **file-based locking using `portalocker`**, which:
 - ✅ Works across separate Python processes (CLI batch mode)
 - ✅ Works across threads in same process (UI batch mode)
 - ✅ Works for mixed execution scenarios (CLI + UI simultaneously)
 - ✅ Automatically cleans up if process crashes
-- ✅ Simple and reliable (already used by usage_tracker.py)
+- ✅ Cross-platform compatible (Windows, macOS, Linux)
 
 ## Files Modified
 
 ### 1. `fintel/ai/request_queue.py`
-**Changes**: Complete rewrite from threading.Lock to fcntl.flock
+**Changes**: Complete rewrite from threading.Lock to portalocker (cross-platform)
 
-- Imports: Changed from `threading` to `fcntl`
+- Imports: Changed from `threading` to `portalocker`
 - `__init__`: Now manages lock file at `data/api_usage/gemini_request.lock`
-- `execute_with_lock`: Uses `fcntl.flock()` with `LOCK_EX` (exclusive) and `LOCK_UN` (unlock)
+- `execute_with_lock`: Uses `portalocker.lock()` with `LOCK_EX` (exclusive) and `portalocker.unlock()`
 - Lock file is automatically created in data/api_usage directory
 - Same directory as usage tracking files for consistency
 
@@ -36,12 +36,12 @@ Replaced `threading.Lock` with **file-based locking using `fcntl`**, which:
 ```python
 with open(self.lock_file_path, 'a+') as lock_file:
     try:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)  # Block until lock available
+        portalocker.lock(lock_file, portalocker.LOCK_EX)  # Block until lock available
         result = request_func(*args, **kwargs)
         time.sleep(self._sleep_duration)  # 65s sleep
         return result
     finally:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)  # Release lock
+        portalocker.unlock(lock_file)  # Release lock
 ```
 
 ### 2. `fintel/ai/providers/gemini.py`
@@ -66,7 +66,7 @@ Thread 3 (Process A, Key 1): BLOCKED until t=65
 Result: 2 concurrent API calls → 429 RESOURCE_EXHAUSTED error
 ```
 
-### After Fix (fcntl.flock - WORKING)
+### After Fix (portalocker - WORKING)
 ```
 Thread 1 (Process A, Key 1): Acquires file lock → Calls Gemini at t=0
                               ├─ Sleeps 65s
@@ -154,10 +154,10 @@ fintel batch tickers.csv --workers 3
 
 ## Platform Support
 
-- ✅ macOS (Darwin) - Current platform, fully supported
-- ✅ Linux - Fully supported (fcntl available)
+- ✅ macOS (Darwin) - Fully supported
+- ✅ Linux - Fully supported
+- ✅ Windows - Fully supported (via portalocker cross-platform library)
 - ✅ Unix-based systems - Fully supported
-- ❌ Windows - fcntl not available (would need msvcrt.locking() or alternative)
 
 ## Edge Cases Handled
 
@@ -165,7 +165,7 @@ fintel batch tickers.csv --workers 3
 - Handled: File is recreated on next request (touch exists with exist_ok=True)
 
 ### 2. Process Crashes (Stale Locks)
-- Handled: fcntl locks automatically release when process exits
+- Handled: portalocker locks automatically release when process exits
 - No manual cleanup needed
 
 ### 3. Permission Issues
@@ -192,9 +192,8 @@ If any issues arise:
 1. **Token Bucket Algorithm** - Allow periodic bursts while respecting limits
 2. **Per-Minute Rate Limiting** - Respect 15 RPM limit more precisely
 3. **Intelligent Scheduling** - Prioritize smaller requests
-4. **Windows Support** - Add msvcrt.locking() fallback
-5. **Redis Queue** - For cloud/distributed deployments
-6. **Monitoring Dashboard** - Track API usage and queue stats
+4. **Redis Queue** - For cloud/distributed deployments
+5. **Monitoring Dashboard** - Track API usage and queue stats
 
 ## Testing Instructions
 
@@ -230,7 +229,7 @@ This fix ensures that running multiple analyses in parallel (CLI batch, UI batch
 The solution is:
 - ✅ Simple and reliable
 - ✅ Cross-process and cross-thread safe
-- ✅ Uses existing patterns (fcntl already used in usage_tracker.py)
-- ✅ Zero external dependencies
+- ✅ Cross-platform compatible (Windows, macOS, Linux)
+- ✅ Uses portalocker library for file locking
 - ✅ Automatic cleanup on process crash
 - ✅ Works for all execution modes

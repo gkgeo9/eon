@@ -86,7 +86,15 @@ FINTEL_SEC_COMPANY_NAME="Investment Research"
 
 ```bash
 streamlit run streamlit_app.py
+
+mac
+
 /Users/gkg/PycharmProjects/Fintel/.venv/bin/python -m streamlit run /Users/gkg/PycharmProjects/Fintel/streamlit_app.py
+
+windows
+
+.venv\Scripts\python -m streamlit run streamlit_app.py
+
 
 ```
 
@@ -440,13 +448,13 @@ This project demonstrates several advanced engineering solutions:
 
 **Problem:** Parallel analyses across threads, processes, and simultaneous CLI/UI execution exceeded Gemini API rate limits (503 UNAVAILABLE, 429 RESOURCE_EXHAUSTED).
 
-**Solution:** File-based locking using `fcntl` that serializes all API requests across the entire system:
+**Solution:** File-based locking using `portalocker` that serializes all API requests across the entire system:
 
 - Lock file at `data/api_usage/gemini_request.lock`
 - Mandatory 65-second sleep between requests (Gemini requirement)
 - Works across ThreadPool workers, ProcessPoolExecutor, and mixed execution modes
 - Automatic cleanup on process crash
-- Zero external dependencies (uses Python standard library)
+- Cross-platform compatible (Windows, macOS, Linux)
 
 ### Intelligent API Key Rotation
 

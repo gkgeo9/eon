@@ -59,6 +59,9 @@ dependencies = [
     "python-dateutil>=2.8.0",
     "pytz>=2023.0",
 
+    # Cross-platform file locking (Windows compatibility)
+    "portalocker>=2.0.0",
+
     # Web UI
     "streamlit>=1.30.0",
 ]

@@ -76,6 +76,7 @@ Desktop.ini
 **/pdfs/
 *.pdf
 *.sql
+!/**/**/migrations/*.sql
 *.corrupted
 
 # Workflow JSON exports (user-generated)
