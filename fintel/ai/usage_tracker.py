@@ -5,11 +5,12 @@ Persistent API usage tracker with file locking for parallel execution safety.
 
 Each API key has its own JSON file to track usage, avoiding conflicts
 when multiple processes/threads access the same key.
+
+Cross-platform compatible (Windows, macOS, Linux) using portalocker.
 """
 
 import json
-import os
-import fcntl
+import portalocker
 import hashlib
 import threading
 import time
@@ -175,13 +176,13 @@ class APIUsageTracker:
 
         try:
             with open(usage_file, 'r') as f:
-                # Acquire shared lock for reading
-                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                # Acquire shared lock for reading (cross-platform)
+                portalocker.lock(f, portalocker.LOCK_SH)
                 try:
                     data = json.load(f)
                     return KeyUsageData.from_dict(data)
                 finally:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    portalocker.unlock(f)
         except (json.JSONDecodeError, KeyError) as e:
             self.logger.warning(f"Corrupted usage file for key ...{key_id}, resetting: {e}")
             return KeyUsageData(
@@ -203,12 +204,12 @@ class APIUsageTracker:
 
         try:
             with open(temp_file, 'w') as f:
-                # Acquire exclusive lock for writing
-                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                # Acquire exclusive lock for writing (cross-platform)
+                portalocker.lock(f, portalocker.LOCK_EX)
                 try:
                     json.dump(data.to_dict(), f, indent=2)
                 finally:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    portalocker.unlock(f)
 
             # Atomic rename
             temp_file.rename(usage_file)
@@ -254,9 +255,9 @@ class APIUsageTracker:
         now = datetime.now().isoformat()
 
         try:
-            # Use exclusive lock for the entire read-modify-write operation
+            # Use exclusive lock for the entire read-modify-write operation (cross-platform)
             with open(usage_file, 'a+') as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                portalocker.lock(f, portalocker.LOCK_EX)
                 try:
                     # Read existing data
                     f.seek(0)
@@ -294,7 +295,7 @@ class APIUsageTracker:
                     json.dump(data.to_dict(), f, indent=2)
 
                 finally:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                    portalocker.unlock(f)
 
             self.logger.debug(
                 f"Recorded request for key ...{key_id} "
@@ -594,7 +595,7 @@ class APIUsageTracker:
         for usage_file in self.usage_dir.glob("usage_*.json"):
             try:
                 with open(usage_file, 'r+') as f:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                    portalocker.lock(f, portalocker.LOCK_EX)
                     try:
                         data = KeyUsageData.from_dict(json.load(f))
 
@@ -613,7 +614,7 @@ class APIUsageTracker:
                         json.dump(data.to_dict(), f, indent=2)
 
                     finally:
-                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+                        portalocker.unlock(f)
 
                 self.logger.debug(f"Cleaned up old data from {usage_file}")
 

@@ -3,7 +3,7 @@
 """
 SEC EDGAR request queue with cross-process rate limiting.
 
-Uses file-based locking (fcntl) for process-safe coordination across:
+Uses file-based locking (portalocker) for process-safe coordination across:
 - Single-threaded CLI
 - Multi-threaded UI
 - Multi-process batch processing
@@ -12,9 +12,11 @@ Uses file-based locking (fcntl) for process-safe coordination across:
 SEC's fair access policy recommends no more than 10 requests per second.
 This module provides configurable delays and concurrency limits to prevent
 overwhelming SEC servers during batch processing with multiple workers.
+
+Cross-platform compatible (Windows, macOS, Linux).
 """
 
-import fcntl
+import portalocker
 import time
 import threading
 from pathlib import Path
@@ -150,8 +152,8 @@ class SECRequestQueue:
 
             with open(self._lock_file_path, 'a+') as lock_file:
                 try:
-                    # Acquire exclusive lock (blocks if another process holds it)
-                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+                    # Acquire exclusive lock (blocks if another process holds it) - cross-platform
+                    portalocker.lock(lock_file, portalocker.LOCK_EX)
 
                     lock_wait = time.time() - wait_start
                     self.logger.debug(f"File lock acquired (total wait {lock_wait:.2f}s)")
@@ -188,8 +190,8 @@ class SECRequestQueue:
                         raise
 
                 finally:
-                    # Release file lock
-                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                    # Release file lock (cross-platform)
+                    portalocker.unlock(lock_file)
                     self.logger.debug("Released SEC file lock")
 
         finally:

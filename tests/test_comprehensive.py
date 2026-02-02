@@ -10,6 +10,7 @@ import time
 import uuid
 import threading
 import sqlite3
+import tempfile
 from pathlib import Path
 from datetime import datetime
 
@@ -477,8 +478,9 @@ class TestSuite:
                 filing_type='10-K', years=[2024], config={}
             )
 
-            # Cache a file
-            test_path = '/tmp/test_filing_2024.pdf'
+            # Cache a file (use cross-platform temp directory)
+            temp_dir = tempfile.gettempdir()
+            test_path = str(Path(temp_dir) / 'test_filing_2024.pdf')
             self.db.cache_file('TEST', 2024, '10-K', test_path)
             print(f"✓ Cached file: {test_path}")
 
@@ -488,7 +490,7 @@ class TestSuite:
             print(f"✓ Retrieved cached file: {cached}")
 
             # Cache for different year
-            test_path2 = '/tmp/test_filing_2023.pdf'
+            test_path2 = str(Path(temp_dir) / 'test_filing_2023.pdf')
             self.db.cache_file('TEST', 2023, '10-K', test_path2)
 
             # Verify separate cache

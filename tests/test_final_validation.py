@@ -9,6 +9,7 @@ import sys
 import time
 import uuid
 import sqlite3
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -53,8 +54,9 @@ class FinalValidationSuite:
                 filing_type='10-K', years=[2024], config={}
             )
 
-            # Cache a file
-            test_path = '/tmp/test_2024.pdf'
+            # Cache a file (use cross-platform temp directory)
+            temp_dir = tempfile.gettempdir()
+            test_path = str(Path(temp_dir) / 'test_2024.pdf')
             self.db.cache_file('CACHE_TEST', 2024, '10-K', test_path)
             print(f"✓ Cached file: {test_path}")
 
@@ -77,10 +79,11 @@ class FinalValidationSuite:
 
             years = [2024, 2023, 2022]
             paths = {}
+            temp_dir = tempfile.gettempdir()
 
             print(f"Caching {len(years)} years:")
             for year in years:
-                path = f'/tmp/test_{year}.pdf'
+                path = str(Path(temp_dir) / f'test_{year}.pdf')
                 self.db.cache_file('CACHE_MULTI', year, '10-K', path)
                 paths[year] = path
                 print(f"  ✓ Cached {year}: {path}")
@@ -105,30 +108,35 @@ class FinalValidationSuite:
                     filing_type='10-K', years=[2024], config={}
                 )
 
-            # Cache different files for different tickers
-            self.db.cache_file('TICKER_A', 2024, '10-K', '/tmp/a_2024.pdf')
-            self.db.cache_file('TICKER_B', 2024, '10-K', '/tmp/b_2024.pdf')
+            # Cache different files for different tickers (use cross-platform temp directory)
+            temp_dir = tempfile.gettempdir()
+            a_2024_path = str(Path(temp_dir) / 'a_2024.pdf')
+            b_2024_path = str(Path(temp_dir) / 'b_2024.pdf')
+            self.db.cache_file('TICKER_A', 2024, '10-K', a_2024_path)
+            self.db.cache_file('TICKER_B', 2024, '10-K', b_2024_path)
 
             # Verify isolation
             a_cached = self.db.get_cached_file('TICKER_A', 2024, '10-K')
             b_cached = self.db.get_cached_file('TICKER_B', 2024, '10-K')
 
-            assert a_cached == '/tmp/a_2024.pdf', f"TICKER_A mismatch"
-            assert b_cached == '/tmp/b_2024.pdf', f"TICKER_B mismatch"
+            assert a_cached == a_2024_path, f"TICKER_A mismatch"
+            assert b_cached == b_2024_path, f"TICKER_B mismatch"
             print(f"✓ Cache properly isolated by ticker")
 
             # Test filing type isolation
-            self.db.cache_file('TICKER_A', 2024, '10-Q', '/tmp/a_2024_q.pdf')
+            a_2024_q_path = str(Path(temp_dir) / 'a_2024_q.pdf')
+            self.db.cache_file('TICKER_A', 2024, '10-Q', a_2024_q_path)
             q_cached = self.db.get_cached_file('TICKER_A', 2024, '10-Q')
-            assert q_cached == '/tmp/a_2024_q.pdf'
+            assert q_cached == a_2024_q_path
             print(f"✓ Cache properly isolated by filing type")
 
             # Test year isolation
-            self.db.cache_file('TICKER_A', 2023, '10-K', '/tmp/a_2023.pdf')
+            a_2023_path = str(Path(temp_dir) / 'a_2023.pdf')
+            self.db.cache_file('TICKER_A', 2023, '10-K', a_2023_path)
             cached_2023 = self.db.get_cached_file('TICKER_A', 2023, '10-K')
             cached_2024 = self.db.get_cached_file('TICKER_A', 2024, '10-K')
-            assert cached_2023 == '/tmp/a_2023.pdf'
-            assert cached_2024 == '/tmp/a_2024.pdf'
+            assert cached_2023 == a_2023_path
+            assert cached_2024 == a_2024_path
             print(f"✓ Cache properly isolated by year")
 
         finally:
