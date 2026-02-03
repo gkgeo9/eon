@@ -351,7 +351,7 @@ class GeminiProvider(LLMProvider):
 
                     if api_delay:
                         actual_delay = api_delay + buffer_seconds
-                        self.logger.warning(
+                        self.logger.debug(
                             f"Rate limit hit ({rate_limit_retries}/{max_rate_limit_retries}). "
                             f"API suggests {api_delay}s delay. "
                             f"Waiting {actual_delay}s (with {buffer_seconds}s buffer)..."
@@ -359,7 +359,7 @@ class GeminiProvider(LLMProvider):
                     else:
                         # Fallback: use a longer delay for rate limits
                         actual_delay = max(retry_delay * 2, 60) + buffer_seconds
-                        self.logger.warning(
+                        self.logger.debug(
                             f"Rate limit hit ({rate_limit_retries}/{max_rate_limit_retries}). "
                             f"Could not parse delay. Waiting {actual_delay}s..."
                         )
@@ -390,7 +390,7 @@ class GeminiProvider(LLMProvider):
                         last_category = "other"
                         operator_action = None
                     non_rate_limit_attempts += 1
-                    self.logger.warning(
+                    self.logger.debug(
                         f"Attempt {non_rate_limit_attempts}/{max_retries} failed: {e}. "
                         f"Retrying in {retry_delay} seconds..."
                     )
@@ -408,9 +408,10 @@ class GeminiProvider(LLMProvider):
             f"{f'{last_transient_delay:.1f}s' if last_transient_delay is not None else 'n/a'}. "
             f"Last error: {last_error}"
         )
-        if operator_action:
-            error_msg = f"{error_msg} {operator_action}"
-        self.logger.error(error_msg)
+        self.logger.warning(
+            f"Generation failed after {total_attempts} attempts. "
+            f"Last error: {last_error}"
+        )
         raise AIProviderError(error_msg) from last_error
 
     def validate_api_key(self) -> bool:

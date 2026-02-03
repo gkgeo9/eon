@@ -295,9 +295,12 @@ class PerspectiveAnalyzer:
             return result
 
         except Exception as e:
+            provider_name = GeminiProvider.__name__
             error_msg = (
-                f"{perspective_name.capitalize()} analysis failed "
-                f"for {ticker} {year}: {e}"
+                "AI analysis failed "
+                f"for ticker={ticker} year={year} "
+                f"perspective={perspective_name} "
+                f"provider={provider_name}: {e}"
             )
             self.logger.error(error_msg)
             raise AnalysisError(error_msg) from e
@@ -358,8 +361,7 @@ class PerspectiveAnalyzer:
             return result
 
         except Exception as e:
-            self.logger.error(f"AI analysis failed: {e}")
-            raise AnalysisError(f"AI analysis failed: {e}") from e
+            raise AnalysisError(str(e)) from e
 
         finally:
             # Always release the key, even on error
