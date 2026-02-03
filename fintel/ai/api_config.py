@@ -93,8 +93,10 @@ class SECLimits:
 
     # Stagger delay between batch worker starts (seconds)
     # Prevents thundering herd when multiple workers start batch processing
-    # Min: 0 (no stagger) | Recommended: 30 | Max: 120 (very conservative)
-    WORKER_STAGGER_DELAY: int = 30
+    # With free tier's 250k tokens/minute limit, 60s ensures only 1 worker
+    # starts per minute, avoiding token limit issues with large 10-Ks
+    # Min: 0 (no stagger) | Recommended: 60 | Max: 120 (very conservative)
+    WORKER_STAGGER_DELAY: int = 60
 
     # Maximum parallel workers for batch processing
     # Limits how many companies are processed simultaneously
@@ -151,7 +153,7 @@ def get_sec_limits() -> SECLimits:
     Environment variables:
         FINTEL_SEC_REQUEST_DELAY: Seconds between SEC requests (default: 2.0)
         FINTEL_SEC_MAX_CONCURRENT: Max parallel SEC requests (default: 5)
-        FINTEL_SEC_WORKER_STAGGER_DELAY: Seconds between worker starts (default: 30)
+        FINTEL_SEC_WORKER_STAGGER_DELAY: Seconds between worker starts (default: 60)
         FINTEL_MAX_PARALLEL_WORKERS: Max parallel batch workers (default: 3, 0=unlimited)
 
     Returns:
@@ -161,6 +163,6 @@ def get_sec_limits() -> SECLimits:
     return SECLimits(
         REQUEST_DELAY=float(os.getenv('FINTEL_SEC_REQUEST_DELAY', 2.0)),
         MAX_CONCURRENT_REQUESTS=int(os.getenv('FINTEL_SEC_MAX_CONCURRENT', 5)),
-        WORKER_STAGGER_DELAY=int(os.getenv('FINTEL_SEC_WORKER_STAGGER_DELAY', 30)),
+        WORKER_STAGGER_DELAY=int(os.getenv('FINTEL_SEC_WORKER_STAGGER_DELAY', 60)),
         MAX_PARALLEL_WORKERS=int(os.getenv('FINTEL_MAX_PARALLEL_WORKERS', 3)),
     )
