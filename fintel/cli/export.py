@@ -84,13 +84,13 @@ def export(
             if json_dir.exists():
                 json_store = JSONStore(base_dir=json_dir)
             else:
-                console.print(f"  JSON storage directory not found: {json_dir}", style="yellow")
+                console.print(f"[yellow]Warning:[/yellow] JSON storage directory not found: {json_dir}")
         elif source == "parquet":
             parquet_dir = config.data_dir / "archive"
             if parquet_dir.exists():
                 parquet_store = ParquetStore(base_dir=parquet_dir)
             else:
-                console.print(f"  Parquet storage directory not found: {parquet_dir}", style="yellow")
+                console.print(f"[yellow]Warning:[/yellow] Parquet storage directory not found: {parquet_dir}")
 
         if not json_store and not parquet_store:
             console.print(" No storage backend available. Nothing to export.", style="bold red")
