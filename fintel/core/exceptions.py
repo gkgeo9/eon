@@ -55,6 +55,11 @@ class KeyQuotaExhaustedError(AIProviderError):
     pass
 
 
+class ContextLengthExceededError(AIProviderError):
+    """Raised when input exceeds the model's context length limit."""
+    pass
+
+
 class StorageError(FintelException):
     """Raised when there's an error with data storage."""
     pass

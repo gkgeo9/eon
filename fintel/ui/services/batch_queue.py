@@ -26,7 +26,7 @@ from fintel.ai import APIKeyManager, RateLimiter
 from fintel.ai.api_config import get_sec_limits
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services.cancellation import AnalysisCancelledException
-from fintel.core.exceptions import KeyQuotaExhaustedError
+from fintel.core.exceptions import KeyQuotaExhaustedError, ContextLengthExceededError
 
 
 @dataclass
@@ -454,6 +454,14 @@ class BatchQueueService:
                                     f"Quota exhausted for {item['ticker']}, resetting to pending (no retry increment)"
                                 )
                                 self._reset_item_to_pending_no_retry_increment(item['id'])
+                                self._update_batch_progress(batch_id)
+                            except ContextLengthExceededError as e:
+                                # Context length exceeded - skip this item (common for large bank 10-Ks)
+                                # Don't fail the entire company, just mark as skipped and continue
+                                self.logger.warning(
+                                    f"Context length exceeded for {item['ticker']}, marking as skipped: {e}"
+                                )
+                                self._mark_item_skipped(item['id'], str(e))
                                 self._update_batch_progress(batch_id)
                             except Exception as e:
                                 self._handle_item_error(item, str(e), batch_id)
@@ -911,8 +919,20 @@ class BatchQueueService:
 
         Fix #5: Verifies that API keys are actually available after the
         calculated reset time, handling potential clock drift or timezone issues.
+
+        Adds a 5-minute buffer after midnight to ensure Google's systems have
+        fully reset before resuming processing.
+
+        During the wait, performs periodic maintenance:
+        - Database maintenance (WAL checkpoint, ANALYZE)
+        - Chrome process cleanup
         """
         wait_seconds = self.rate_limiter.wait_for_reset()
+
+        # Add 5-minute buffer after midnight to ensure reset is complete
+        # This accounts for potential clock drift and API-side reset delays
+        RESET_BUFFER_SECONDS = 300  # 5 minutes
+        wait_seconds += RESET_BUFFER_SECONDS
 
         # Calculate resume time
         resume_time = datetime.utcnow() + timedelta(seconds=wait_seconds)
@@ -937,6 +957,9 @@ class BatchQueueService:
             WHERE batch_id = ?
         """
         self.db._execute_with_retry(query, (datetime.utcnow().isoformat(), batch_id))
+
+        # Perform maintenance at start of wait period
+        self._perform_daily_maintenance()
 
         # Sleep in chunks to allow for stop signals
         chunk_size = 60  # 1 minute
@@ -1408,6 +1431,64 @@ class BatchQueueService:
             WHERE id = ?
         """
         self.db._execute_with_retry(query, (item_id,))
+
+    def _mark_item_skipped(self, item_id: int, reason: str):
+        """
+        Mark an item as skipped (not failed).
+
+        Used for items that cannot be processed due to inherent limitations
+        (e.g., 10-K exceeds context length) rather than transient errors.
+        These items won't be retried and are counted separately from failures.
+
+        Args:
+            item_id: Batch item ID
+            reason: Reason for skipping (stored in error_message)
+        """
+        now = datetime.utcnow().isoformat()
+        query = """
+            UPDATE batch_items
+            SET status = 'skipped',
+                completed_at = ?,
+                error_message = ?,
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                last_heartbeat_at = NULL
+            WHERE id = ?
+        """
+        self.db._execute_with_retry(query, (now, reason[:500], item_id))
+        self.logger.info(f"Marked item {item_id} as skipped: {reason[:100]}...")
+
+    def _perform_daily_maintenance(self):
+        """
+        Perform maintenance tasks during daily reset wait.
+
+        This is called at the start of the reset wait period to:
+        - Clean up orphaned Chrome processes
+        - Perform SQLite maintenance (WAL checkpoint, ANALYZE)
+
+        Running during the reset wait ensures these operations don't
+        interfere with active processing.
+        """
+        self.logger.info("Performing daily maintenance during reset wait...")
+
+        # Clean up Chrome processes
+        try:
+            from fintel.data.sources.sec.converter import cleanup_orphaned_chrome_processes
+            cleanup_orphaned_chrome_processes(self.logger)
+        except ImportError:
+            self.logger.warning("Could not import Chrome cleanup function")
+        except Exception as e:
+            self.logger.warning(f"Chrome cleanup failed: {e}")
+
+        # Database maintenance
+        try:
+            results = self.db.maintenance()
+            if results.get('errors'):
+                self.logger.warning(f"Database maintenance had errors: {results['errors']}")
+        except Exception as e:
+            self.logger.warning(f"Database maintenance failed: {e}")
+
+        self.logger.info("Daily maintenance complete")
 
     def _cleanup_worker(self, batch_id: str):
         """Cleanup worker state."""

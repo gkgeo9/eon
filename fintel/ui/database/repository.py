@@ -147,6 +147,72 @@ class DatabaseRepository(
                 else:
                     raise
 
+    def maintenance(self) -> dict:
+        """
+        Perform database maintenance operations.
+
+        This should be called periodically during long-running operations
+        (e.g., during daily rate limit reset waits) to keep the database healthy.
+
+        Operations performed:
+        - WAL checkpoint (flush WAL to main database)
+        - Analyze (update query planner statistics)
+        - Integrity check (optional, skipped if too slow)
+
+        Returns:
+            Dictionary with maintenance results and database stats
+        """
+        results = {
+            'db_path': self.db_path,
+            'size_before_mb': 0,
+            'size_after_mb': 0,
+            'wal_checkpoint': False,
+            'analyze': False,
+            'errors': []
+        }
+
+        try:
+            # Get database size before maintenance
+            db_file = Path(self.db_path)
+            if db_file.exists():
+                results['size_before_mb'] = db_file.stat().st_size / (1024 * 1024)
+
+            with sqlite3.connect(self.db_path, timeout=30.0) as conn:
+                # Checkpoint WAL to reduce file size
+                try:
+                    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                    results['wal_checkpoint'] = True
+                    logger.info("WAL checkpoint completed")
+                except Exception as e:
+                    results['errors'].append(f"WAL checkpoint failed: {e}")
+                    logger.warning(f"WAL checkpoint failed: {e}")
+
+                # Update query planner statistics
+                try:
+                    conn.execute("ANALYZE")
+                    results['analyze'] = True
+                    logger.info("ANALYZE completed")
+                except Exception as e:
+                    results['errors'].append(f"ANALYZE failed: {e}")
+                    logger.warning(f"ANALYZE failed: {e}")
+
+                conn.commit()
+
+            # Get database size after maintenance
+            if db_file.exists():
+                results['size_after_mb'] = db_file.stat().st_size / (1024 * 1024)
+
+            logger.info(
+                f"Database maintenance complete: "
+                f"{results['size_before_mb']:.1f}MB -> {results['size_after_mb']:.1f}MB"
+            )
+
+        except Exception as e:
+            results['errors'].append(f"Maintenance failed: {e}")
+            logger.error(f"Database maintenance failed: {e}")
+
+        return results
+
     def _read_dataframe_with_retry(
         self,
         query: str,

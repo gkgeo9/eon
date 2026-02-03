@@ -199,6 +199,25 @@ class GeminiProvider(LLMProvider):
             raise AIProviderError(error_msg) from e
 
         except Exception as e:
+            error_str = str(e).lower()
+            # Check for context length exceeded errors
+            # These can manifest as various error messages from the API
+            context_error_indicators = [
+                'token count',
+                'context length',
+                'maximum context',
+                'input too long',
+                'request payload size exceeds',
+                'exceeds the limit',
+                'too many tokens',
+                'content too large',
+            ]
+            if any(indicator in error_str for indicator in context_error_indicators):
+                from fintel.core.exceptions import ContextLengthExceededError
+                error_msg = f"Input exceeds model context limit: {str(e)}"
+                self.logger.warning(error_msg)
+                raise ContextLengthExceededError(error_msg) from e
+
             error_msg = f"Gemini generation failed: {str(e)}"
             self.logger.error(error_msg)
             raise AIProviderError(error_msg) from e

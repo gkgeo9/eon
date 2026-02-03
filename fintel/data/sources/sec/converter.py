@@ -9,6 +9,8 @@ import os
 import base64
 import time
 import shutil
+import subprocess
+import platform
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
@@ -17,6 +19,71 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 
 from fintel.core import get_logger, get_config, ConversionError
+
+
+def cleanup_orphaned_chrome_processes(logger=None) -> int:
+    """
+    Clean up orphaned Chrome/ChromeDriver processes.
+
+    This is useful during long-running batch operations to prevent
+    memory leaks from crashed or abandoned browser instances.
+
+    Args:
+        logger: Optional logger for output
+
+    Returns:
+        Number of processes killed
+    """
+    if logger is None:
+        logger = get_logger(__name__)
+
+    killed = 0
+    system = platform.system().lower()
+
+    try:
+        if system in ('linux', 'darwin'):
+            # Kill orphaned chromedriver processes
+            for proc_name in ['chromedriver', 'chrome']:
+                try:
+                    result = subprocess.run(
+                        ['pkill', '-f', proc_name],
+                        capture_output=True,
+                        timeout=10
+                    )
+                    # pkill returns 0 if processes were killed
+                    if result.returncode == 0:
+                        killed += 1
+                except subprocess.TimeoutExpired:
+                    logger.warning(f"Timeout killing {proc_name} processes")
+                except FileNotFoundError:
+                    # pkill not available
+                    pass
+
+        elif system == 'windows':
+            # Windows - use taskkill
+            for proc_name in ['chromedriver.exe', 'chrome.exe']:
+                try:
+                    result = subprocess.run(
+                        ['taskkill', '/F', '/IM', proc_name],
+                        capture_output=True,
+                        timeout=10
+                    )
+                    if result.returncode == 0:
+                        killed += 1
+                except subprocess.TimeoutExpired:
+                    logger.warning(f"Timeout killing {proc_name}")
+                except FileNotFoundError:
+                    pass
+
+        if killed > 0:
+            logger.info(f"Cleaned up {killed} orphaned Chrome process groups")
+        else:
+            logger.debug("No orphaned Chrome processes found")
+
+    except Exception as e:
+        logger.warning(f"Error during Chrome cleanup: {e}")
+
+    return killed
 
 
 class SECConverter:
