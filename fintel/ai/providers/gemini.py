@@ -199,6 +199,25 @@ class GeminiProvider(LLMProvider):
             raise AIProviderError(error_msg) from e
 
         except Exception as e:
+            error_str = str(e).lower()
+            # Check for context length exceeded errors
+            # These can manifest as various error messages from the API
+            context_error_indicators = [
+                'token count',
+                'context length',
+                'maximum context',
+                'input too long',
+                'request payload size exceeds',
+                'exceeds the limit',
+                'too many tokens',
+                'content too large',
+            ]
+            if any(indicator in error_str for indicator in context_error_indicators):
+                from fintel.core.exceptions import ContextLengthExceededError
+                error_msg = f"Input exceeds model context limit: {str(e)}"
+                self.logger.warning(error_msg)
+                raise ContextLengthExceededError(error_msg) from e
+
             error_msg = f"Gemini generation failed: {str(e)}"
             self.logger.error(error_msg)
             raise AIProviderError(error_msg) from e
@@ -208,21 +227,23 @@ class GeminiProvider(LLMProvider):
         Parse retryDelay from API error response.
 
         The Gemini API returns 429 errors with a retryDelay field like:
-        {'retryDelay': '55s'} or "retryDelay": "30s"
+        {'retryDelay': '55s'} or "retryDelay": "35.159591337s"
 
         Args:
             error: Exception from API call
 
         Returns:
-            Retry delay in seconds, or None if not parseable
+            Retry delay in seconds (rounded up), or None if not parseable
         """
+        import math
         error_str = str(error)
 
-        # Look for retryDelay pattern like "'retryDelay': '55s'" or "retryDelay": "30s"
-        # Handle both single quotes and double quotes, with optional 's' suffix
-        match = re.search(r"['\"]retryDelay['\"]:\s*['\"](\d+)s?['\"]", error_str, re.IGNORECASE)
+        # Look for retryDelay pattern - handle both integer and decimal seconds
+        # Examples: 'retryDelay': '55s', 'retryDelay': '35.159591337s'
+        match = re.search(r"['\"]retryDelay['\"]:\s*['\"](\d+(?:\.\d+)?)s?['\"]", error_str, re.IGNORECASE)
         if match:
-            return int(match.group(1))
+            delay = float(match.group(1))
+            return math.ceil(delay)  # Round up to be safe
 
         return None
 
@@ -271,10 +292,12 @@ class GeminiProvider(LLMProvider):
         """
         last_error = None
         non_rate_limit_attempts = 0
+        rate_limit_retries = 0
+        max_rate_limit_retries = 10  # Allow many rate-limit retries since we wait the specified time
         total_attempts = 0
-        max_total_attempts = max_retries * 3  # Safety limit to prevent infinite loops
+        max_total_attempts = max_retries + max_rate_limit_retries  # More generous for rate limits
 
-        while non_rate_limit_attempts < max_retries and total_attempts < max_total_attempts:
+        while non_rate_limit_attempts < max_retries and rate_limit_retries < max_rate_limit_retries and total_attempts < max_total_attempts:
             total_attempts += 1
 
             try:
@@ -287,21 +310,23 @@ class GeminiProvider(LLMProvider):
                 is_rate_limit = self._is_rate_limit_error(e)
 
                 if is_rate_limit:
+                    rate_limit_retries += 1
                     # Parse API-suggested retry delay
                     api_delay = self._parse_retry_delay(e)
 
                     if api_delay:
                         actual_delay = api_delay + buffer_seconds
                         self.logger.warning(
-                            f"Rate limit hit. API suggests {api_delay}s delay. "
+                            f"Rate limit hit ({rate_limit_retries}/{max_rate_limit_retries}). "
+                            f"API suggests {api_delay}s delay. "
                             f"Waiting {actual_delay}s (with {buffer_seconds}s buffer)..."
                         )
                     else:
                         # Fallback: use a longer delay for rate limits
                         actual_delay = max(retry_delay * 2, 60) + buffer_seconds
                         self.logger.warning(
-                            f"Rate limit hit (could not parse delay). "
-                            f"Waiting {actual_delay}s..."
+                            f"Rate limit hit ({rate_limit_retries}/{max_rate_limit_retries}). "
+                            f"Could not parse delay. Waiting {actual_delay}s..."
                         )
 
                     time.sleep(actual_delay)
@@ -318,7 +343,12 @@ class GeminiProvider(LLMProvider):
                         time.sleep(retry_delay)
 
         # All retries failed
-        error_msg = f"All {non_rate_limit_attempts} attempts failed (total: {total_attempts}). Last error: {last_error}"
+        error_msg = (
+            f"All retries exhausted. "
+            f"Non-rate-limit attempts: {non_rate_limit_attempts}/{max_retries}, "
+            f"Rate-limit retries: {rate_limit_retries}/{max_rate_limit_retries}. "
+            f"Last error: {last_error}"
+        )
         self.logger.error(error_msg)
         raise AIProviderError(error_msg) from last_error
 

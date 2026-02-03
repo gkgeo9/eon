@@ -15,7 +15,8 @@ import json
 import threading
 import time
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed, Future
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait, FIRST_COMPLETED, Future
+from collections import deque
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Optional, Any
@@ -26,7 +27,7 @@ from fintel.ai import APIKeyManager, RateLimiter
 from fintel.ai.api_config import get_sec_limits
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services.cancellation import AnalysisCancelledException
-from fintel.core.exceptions import KeyQuotaExhaustedError
+from fintel.core.exceptions import KeyQuotaExhaustedError, ContextLengthExceededError
 
 
 @dataclass
@@ -167,6 +168,48 @@ class BatchQueueService:
             os.kill(pid, 0)  # Signal 0 just checks existence
             return True
         except OSError:
+            return False
+
+    def _claim_item(self, item_id: int) -> bool:
+        """
+        Atomically claim an item for processing.
+
+        Uses optimistic locking to ensure only one worker claims each item.
+        Returns True if successfully claimed, False if already claimed.
+
+        Args:
+            item_id: Batch item ID to claim
+
+        Returns:
+            True if successfully claimed, False if already claimed by another worker
+        """
+        import sqlite3
+
+        try:
+            with sqlite3.connect(self.db.db_path, timeout=30.0) as conn:
+                conn.execute("PRAGMA journal_mode=WAL")
+                cursor = conn.cursor()
+
+                now = datetime.utcnow().isoformat()
+
+                # Try to claim the item only if it's still pending
+                cursor.execute("""
+                    UPDATE batch_items
+                    SET status = 'running',
+                        started_at = ?,
+                        lease_owner = ?,
+                        lease_expires_at = ?,
+                        last_heartbeat_at = ?
+                    WHERE id = ? AND status = 'pending'
+                """, (now, self.worker_id, self._lease_expires_at(), now, item_id))
+
+                conn.commit()
+
+                # Check if we successfully claimed it
+                return cursor.rowcount == 1
+
+        except sqlite3.Error as e:
+            self.logger.error(f"Database error in _claim_item: {e}")
             return False
 
     def _reset_item_to_pending(self, item_id: int):
@@ -328,18 +371,23 @@ class BatchQueueService:
 
     def _batch_worker(self, batch_id: str):
         """
-        Main worker loop for processing batch items IN PARALLEL.
+        Main worker loop for processing batch items IN PARALLEL with continuous replenishment.
 
-        Uses a thread pool to process multiple items concurrently, with one
-        thread per available API key. This provides up to Nx speedup where
-        N = number of API keys.
+        Uses a thread pool to process multiple items concurrently. When any worker
+        finishes, immediately starts a new one for the next pending item. This
+        ensures maximum parallelism - never waiting for all workers to finish
+        before starting new ones.
 
-        Fix #1: Pre-reserves API keys BEFORE spawning threads to prevent
-        race conditions where threads fail to get keys.
+        Example with 29 companies and 5 workers:
+        - Workers 1-5 start on companies 1-5
+        - Worker 3 finishes first -> immediately starts on company 6
+        - Worker 1 finishes -> immediately starts on company 7
+        - Continue until all 29 companies are processed
 
         Handles:
-        - Pre-reserving API keys before thread spawn (Fix #1)
-        - Processing items in parallel (up to number of reserved keys)
+        - Continuous worker replenishment (no batch waiting)
+        - Pre-reserving API keys before thread spawn
+        - Staggered worker starts for SEC rate limiting
         - Sleeping until midnight when all keys exhausted
         - Graceful stop/pause
         """
@@ -361,43 +409,27 @@ class BatchQueueService:
                     self._wait_for_reset(batch_id)
                     continue
 
-                # Get batch of pending items (up to number of available keys)
-                max_parallel = len(available_keys)
-                pending_items = self._get_pending_items(batch_id, limit=max_parallel)
+                # Determine max parallel workers
+                sec_limits = get_sec_limits()
+                max_workers_config = sec_limits.MAX_PARALLEL_WORKERS
+                if max_workers_config > 0:
+                    max_parallel = min(len(available_keys), max_workers_config)
+                    self.logger.info(f"Limiting to {max_parallel} parallel workers (config: {max_workers_config})")
+                else:
+                    max_parallel = len(available_keys)  # 0 = unlimited
 
-                if not pending_items:
+                # Get ALL pending items for this batch (for continuous replenishment)
+                # We fetch more than max_parallel to have items ready when workers finish
+                all_pending = self._get_all_pending_items(batch_id)
+
+                if not all_pending:
                     # No more items - batch complete
                     self._complete_batch(batch_id)
                     break
 
-                # Fix #1: PRE-RESERVE API keys before spawning threads
-                # This prevents race conditions where threads fail to get keys
-                # Use wait_timeout=0 for quick reservation - batch queue handles
-                # key exhaustion with _wait_for_reset() instead
-                items_with_keys = []
-                reserved_keys = []
-
-                for item in pending_items:
-                    key = self.api_key_manager.reserve_key(wait_timeout=0)
-                    if key is None:
-                        # No more keys available - reset this item to pending
-                        self._reset_item_to_pending(item['id'])
-                        self.logger.warning(
-                            f"No API key available for {item['ticker']}, resetting to pending"
-                        )
-                        continue
-                    reserved_keys.append(key)
-                    items_with_keys.append((item, key))
-
-                if not items_with_keys:
-                    # All keys exhausted during reservation - wait for reset
-                    self.logger.info("All API keys exhausted during reservation")
-                    self._wait_for_reset(batch_id)
-                    continue
-
                 self.logger.info(
-                    f"Processing {len(items_with_keys)} items in parallel "
-                    f"(reserved {len(reserved_keys)} API keys)"
+                    f"Starting continuous processing: {len(all_pending)} items pending, "
+                    f"max {max_parallel} parallel workers"
                 )
 
                 # Track which keys have been released by workers
@@ -408,77 +440,147 @@ class BatchQueueService:
                     with released_keys_lock:
                         released_keys.add(key)
 
+                # Use a deque as a work queue for continuous replenishment
+                work_queue = deque(all_pending)
+                active_futures: Dict[Future, tuple] = {}
+                worker_index_counter = [0]  # Mutable container for closure
+
                 try:
-                    # Process items in parallel using thread pool
-                    with ThreadPoolExecutor(max_workers=len(items_with_keys)) as executor:
-                        # Submit all items with their pre-reserved keys
-                        # NOTE: When stagger delay > 0, workers will release their key
-                        # during the stagger wait and re-acquire after, so they don't
-                        # hold keys while waiting.
-                        futures: Dict[Future, tuple] = {}
-                        for worker_idx, (item, api_key) in enumerate(items_with_keys):
-                            stagger_delay = worker_idx * self._worker_stagger_delay
+                    with ThreadPoolExecutor(max_workers=max_parallel) as executor:
+                        # Helper function to submit a new item
+                        def submit_next_item() -> bool:
+                            """Submit the next item from the queue. Returns True if submitted."""
+                            if not work_queue or self._stop_event.is_set():
+                                return False
+
+                            # Try to reserve a key
+                            key = self.api_key_manager.reserve_key(wait_timeout=0)
+                            if key is None:
+                                return False  # No keys available
+
+                            item = work_queue.popleft()
+                            worker_idx = worker_index_counter[0]
+                            worker_index_counter[0] += 1
+
+                            # Calculate stagger delay only for initial workers
+                            # After the initial batch, new workers start without stagger
+                            stagger_delay = 0
+                            if worker_idx < max_parallel:
+                                stagger_delay = worker_idx * self._worker_stagger_delay
+
                             future = executor.submit(
                                 self._process_item_with_staggered_start,
                                 item,
                                 batch_id,
-                                api_key,
+                                key,
                                 mark_key_released,
                                 stagger_delay,
-                                worker_idx  # Pass index for logging
+                                worker_idx
                             )
-                            futures[future] = (item, api_key)
+                            active_futures[future] = (item, key)
+                            return True
 
-                        # Wait for all to complete (or stop event)
-                        for future in as_completed(futures):
-                            if self._stop_event.is_set():
-                                self.logger.info("Stop event received, cancelling remaining items")
-                                executor.shutdown(wait=False, cancel_futures=True)
-                                break
+                        # Submit initial batch of workers up to max_parallel
+                        initial_submitted = 0
+                        while initial_submitted < max_parallel and work_queue:
+                            if submit_next_item():
+                                initial_submitted += 1
+                            else:
+                                break  # No more keys available
 
-                            item, api_key = futures[future]
-                            try:
-                                future.result()  # Raises if the thread raised
-                                # Update batch progress immediately after each item completes
-                                # This ensures the UI shows real-time progress
-                                self._update_batch_progress(batch_id)
-                            except AnalysisCancelledException:
-                                self.logger.info(f"Batch job {batch_id} cancelled")
-                                self._mark_batch_stopped(batch_id, "Cancelled by user")
-                                executor.shutdown(wait=False, cancel_futures=True)
-                                return
-                            except KeyQuotaExhaustedError as e:
-                                # Quota exhaustion - reset to pending WITHOUT incrementing retry counter
-                                # This is not a real failure, just need to wait for quota reset
-                                self.logger.warning(
-                                    f"Quota exhausted for {item['ticker']}, resetting to pending (no retry increment)"
-                                )
-                                self._reset_item_to_pending_no_retry_increment(item['id'])
-                                self._update_batch_progress(batch_id)
-                            except Exception as e:
-                                self._handle_item_error(item, str(e), batch_id)
-                                # Also update progress after errors so failed count updates
-                                self._update_batch_progress(batch_id)
+                        if not active_futures:
+                            # Couldn't submit any workers - keys exhausted
+                            self.logger.info("No API keys available for initial workers")
+                            self._wait_for_reset(batch_id)
+                            continue
+
+                        self.logger.info(
+                            f"Started {len(active_futures)} initial workers, "
+                            f"{len(work_queue)} items remaining in queue"
+                        )
+
+                        # Continuous replenishment loop
+                        while active_futures and not self._stop_event.is_set():
+                            # Wait for ANY worker to complete (not all)
+                            done, _ = wait(active_futures.keys(), timeout=1.0, return_when=FIRST_COMPLETED)
+
+                            if not done:
+                                # Timeout - no workers completed yet, check stop event and continue
+                                continue
+
+                            # Process completed workers
+                            for future in done:
+                                item, api_key = active_futures.pop(future)
+
+                                try:
+                                    future.result()  # Raises if the thread raised
+                                    self._update_batch_progress(batch_id)
+                                    self.logger.debug(
+                                        f"Worker completed {item['ticker']}, "
+                                        f"{len(active_futures)} active, {len(work_queue)} queued"
+                                    )
+
+                                except AnalysisCancelledException:
+                                    self.logger.info(f"Batch job {batch_id} cancelled")
+                                    self._mark_batch_stopped(batch_id, "Cancelled by user")
+                                    executor.shutdown(wait=False, cancel_futures=True)
+                                    return
+
+                                except KeyQuotaExhaustedError as e:
+                                    self.logger.warning(
+                                        f"Quota exhausted for {item['ticker']}, "
+                                        "resetting to pending (no retry increment)"
+                                    )
+                                    self._reset_item_to_pending_no_retry_increment(item['id'])
+                                    self._update_batch_progress(batch_id)
+
+                                except ContextLengthExceededError as e:
+                                    self.logger.warning(
+                                        f"Context length exceeded for {item['ticker']}, "
+                                        f"marking as skipped: {e}"
+                                    )
+                                    self._mark_item_skipped(item['id'], str(e))
+                                    self._update_batch_progress(batch_id)
+
+                                except Exception as e:
+                                    self._handle_item_error(item, str(e), batch_id)
+                                    self._update_batch_progress(batch_id)
+
+                                # CONTINUOUS REPLENISHMENT: Immediately start next item
+                                if work_queue and not self._stop_event.is_set():
+                                    if submit_next_item():
+                                        self.logger.debug(
+                                            f"Replenished worker, now {len(active_futures)} active, "
+                                            f"{len(work_queue)} queued"
+                                        )
+
+                        # Handle stop event
+                        if self._stop_event.is_set() and active_futures:
+                            self.logger.info("Stop event received, cancelling remaining workers")
+                            executor.shutdown(wait=False, cancel_futures=True)
+                            # Reset uncompleted items back to pending
+                            for future, (item, key) in active_futures.items():
+                                self._reset_item_to_pending(item['id'])
 
                 finally:
                     # Release any keys that weren't released by workers
                     with released_keys_lock:
-                        for key in reserved_keys:
+                        for future, (item, key) in active_futures.items():
                             if key not in released_keys:
                                 self.api_key_manager.release_key(key)
-                                self.logger.debug(f"Released unreleased key in finally block")
+                                self.logger.debug("Released unreleased key in finally block")
 
-                # Check if all API keys were exhausted during this batch
-                # If so, wait for midnight reset instead of continuing to fail
+                # Check if all API keys were exhausted
                 available_keys = self.api_key_manager.get_available_keys()
-                if not available_keys:
+                if not available_keys and work_queue:
                     self.logger.info(
-                        "All API keys exhausted during batch processing - waiting for midnight PST reset"
+                        "All API keys exhausted during processing - "
+                        "waiting for midnight PST reset"
                     )
                     self._wait_for_reset(batch_id)
-                    continue  # Resume main loop after reset
+                    continue
 
-                # Small delay between parallel batches
+                # Small delay before checking for more items
                 time.sleep(1)
 
         except Exception as e:
@@ -506,6 +608,71 @@ class BatchQueueService:
                 'attempts': row['attempts']
             }
         return None
+
+    def _get_all_pending_items(self, batch_id: str) -> List[Dict]:
+        """
+        Get ALL pending items from a batch for continuous processing.
+
+        Unlike _get_pending_items which claims items with a lease, this method
+        just returns all pending items without modifying their status. The items
+        will be claimed one-by-one as workers become available.
+
+        This is used for continuous replenishment where we need the full queue
+        upfront but don't want to claim all items at once.
+
+        Args:
+            batch_id: Batch to get items from
+
+        Returns:
+            List of item dictionaries (id, ticker, company_name, attempts)
+        """
+        import sqlite3
+
+        try:
+            with sqlite3.connect(self.db.db_path, timeout=30.0) as conn:
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                # Reset lease-expired running items back to pending first
+                now = datetime.utcnow().isoformat()
+                cursor.execute("""
+                    UPDATE batch_items
+                    SET status = 'pending',
+                        started_at = NULL,
+                        lease_owner = NULL,
+                        lease_expires_at = NULL,
+                        last_heartbeat_at = NULL
+                    WHERE batch_id = ?
+                    AND status = 'running'
+                    AND lease_expires_at IS NOT NULL
+                    AND lease_expires_at < ?
+                """, (batch_id, now))
+
+                # Get all pending items
+                cursor.execute("""
+                    SELECT id, ticker, company_name, attempts
+                    FROM batch_items
+                    WHERE batch_id = ? AND status = 'pending'
+                    ORDER BY id
+                """, (batch_id,))
+                rows = cursor.fetchall()
+
+                conn.commit()
+
+                return [
+                    {
+                        'id': row['id'],
+                        'ticker': row['ticker'],
+                        'company_name': row['company_name'],
+                        'attempts': row['attempts']
+                    }
+                    for row in rows
+                ]
+
+        except sqlite3.Error as e:
+            self.logger.error(f"Database error in _get_all_pending_items: {e}")
+            return []
 
     def _get_pending_items(self, batch_id: str, limit: int = 10) -> List[Dict]:
         """
@@ -791,6 +958,18 @@ class BatchQueueService:
             stagger_delay: Seconds to wait before starting (based on worker index)
             worker_idx: Worker index for logging
         """
+        # First, claim the item by marking it as running
+        # This prevents other workers from picking it up
+        if not self._claim_item(item['id']):
+            self.logger.warning(
+                f"Worker {worker_idx} for {item['ticker']}: "
+                "item already claimed by another worker, skipping"
+            )
+            # Release the key since we won't use it
+            self.api_key_manager.release_key(api_key)
+            release_callback(api_key)
+            return
+
         if stagger_delay > 0:
             # Release the pre-reserved key during the wait so other workers can use it
             self.logger.info(
@@ -911,8 +1090,20 @@ class BatchQueueService:
 
         Fix #5: Verifies that API keys are actually available after the
         calculated reset time, handling potential clock drift or timezone issues.
+
+        Adds a 5-minute buffer after midnight to ensure Google's systems have
+        fully reset before resuming processing.
+
+        During the wait, performs periodic maintenance:
+        - Database maintenance (WAL checkpoint, ANALYZE)
+        - Chrome process cleanup
         """
         wait_seconds = self.rate_limiter.wait_for_reset()
+
+        # Add 5-minute buffer after midnight to ensure reset is complete
+        # This accounts for potential clock drift and API-side reset delays
+        RESET_BUFFER_SECONDS = 300  # 5 minutes
+        wait_seconds += RESET_BUFFER_SECONDS
 
         # Calculate resume time
         resume_time = datetime.utcnow() + timedelta(seconds=wait_seconds)
@@ -937,6 +1128,9 @@ class BatchQueueService:
             WHERE batch_id = ?
         """
         self.db._execute_with_retry(query, (datetime.utcnow().isoformat(), batch_id))
+
+        # Perform maintenance at start of wait period
+        self._perform_daily_maintenance()
 
         # Sleep in chunks to allow for stop signals
         chunk_size = 60  # 1 minute
@@ -1408,6 +1602,64 @@ class BatchQueueService:
             WHERE id = ?
         """
         self.db._execute_with_retry(query, (item_id,))
+
+    def _mark_item_skipped(self, item_id: int, reason: str):
+        """
+        Mark an item as skipped (not failed).
+
+        Used for items that cannot be processed due to inherent limitations
+        (e.g., 10-K exceeds context length) rather than transient errors.
+        These items won't be retried and are counted separately from failures.
+
+        Args:
+            item_id: Batch item ID
+            reason: Reason for skipping (stored in error_message)
+        """
+        now = datetime.utcnow().isoformat()
+        query = """
+            UPDATE batch_items
+            SET status = 'skipped',
+                completed_at = ?,
+                error_message = ?,
+                lease_owner = NULL,
+                lease_expires_at = NULL,
+                last_heartbeat_at = NULL
+            WHERE id = ?
+        """
+        self.db._execute_with_retry(query, (now, reason[:500], item_id))
+        self.logger.info(f"Marked item {item_id} as skipped: {reason[:100]}...")
+
+    def _perform_daily_maintenance(self):
+        """
+        Perform maintenance tasks during daily reset wait.
+
+        This is called at the start of the reset wait period to:
+        - Clean up orphaned Chrome processes
+        - Perform SQLite maintenance (WAL checkpoint, ANALYZE)
+
+        Running during the reset wait ensures these operations don't
+        interfere with active processing.
+        """
+        self.logger.info("Performing daily maintenance during reset wait...")
+
+        # Clean up Chrome processes
+        try:
+            from fintel.data.sources.sec.converter import cleanup_orphaned_chrome_processes
+            cleanup_orphaned_chrome_processes(self.logger)
+        except ImportError:
+            self.logger.warning("Could not import Chrome cleanup function")
+        except Exception as e:
+            self.logger.warning(f"Chrome cleanup failed: {e}")
+
+        # Database maintenance
+        try:
+            results = self.db.maintenance()
+            if results.get('errors'):
+                self.logger.warning(f"Database maintenance had errors: {results['errors']}")
+        except Exception as e:
+            self.logger.warning(f"Database maintenance failed: {e}")
+
+        self.logger.info("Daily maintenance complete")
 
     def _cleanup_worker(self, batch_id: str):
         """Cleanup worker state."""
