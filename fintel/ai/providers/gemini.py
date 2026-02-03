@@ -340,8 +340,11 @@ class GeminiProvider(LLMProvider):
             except AIProviderError as e:
                 last_error = e
                 is_rate_limit = self._is_rate_limit_error(e)
+                is_transient_service = self._is_transient_service_error(e)
 
                 if is_rate_limit:
+                    last_category = "rate_limit"
+                    operator_action = None
                     rate_limit_retries += 1
                     # Parse API-suggested retry delay
                     api_delay = self._parse_retry_delay(e)
@@ -380,6 +383,12 @@ class GeminiProvider(LLMProvider):
                         time.sleep(jittered_delay)
                 else:
                     # Non-rate-limit error
+                    if is_transient_service:
+                        last_category = "service_unavailable"
+                        operator_action = "Suggested action: retry later or reduce concurrency."
+                    else:
+                        last_category = "other"
+                        operator_action = None
                     non_rate_limit_attempts += 1
                     self.logger.warning(
                         f"Attempt {non_rate_limit_attempts}/{max_retries} failed: {e}. "
@@ -399,6 +408,8 @@ class GeminiProvider(LLMProvider):
             f"{f'{last_transient_delay:.1f}s' if last_transient_delay is not None else 'n/a'}. "
             f"Last error: {last_error}"
         )
+        if operator_action:
+            error_msg = f"{error_msg} {operator_action}"
         self.logger.error(error_msg)
         raise AIProviderError(error_msg) from last_error
 
