@@ -361,8 +361,14 @@ class BatchQueueService:
                     self._wait_for_reset(batch_id)
                     continue
 
-                # Get batch of pending items (up to number of available keys)
-                max_parallel = len(available_keys)
+                # Get batch of pending items (up to max parallel workers or available keys)
+                sec_limits = get_sec_limits()
+                max_workers_config = sec_limits.MAX_PARALLEL_WORKERS
+                if max_workers_config > 0:
+                    max_parallel = min(len(available_keys), max_workers_config)
+                    self.logger.info(f"Limiting to {max_parallel} parallel workers (config: {max_workers_config})")
+                else:
+                    max_parallel = len(available_keys)  # 0 = unlimited
                 pending_items = self._get_pending_items(batch_id, limit=max_parallel)
 
                 if not pending_items:

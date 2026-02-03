@@ -96,6 +96,13 @@ class SECLimits:
     # Min: 0 (no stagger) | Recommended: 30 | Max: 120 (very conservative)
     WORKER_STAGGER_DELAY: int = 30
 
+    # Maximum parallel workers for batch processing
+    # Limits how many companies are processed simultaneously
+    # Set lower (2-3) for free tier to avoid token-per-minute limits
+    # Set higher (10-25) for paid tier with higher limits
+    # 0 = no limit (use all available API keys)
+    MAX_PARALLEL_WORKERS: int = 3
+
     # Directory for SEC lock files (same as Gemini for simplicity)
     LOCK_DIR: str = "data/api_usage"
 
@@ -105,6 +112,7 @@ class SECLimits:
             'request_delay': self.REQUEST_DELAY,
             'max_concurrent_requests': self.MAX_CONCURRENT_REQUESTS,
             'worker_stagger_delay': self.WORKER_STAGGER_DELAY,
+            'max_parallel_workers': self.MAX_PARALLEL_WORKERS,
             'lock_dir': self.LOCK_DIR,
         }
 
@@ -144,6 +152,7 @@ def get_sec_limits() -> SECLimits:
         FINTEL_SEC_REQUEST_DELAY: Seconds between SEC requests (default: 2.0)
         FINTEL_SEC_MAX_CONCURRENT: Max parallel SEC requests (default: 5)
         FINTEL_SEC_WORKER_STAGGER_DELAY: Seconds between worker starts (default: 30)
+        FINTEL_MAX_PARALLEL_WORKERS: Max parallel batch workers (default: 3, 0=unlimited)
 
     Returns:
         SECLimits instance with configured values
@@ -153,4 +162,5 @@ def get_sec_limits() -> SECLimits:
         REQUEST_DELAY=float(os.getenv('FINTEL_SEC_REQUEST_DELAY', 2.0)),
         MAX_CONCURRENT_REQUESTS=int(os.getenv('FINTEL_SEC_MAX_CONCURRENT', 5)),
         WORKER_STAGGER_DELAY=int(os.getenv('FINTEL_SEC_WORKER_STAGGER_DELAY', 30)),
+        MAX_PARALLEL_WORKERS=int(os.getenv('FINTEL_MAX_PARALLEL_WORKERS', 3)),
     )
