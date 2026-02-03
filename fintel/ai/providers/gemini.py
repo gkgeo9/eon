@@ -260,6 +260,31 @@ class GeminiProvider(LLMProvider):
         error_str = str(error).lower()
         return '429' in error_str or 'rate limit' in error_str or 'resource_exhausted' in error_str
 
+    def _is_transient_service_error(self, error: Exception) -> bool:
+        """
+        Check if an error looks like a transient service availability issue.
+
+        Args:
+            error: Exception from API call
+
+        Returns:
+            True if this is likely a transient service error
+        """
+        error_str = str(error).lower()
+        transient_indicators = [
+            '500',
+            '502',
+            '503',
+            '504',
+            'service unavailable',
+            'internal error',
+            'temporarily unavailable',
+            'deadline exceeded',
+            'unavailable',
+            'backend error',
+        ]
+        return any(indicator in error_str for indicator in transient_indicators)
+
     def generate_with_retry(
         self,
         prompt: str,
@@ -293,9 +318,11 @@ class GeminiProvider(LLMProvider):
         last_error = None
         non_rate_limit_attempts = 0
         rate_limit_retries = 0
+        last_category = "other"
         max_rate_limit_retries = 10  # Allow many rate-limit retries since we wait the specified time
         total_attempts = 0
         max_total_attempts = max_retries + max_rate_limit_retries  # More generous for rate limits
+        operator_action = None
 
         while non_rate_limit_attempts < max_retries and rate_limit_retries < max_rate_limit_retries and total_attempts < max_total_attempts:
             total_attempts += 1
@@ -308,8 +335,11 @@ class GeminiProvider(LLMProvider):
             except AIProviderError as e:
                 last_error = e
                 is_rate_limit = self._is_rate_limit_error(e)
+                is_transient_service = self._is_transient_service_error(e)
 
                 if is_rate_limit:
+                    last_category = "rate_limit"
+                    operator_action = None
                     rate_limit_retries += 1
                     # Parse API-suggested retry delay
                     api_delay = self._parse_retry_delay(e)
@@ -333,6 +363,12 @@ class GeminiProvider(LLMProvider):
                     # Don't increment non_rate_limit_attempts - rate limit waits are "free"
                 else:
                     # Non-rate-limit error
+                    if is_transient_service:
+                        last_category = "service_unavailable"
+                        operator_action = "Suggested action: retry later or reduce concurrency."
+                    else:
+                        last_category = "other"
+                        operator_action = None
                     non_rate_limit_attempts += 1
                     self.logger.warning(
                         f"Attempt {non_rate_limit_attempts}/{max_retries} failed: {e}. "
@@ -347,8 +383,11 @@ class GeminiProvider(LLMProvider):
             f"All retries exhausted. "
             f"Non-rate-limit attempts: {non_rate_limit_attempts}/{max_retries}, "
             f"Rate-limit retries: {rate_limit_retries}/{max_rate_limit_retries}. "
-            f"Last error: {last_error}"
+            f"Last error: {last_error}. "
+            f"Final category: {last_category}."
         )
+        if operator_action:
+            error_msg = f"{error_msg} {operator_action}"
         self.logger.error(error_msg)
         raise AIProviderError(error_msg) from last_error
 
