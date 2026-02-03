@@ -310,8 +310,14 @@ class AnalysisService:
             raise
 
         except AIProviderError as e:
-            error_msg = f"AI analysis failed: {str(e)}"
-            self.logger.error(error_msg)
+            error_msg = str(e)
+            self.logger.error("AI analysis failed", exc_info=True)
+            self.db.update_run_status(run_id, 'failed', error_msg)
+            raise
+
+        except AnalysisError as e:
+            error_msg = str(e)
+            self.logger.error("Analysis failed", exc_info=True)
             self.db.update_run_status(run_id, 'failed', error_msg)
             raise
 
