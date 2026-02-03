@@ -8,6 +8,13 @@ This module provides the CLI command for large-scale batch processing that:
 - Can resume interrupted batches
 - Handles context length errors gracefully (skips, doesn't fail)
 
+RESUME BEHAVIOR:
+    - Progress is tracked per-COMPANY, not per-year
+    - If a company fails mid-analysis (e.g., at year 13 of 20), the entire
+      company will be retried from the beginning on resume
+    - Completed companies are never re-processed
+    - Failed companies are retried up to max_retries times
+
 Usage:
     # Process 1000 companies with 7 years each
     fintel batch companies.csv --years 7
@@ -24,13 +31,15 @@ import signal
 import sys
 import time
 from pathlib import Path
-from datetime import datetime
-from typing import Optional
-from rich.console import Console
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict
+from rich.console import Console, Group
 from rich.panel import Panel
 from rich.table import Table
 from rich.live import Live
-from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, SpinnerColumn
+from rich.progress import Progress, BarColumn, TextColumn, TaskProgressColumn, TimeElapsedColumn
+from rich.layout import Layout
+from rich.text import Text
 
 from fintel.core import get_config, get_logger
 from fintel.ui.database import DatabaseRepository
@@ -82,57 +91,248 @@ def _get_incomplete_batches(db: DatabaseRepository) -> list:
     return [dict(row) for row in rows] if rows else []
 
 
-def _display_batch_progress(batch_service: BatchQueueService, batch_id: str):
-    """Display live progress of batch processing."""
+def _get_running_items(db: DatabaseRepository, batch_id: str) -> List[Dict]:
+    """Get currently running items (active workers)."""
+    query = """
+        SELECT ticker, company_name, started_at, attempts
+        FROM batch_items
+        WHERE batch_id = ? AND status = 'running'
+        ORDER BY started_at DESC
+        LIMIT 25
+    """
+    rows = db._execute_with_retry(query, (batch_id,), fetch_all=True)
+    return [dict(row) for row in rows] if rows else []
+
+
+def _get_recent_completed(db: DatabaseRepository, batch_id: str, limit: int = 5) -> List[Dict]:
+    """Get recently completed items."""
+    query = """
+        SELECT ticker, company_name, completed_at
+        FROM batch_items
+        WHERE batch_id = ? AND status = 'completed'
+        ORDER BY completed_at DESC
+        LIMIT ?
+    """
+    rows = db._execute_with_retry(query, (batch_id, limit), fetch_all=True)
+    return [dict(row) for row in rows] if rows else []
+
+
+def _get_recent_failed(db: DatabaseRepository, batch_id: str, limit: int = 5) -> List[Dict]:
+    """Get recently failed items."""
+    query = """
+        SELECT ticker, company_name, error_message, attempts
+        FROM batch_items
+        WHERE batch_id = ? AND status = 'failed'
+        ORDER BY completed_at DESC
+        LIMIT ?
+    """
+    rows = db._execute_with_retry(query, (batch_id, limit), fetch_all=True)
+    return [dict(row) for row in rows] if rows else []
+
+
+def _format_duration(start_time_str: Optional[str]) -> str:
+    """Format duration since start time."""
+    if not start_time_str:
+        return "N/A"
+    try:
+        start = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+        if start.tzinfo:
+            start = start.replace(tzinfo=None)
+        duration = datetime.utcnow() - start
+        minutes = int(duration.total_seconds() // 60)
+        seconds = int(duration.total_seconds() % 60)
+        if minutes > 0:
+            return f"{minutes}m {seconds}s"
+        return f"{seconds}s"
+    except:
+        return "N/A"
+
+
+def _build_progress_display(
+    batch_service: BatchQueueService,
+    db: DatabaseRepository,
+    batch_id: str,
+    num_years: int
+) -> Panel:
+    """Build a rich progress display panel."""
+    status = batch_service.get_batch_status(batch_id)
+    if not status:
+        return Panel("[red]Batch not found[/red]")
+
+    # Get detailed item info
+    running_items = _get_running_items(db, batch_id)
+    recent_completed = _get_recent_completed(db, batch_id, limit=3)
+    recent_failed = _get_recent_failed(db, batch_id, limit=3)
+
+    # Calculate stats
+    total = status['total_tickers']
+    completed = status['completed_tickers']
+    failed = status['failed_tickers']
+    skipped = status.get('skipped_tickers', 0)
+    pending = total - completed - failed - skipped - len(running_items)
+    pct = (completed / total * 100) if total > 0 else 0
+
+    # Build the display
+    elements = []
+
+    # === OVERALL PROGRESS BAR ===
+    progress_bar = Progress(
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(bar_width=40),
+        TaskProgressColumn(),
+        TextColumn("[green]{task.completed}[/green]/[blue]{task.total}[/blue]"),
+        expand=False
+    )
+    task = progress_bar.add_task("Overall", total=total, completed=completed)
+    elements.append(progress_bar)
+    elements.append(Text(""))
+
+    # === STATUS SUMMARY ===
+    summary_table = Table(show_header=False, box=None, padding=(0, 2))
+    summary_table.add_column("Label", style="bold", width=15)
+    summary_table.add_column("Value", width=20)
+    summary_table.add_column("Label2", style="bold", width=15)
+    summary_table.add_column("Value2", width=20)
+
+    status_color = {
+        'running': 'green',
+        'waiting_reset': 'yellow',
+        'stopped': 'red',
+        'completed': 'cyan',
+        'failed': 'red'
+    }.get(status['status'], 'white')
+
+    summary_table.add_row(
+        "Status", f"[{status_color}]{status['status']}[/{status_color}]",
+        "Active Workers", f"[cyan]{len(running_items)}[/cyan]"
+    )
+    summary_table.add_row(
+        "Completed", f"[green]{completed}[/green] ({pct:.1f}%)",
+        "Pending", f"[blue]{pending}[/blue]"
+    )
+    summary_table.add_row(
+        "Failed", f"[red]{failed}[/red]",
+        "Skipped", f"[yellow]{skipped}[/yellow]"
+    )
+
+    # Time estimates
+    if status.get('estimated_completion'):
+        try:
+            est = datetime.fromisoformat(status['estimated_completion'])
+            est_str = est.strftime("%Y-%m-%d %H:%M")
+        except:
+            est_str = "N/A"
+    else:
+        est_str = "Calculating..."
+
+    summary_table.add_row(
+        "Est. Completion", est_str,
+        "Years/Company", f"{num_years}"
+    )
+
+    elements.append(summary_table)
+    elements.append(Text(""))
+
+    # === ACTIVE WORKERS ===
+    if running_items:
+        workers_table = Table(
+            title="[bold cyan]Active Workers[/bold cyan]",
+            show_header=True,
+            header_style="bold",
+            box=None,
+            padding=(0, 1)
+        )
+        workers_table.add_column("Ticker", style="cyan", width=10)
+        workers_table.add_column("Company", width=25)
+        workers_table.add_column("Duration", width=10)
+        workers_table.add_column("Attempt", width=8)
+
+        for item in running_items[:10]:  # Show max 10 workers
+            company = (item.get('company_name') or '')[:24]
+            duration = _format_duration(item.get('started_at'))
+            attempt = item.get('attempts', 1)
+            workers_table.add_row(
+                item['ticker'],
+                company,
+                duration,
+                f"{attempt}/3"
+            )
+
+        if len(running_items) > 10:
+            workers_table.add_row(
+                f"... +{len(running_items) - 10} more",
+                "", "", ""
+            )
+
+        elements.append(workers_table)
+        elements.append(Text(""))
+
+    # === RECENT ACTIVITY ===
+    if recent_completed or recent_failed:
+        activity_table = Table(
+            title="[bold]Recent Activity[/bold]",
+            show_header=True,
+            header_style="bold",
+            box=None,
+            padding=(0, 1)
+        )
+        activity_table.add_column("Status", width=10)
+        activity_table.add_column("Ticker", width=10)
+        activity_table.add_column("Details", width=40)
+
+        for item in recent_completed:
+            activity_table.add_row(
+                "[green]Done[/green]",
+                item['ticker'],
+                (item.get('company_name') or '')[:39]
+            )
+
+        for item in recent_failed:
+            error = (item.get('error_message') or 'Unknown error')[:39]
+            activity_table.add_row(
+                "[red]Failed[/red]",
+                item['ticker'],
+                error
+            )
+
+        elements.append(activity_table)
+
+    # === WAITING FOR RESET MESSAGE ===
+    if status['status'] == 'waiting_reset':
+        elements.append(Text(""))
+        elements.append(Text(
+            "[yellow]Waiting for midnight PST rate limit reset...[/yellow]",
+            justify="center"
+        ))
+
+    # Build final panel
+    return Panel(
+        Group(*elements),
+        title=f"[bold]{status['name']}[/bold]",
+        subtitle=f"batch_id: {batch_id[:8]}... | Last update: {datetime.now().strftime('%H:%M:%S')}",
+        border_style="blue"
+    )
+
+
+def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, db: DatabaseRepository, num_years: int):
+    """Display live progress of batch processing with detailed worker info."""
     global _shutdown_requested
 
-    with Live(console=console, refresh_per_second=0.5) as live:
+    with Live(console=console, refresh_per_second=0.5, transient=False) as live:
         while not _shutdown_requested:
             status = batch_service.get_batch_status(batch_id)
             if not status:
                 break
 
-            # Build progress display
-            total = status['total_tickers']
-            completed = status['completed_tickers']
-            failed = status['failed_tickers']
-            skipped = status.get('skipped_tickers', 0)
-            remaining = total - completed - failed - skipped
-
-            pct = (completed / total * 100) if total > 0 else 0
-
-            # Create status table
-            table = Table(show_header=False, box=None, padding=(0, 2))
-            table.add_column("Label", style="bold")
-            table.add_column("Value")
-
-            table.add_row("Status", f"[cyan]{status['status']}[/cyan]")
-            table.add_row("Progress", f"[green]{completed}[/green] / {total} ({pct:.1f}%)")
-            table.add_row("Failed", f"[red]{failed}[/red]")
-            table.add_row("Skipped", f"[yellow]{skipped}[/yellow]")
-            table.add_row("Remaining", f"{remaining}")
-
-            if status.get('estimated_completion'):
-                try:
-                    est = datetime.fromisoformat(status['estimated_completion'])
-                    table.add_row("Est. Completion", est.strftime("%Y-%m-%d %H:%M"))
-                except:
-                    pass
-
-            table.add_row("Last Activity", status.get('last_activity_at', 'N/A')[:19])
-
-            panel = Panel(
-                table,
-                title=f"[bold]Batch: {status['name']}[/bold]",
-                subtitle=f"batch_id: {batch_id[:8]}..."
-            )
+            # Build and display progress
+            panel = _build_progress_display(batch_service, db, batch_id, num_years)
             live.update(panel)
 
             # Check if batch is complete
             if status['status'] in ('completed', 'failed', 'stopped'):
                 break
 
-            time.sleep(5)
+            time.sleep(2)  # Update every 2 seconds
 
 
 @click.command()
@@ -161,28 +361,26 @@ def batch(
     Processes companies from a CSV file through the analysis pipeline,
     handling rate limits automatically by waiting for midnight PST reset.
 
-    This command is designed for long-running operations (days/weeks).
-    Use tmux or screen for persistence:
+    \b
+    RESUME BEHAVIOR:
+    - Progress tracked per-COMPANY (not per-year)
+    - If interrupted mid-company, that company restarts from year 1
+    - Completed companies are never re-processed
+    - Use --resume to continue where you left off
 
+    \b
+    RECOMMENDED SETUP (for multi-day runs):
         tmux new -s fintel-batch
         fintel batch companies.csv --years 7
+        # Detach: Ctrl+B, D
+        # Reattach: tmux attach -t fintel-batch
 
+    \b
     Examples:
-
-      # Process 1000 companies, 7 years each
       fintel batch tickers.csv --years 7
-
-      # Resume most recent interrupted batch
       fintel batch --resume
-
-      # Resume specific batch
-      fintel batch --resume-id abc123
-
-      # List incomplete batches
       fintel batch --list-incomplete
-
-      # With Chrome cleanup (recommended for long runs)
-      fintel batch tickers.csv --years 7 --cleanup-chrome
+      fintel batch tickers.csv -t buffett --years 5
     """
     global _batch_service, _current_batch_id
 
@@ -246,20 +444,23 @@ def batch(
             return
 
         _current_batch_id = batch_id
+        num_years = status.get('num_years', 5)
 
         console.print(Panel.fit(
             f"[bold cyan]Resuming Batch[/bold cyan]\n"
             f"Name: {status['name']}\n"
             f"Batch ID: {batch_id[:16]}...\n"
-            f"Progress: {status['completed_tickers']}/{status['total_tickers']}\n"
-            f"Previous Status: {status['status']}",
+            f"Progress: {status['completed_tickers']}/{status['total_tickers']} companies\n"
+            f"Years per company: {num_years}\n"
+            f"Previous Status: {status['status']}\n\n"
+            f"[dim]Note: Any company that was mid-analysis will restart from year 1[/dim]",
             title="Fintel Batch Resume"
         ))
 
         # Resume the batch
         if _batch_service.resume_batch(batch_id):
             console.print("[green]Batch resumed successfully[/green]\n")
-            _display_batch_progress(_batch_service, batch_id)
+            _display_batch_progress(_batch_service, batch_id, db, num_years)
         else:
             console.print("[red]Failed to resume batch[/red]")
         return
@@ -310,7 +511,8 @@ def batch(
         f"API keys available: {keys_count}\n"
         f"Requests/day: ~{requests_per_day}\n"
         f"Estimated duration: ~{days_estimate:.1f} days\n"
-        f"Chrome cleanup: {'Yes' if cleanup_chrome else 'No'}",
+        f"Chrome cleanup: {'Yes' if cleanup_chrome else 'No'}\n\n"
+        f"[dim]Resume behavior: Per-company (not per-year)[/dim]",
         title="Fintel Batch"
     ))
 
@@ -337,7 +539,7 @@ def batch(
 
     # Start batch processing
     if _batch_service.start_batch_job(batch_id):
-        _display_batch_progress(_batch_service, batch_id)
+        _display_batch_progress(_batch_service, batch_id, db, years)
 
         # Final status
         final_status = _batch_service.get_batch_status(batch_id)
