@@ -139,8 +139,8 @@ def _display_batch_progress(batch_service: BatchQueueService, batch_id: str):
 @click.argument("ticker-file", type=click.Path(exists=True), required=False)
 @click.option("--years", "-y", default=5, help="Number of years to analyze per company (default: 5)")
 @click.option("--name", "-n", help="Batch job name (default: auto-generated)")
-@click.option("--analysis-type", "-t", default="multi_analysis",
-              help="Analysis type: fundamental, multi_analysis, custom (default: multi_analysis)")
+@click.option("--analysis-type", "-t", default="multi",
+              help="Analysis type: fundamental, multi, buffett, taleb, contrarian, excellent, objective, scanner (default: multi)")
 @click.option("--resume", "-r", is_flag=True, help="Resume the most recent incomplete batch")
 @click.option("--resume-id", help="Resume a specific batch by ID")
 @click.option("--list-incomplete", "-l", is_flag=True, help="List all incomplete batches")
@@ -283,9 +283,11 @@ def batch(
         return
 
     # Validate analysis type
-    valid_types = ['fundamental', 'multi_analysis', 'custom']
-    if analysis_type not in valid_types:
-        console.print(f"[red]Invalid analysis type. Choose from: {', '.join(valid_types)}[/red]")
+    valid_types = ['fundamental', 'multi', 'buffett', 'taleb', 'contrarian', 'excellent', 'objective', 'scanner']
+    if analysis_type not in valid_types and not analysis_type.startswith('custom:'):
+        console.print(f"[red]Invalid analysis type: {analysis_type}[/red]")
+        console.print(f"[yellow]Valid types: {', '.join(valid_types)}[/yellow]")
+        console.print("[yellow]For custom workflows, use: custom:<workflow_id>[/yellow]")
         return
 
     # Generate batch name
