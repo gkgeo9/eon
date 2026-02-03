@@ -81,11 +81,20 @@ class SECDownloader:
             lambda: requests.get(url, headers=headers, timeout=timeout)
         )
 
+    def _get_filing_path(self, identifier: str, filing_type: str) -> Path:
+        return self.base_path / "sec-edgar-filings" / identifier / filing_type
+
+    def _count_existing_filings(self, filing_path: Path) -> int:
+        if not filing_path.exists():
+            return 0
+        return sum(1 for entry in filing_path.iterdir() if entry.is_dir())
+
     def download(
         self,
         ticker: str,
         num_filings: int = 5,
-        filing_type: str = "10-K"
+        filing_type: str = "10-K",
+        use_cache: bool = True
     ) -> Optional[Path]:
         """
         Download filings for a single ticker.
@@ -102,6 +111,16 @@ class SECDownloader:
             DownloadError: If download fails
         """
         ticker = ticker.upper()
+        filing_path = self._get_filing_path(ticker, filing_type)
+        if use_cache:
+            existing_count = self._count_existing_filings(filing_path)
+            if existing_count >= num_filings:
+                self.logger.info(
+                    f"Using cached {filing_type} filings for {ticker} "
+                    f"({existing_count} already downloaded)"
+                )
+                return filing_path
+
         self.logger.info(f"Downloading {num_filings} {filing_type} filings for {ticker}")
 
         try:
@@ -119,7 +138,6 @@ class SECDownloader:
             )
 
             if num_downloaded > 0:
-                filing_path = self.base_path / "sec-edgar-filings" / ticker / filing_type
                 self.logger.info(f"Downloaded {num_downloaded} filings to {filing_path}")
                 return filing_path
             else:
@@ -613,7 +631,8 @@ class SECDownloader:
         self,
         cik: str,
         num_filings: int = 5,
-        filing_type: str = "10-K"
+        filing_type: str = "10-K",
+        use_cache: bool = True
     ) -> Optional[Path]:
         """
         Download filings using CIK directly (bypasses ticker lookup).
@@ -633,6 +652,16 @@ class SECDownloader:
             DownloadError: If download fails
         """
         cik_padded = cik.zfill(10)
+        filing_path = self._get_filing_path(cik_padded, filing_type)
+        if use_cache:
+            existing_count = self._count_existing_filings(filing_path)
+            if existing_count >= num_filings:
+                self.logger.info(
+                    f"Using cached {filing_type} filings for CIK {cik_padded} "
+                    f"({existing_count} already downloaded)"
+                )
+                return filing_path
+
         self.logger.info(f"Downloading {num_filings} {filing_type} filings for CIK {cik_padded}")
 
         try:
@@ -652,7 +681,6 @@ class SECDownloader:
 
             if num_downloaded > 0:
                 # Filings are stored under CIK directory
-                filing_path = self.base_path / "sec-edgar-filings" / cik_padded / filing_type
                 self.logger.info(f"Downloaded {num_downloaded} filings to {filing_path}")
                 return filing_path
             else:
