@@ -30,13 +30,25 @@ class SECConverter:
         converter.close()
     """
 
-    def __init__(self, chrome_driver_path: Optional[str] = None, headless: bool = True):
+    def __init__(
+        self,
+        chrome_driver_path: Optional[str] = None,
+        headless: bool = True,
+        page_load_timeout: int = 60,
+        script_timeout: int = 120,
+        pdf_timeout: int = 180,
+        conversion_retries: int = 2
+    ):
         """
         Initialize the HTML to PDF converter.
 
         Args:
             chrome_driver_path: Optional path to ChromeDriver executable
             headless: Run browser in headless mode (default: True)
+            page_load_timeout: Timeout for page loads in seconds (default: 60)
+            script_timeout: Timeout for script execution in seconds (default: 120)
+            pdf_timeout: Timeout for PDF generation in seconds (default: 180)
+            conversion_retries: Number of retries for failed conversions (default: 2)
         """
         config = get_config()
 
@@ -44,6 +56,12 @@ class SECConverter:
         self.headless = headless if headless is not None else config.headless_browser
         self.logger = get_logger(f"{__name__}.SECConverter")
         self.driver = None
+
+        # Timeout configuration
+        self.page_load_timeout = page_load_timeout
+        self.script_timeout = script_timeout
+        self.pdf_timeout = pdf_timeout
+        self.conversion_retries = conversion_retries
 
         # PDF print settings for Chrome
         self.pdf_settings = {
@@ -54,7 +72,7 @@ class SECConverter:
         }
 
     def _setup_driver(self):
-        """Set up Selenium WebDriver with Chrome."""
+        """Set up Selenium WebDriver with Chrome and proper timeouts."""
         if self.driver:
             return self.driver
 
@@ -77,7 +95,14 @@ class SECConverter:
                 service = ChromeService()
                 self.driver = webdriver.Chrome(service=service, options=options)
 
-            self.logger.info("Browser setup complete")
+            # Set timeouts to prevent hanging
+            self.driver.set_page_load_timeout(self.page_load_timeout)
+            self.driver.set_script_timeout(self.script_timeout)
+
+            self.logger.info(
+                f"Browser setup complete (timeouts: page={self.page_load_timeout}s, "
+                f"script={self.script_timeout}s)"
+            )
             return self.driver
 
         except Exception as e:
@@ -85,13 +110,25 @@ class SECConverter:
             self.logger.error(error_msg)
             raise ConversionError(error_msg) from e
 
-    def _convert_html_to_pdf(self, html_path: Path, pdf_path: Path) -> bool:
+    def _restart_driver(self):
+        """Restart the WebDriver to recover from timeout/crash."""
+        self.logger.info("Restarting WebDriver...")
+        try:
+            if self.driver:
+                self.driver.quit()
+        except Exception as e:
+            self.logger.warning(f"Error closing driver during restart: {e}")
+        self.driver = None
+        return self._setup_driver()
+
+    def _convert_html_to_pdf(self, html_path: Path, pdf_path: Path, restart_on_failure: bool = True) -> bool:
         """
         Convert a single HTML file to PDF.
 
         Args:
             html_path: Path to HTML file
             pdf_path: Path for output PDF
+            restart_on_failure: If True, restart driver on timeout errors
 
         Returns:
             True if successful, False otherwise
@@ -104,11 +141,41 @@ class SECConverter:
         try:
             # Load HTML file
             file_url = f"file:///{str(html_path.absolute()).replace(os.path.sep, '/')}"
-            self.driver.get(file_url)
-            time.sleep(3)  # Wait for page to load
+            self.logger.debug(f"Loading HTML: {file_url}")
+
+            try:
+                self.driver.get(file_url)
+            except Exception as e:
+                error_str = str(e).lower()
+                if 'timeout' in error_str or 'timed out' in error_str:
+                    self.logger.error(f"Page load timeout for {html_path.name}: {e}")
+                    if restart_on_failure:
+                        self._restart_driver()
+                    return False
+                raise
+
+            # Dynamic wait based on file size (larger files need more render time)
+            try:
+                file_size_kb = html_path.stat().st_size / 1024
+                # Scale wait time: 3s minimum, up to 15s for very large files
+                wait_time = min(max(3, int(file_size_kb / 100)), 15)
+                self.logger.debug(f"Waiting {wait_time}s for page render (file size: {file_size_kb:.1f}KB)")
+            except Exception:
+                wait_time = 5  # Fallback if we can't get file size
+            time.sleep(wait_time)
 
             # Convert to PDF
-            result = self.driver.execute_cdp_cmd("Page.printToPDF", self.pdf_settings)
+            try:
+                result = self.driver.execute_cdp_cmd("Page.printToPDF", self.pdf_settings)
+            except Exception as e:
+                error_str = str(e).lower()
+                if 'timeout' in error_str or 'timed out' in error_str or 'connectionpool' in error_str:
+                    self.logger.error(f"PDF generation timeout for {html_path.name}: {e}")
+                    if restart_on_failure:
+                        self._restart_driver()
+                    return False
+                raise
+
             self.driver.get("about:blank")  # Clear page
 
             # Decode and save PDF
@@ -269,7 +336,22 @@ class SECConverter:
             pdf_path = output_path / pdf_filename
 
             self.logger.info(f"Converting filing to PDF: {pdf_filename}")
-            if self._convert_html_to_pdf(html_file, pdf_path):
+
+            # Retry logic for failed conversions
+            success = False
+            for attempt in range(self.conversion_retries + 1):
+                if self._convert_html_to_pdf(html_file, pdf_path):
+                    success = True
+                    break
+                else:
+                    if attempt < self.conversion_retries:
+                        self.logger.warning(
+                            f"Conversion failed for {pdf_filename}, "
+                            f"retrying ({attempt + 1}/{self.conversion_retries})..."
+                        )
+                        # Driver restart happens inside _convert_html_to_pdf on timeout
+
+            if success:
                 self.logger.info(f"Successfully converted: {pdf_filename}")
                 converted_pdfs.append({
                     'pdf_path': pdf_path,
@@ -286,6 +368,8 @@ class SECConverter:
                         self.logger.info(f"Deleted original folder: {accession_dir.name}")
                     except Exception as e:
                         self.logger.warning(f"Could not delete {accession_dir.name}: {str(e)}")
+            else:
+                self.logger.error(f"Failed to convert {pdf_filename} after {self.conversion_retries + 1} attempts")
 
         self.logger.info(f"Converted {len(converted_pdfs)} filings for {ticker}")
         return converted_pdfs

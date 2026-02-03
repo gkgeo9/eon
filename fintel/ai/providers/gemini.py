@@ -6,6 +6,7 @@ Extracted and refactored from standardized_sec_ai/tenk_processor.py
 """
 
 import json
+import re
 import time
 from typing import Optional, Type, Union, Dict, Any
 
@@ -202,22 +203,63 @@ class GeminiProvider(LLMProvider):
             self.logger.error(error_msg)
             raise AIProviderError(error_msg) from e
 
+    def _parse_retry_delay(self, error: Exception) -> Optional[int]:
+        """
+        Parse retryDelay from API error response.
+
+        The Gemini API returns 429 errors with a retryDelay field like:
+        {'retryDelay': '55s'} or "retryDelay": "30s"
+
+        Args:
+            error: Exception from API call
+
+        Returns:
+            Retry delay in seconds, or None if not parseable
+        """
+        error_str = str(error)
+
+        # Look for retryDelay pattern like "'retryDelay': '55s'" or "retryDelay": "30s"
+        # Handle both single quotes and double quotes, with optional 's' suffix
+        match = re.search(r"['\"]retryDelay['\"]:\s*['\"](\d+)s?['\"]", error_str, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+
+        return None
+
+    def _is_rate_limit_error(self, error: Exception) -> bool:
+        """
+        Check if an error is a rate limit (429) error.
+
+        Args:
+            error: Exception from API call
+
+        Returns:
+            True if this is a rate limit error
+        """
+        error_str = str(error).lower()
+        return '429' in error_str or 'rate limit' in error_str or 'resource_exhausted' in error_str
+
     def generate_with_retry(
         self,
         prompt: str,
         schema: Optional[Type[BaseModel]] = None,
         max_retries: int = 3,
         retry_delay: int = 10,
+        buffer_seconds: int = 20,
         **kwargs
     ) -> Union[BaseModel, Dict[str, Any]]:
         """
         Generate with automatic retry on failure.
 
+        For rate limit (429) errors, parses the API's suggested retry delay
+        and adds a buffer. Rate limit retries don't count against max_retries.
+
         Args:
             prompt: The prompt to send
             schema: Optional Pydantic schema for structured output
-            max_retries: Maximum number of retry attempts
-            retry_delay: Seconds to wait between retries
+            max_retries: Maximum number of retry attempts for non-rate-limit errors
+            retry_delay: Default seconds to wait between retries (fallback)
+            buffer_seconds: Additional buffer to add to API-suggested retry delay
             **kwargs: Additional parameters
 
         Returns:
@@ -228,25 +270,55 @@ class GeminiProvider(LLMProvider):
             AIProviderError: If all retries fail
         """
         last_error = None
+        non_rate_limit_attempts = 0
+        total_attempts = 0
+        max_total_attempts = max_retries * 3  # Safety limit to prevent infinite loops
 
-        for attempt in range(max_retries):
+        while non_rate_limit_attempts < max_retries and total_attempts < max_total_attempts:
+            total_attempts += 1
+
             try:
-                self.logger.debug(f"Generation attempt {attempt + 1}/{max_retries}")
+                self.logger.debug(f"Generation attempt {total_attempts} (non-rate-limit: {non_rate_limit_attempts + 1}/{max_retries})")
                 result = self.generate(prompt, schema, **kwargs)
                 return result
 
             except AIProviderError as e:
                 last_error = e
-                self.logger.warning(
-                    f"Attempt {attempt + 1} failed: {e}. "
-                    f"Retrying in {retry_delay} seconds..."
-                )
+                is_rate_limit = self._is_rate_limit_error(e)
 
-                if attempt < max_retries - 1:  # Don't sleep on last attempt
-                    time.sleep(retry_delay)
+                if is_rate_limit:
+                    # Parse API-suggested retry delay
+                    api_delay = self._parse_retry_delay(e)
+
+                    if api_delay:
+                        actual_delay = api_delay + buffer_seconds
+                        self.logger.warning(
+                            f"Rate limit hit. API suggests {api_delay}s delay. "
+                            f"Waiting {actual_delay}s (with {buffer_seconds}s buffer)..."
+                        )
+                    else:
+                        # Fallback: use a longer delay for rate limits
+                        actual_delay = max(retry_delay * 2, 60) + buffer_seconds
+                        self.logger.warning(
+                            f"Rate limit hit (could not parse delay). "
+                            f"Waiting {actual_delay}s..."
+                        )
+
+                    time.sleep(actual_delay)
+                    # Don't increment non_rate_limit_attempts - rate limit waits are "free"
+                else:
+                    # Non-rate-limit error
+                    non_rate_limit_attempts += 1
+                    self.logger.warning(
+                        f"Attempt {non_rate_limit_attempts}/{max_retries} failed: {e}. "
+                        f"Retrying in {retry_delay} seconds..."
+                    )
+
+                    if non_rate_limit_attempts < max_retries:
+                        time.sleep(retry_delay)
 
         # All retries failed
-        error_msg = f"All {max_retries} attempts failed. Last error: {last_error}"
+        error_msg = f"All {non_rate_limit_attempts} attempts failed (total: {total_attempts}). Last error: {last_error}"
         self.logger.error(error_msg)
         raise AIProviderError(error_msg) from last_error
 

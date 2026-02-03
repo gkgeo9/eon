@@ -399,15 +399,32 @@ class AnalysisService:
         # First, check cache for all years
         for year in years:
             cached = self.db.get_cached_file(identifier, year, filing_type)
-            if cached and Path(cached).exists():
-                self.logger.info(f"Using cached file for {identifier} {year}: {cached}")
-                pdf_paths[year] = Path(cached)
+            if cached:
+                cached_path = Path(cached)
+                if cached_path.exists():
+                    self.logger.info(f"[CACHE HIT] Using cached PDF for {identifier} {year}: {cached}")
+                    pdf_paths[year] = cached_path
+                else:
+                    # File was deleted from disk, remove stale cache entry
+                    self.logger.warning(
+                        f"[CACHE STALE] Cached file missing for {identifier} {year}, "
+                        f"clearing cache entry and re-downloading: {cached}"
+                    )
+                    self.db.clear_file_cache_entry(identifier, year, filing_type)
+                    years_to_download.append(year)
             else:
+                self.logger.debug(f"[CACHE MISS] No cache entry for {identifier} {year}")
                 years_to_download.append(year)
 
         # If all years are cached, we're done
         if not years_to_download:
+            self.logger.info(f"All {len(years)} requested filings found in cache for {identifier}")
             return pdf_paths
+
+        self.logger.info(
+            f"Cache status for {identifier}: {len(pdf_paths)} cached, "
+            f"{len(years_to_download)} need download: {years_to_download}"
+        )
 
         # Download and convert once for all uncached years
         try:

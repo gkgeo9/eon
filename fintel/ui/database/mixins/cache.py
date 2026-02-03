@@ -6,7 +6,7 @@ File cache database operations mixin.
 
 import json
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 
 class FileCacheMixin:
@@ -175,6 +175,120 @@ class FileCacheMixin:
             return None
 
         return json.loads(filing_types_json)
+
+    def get_latest_cached_filing_date(
+        self,
+        ticker: str,
+        filing_type: str
+    ) -> Optional[str]:
+        """
+        Get the most recent filing_date in cache for a ticker/filing_type.
+
+        Args:
+            ticker: Company ticker symbol
+            filing_type: Type of filing (10-K, 10-Q, etc.)
+
+        Returns:
+            Filing date in YYYY-MM-DD format, or None if no cached files
+        """
+        query = """
+            SELECT MAX(filing_date) as latest_date
+            FROM file_cache
+            WHERE ticker = ? AND filing_type = ? AND filing_date IS NOT NULL
+        """
+        row = self._execute_with_retry(query, (ticker.upper(), filing_type), fetch_one=True)
+        return row['latest_date'] if row and row['latest_date'] else None
+
+    def get_all_cached_filings(
+        self,
+        ticker: str,
+        filing_type: str
+    ) -> List[Dict]:
+        """
+        Get all cached filings for a ticker/filing_type.
+
+        Args:
+            ticker: Company ticker symbol
+            filing_type: Type of filing (10-K, 10-Q, etc.)
+
+        Returns:
+            List of dicts with fiscal_year, filing_date, file_path, file_hash, downloaded_at
+        """
+        query = """
+            SELECT fiscal_year, filing_date, file_path, file_hash, downloaded_at
+            FROM file_cache
+            WHERE ticker = ? AND filing_type = ?
+            ORDER BY filing_date DESC NULLS LAST, fiscal_year DESC
+        """
+        return self._execute_with_retry(query, (ticker.upper(), filing_type), fetch_all=True)
+
+    def is_filing_cached(
+        self,
+        ticker: str,
+        filing_date: str,
+        filing_type: str
+    ) -> bool:
+        """
+        Check if a specific filing (by date) is already cached.
+
+        Args:
+            ticker: Company ticker symbol
+            filing_date: Filing date in YYYY-MM-DD format
+            filing_type: Type of filing
+
+        Returns:
+            True if filing is cached, False otherwise
+        """
+        query = """
+            SELECT 1 FROM file_cache
+            WHERE ticker = ? AND filing_date = ? AND filing_type = ?
+            LIMIT 1
+        """
+        row = self._execute_with_retry(query, (ticker.upper(), filing_date, filing_type), fetch_one=True)
+        return row is not None
+
+    def clear_file_cache_entry(
+        self,
+        ticker: str,
+        fiscal_year: int,
+        filing_type: str
+    ) -> int:
+        """
+        Remove a single cache entry.
+
+        Useful for removing stale entries when the actual file is missing.
+
+        Args:
+            ticker: Company ticker symbol
+            fiscal_year: Fiscal year of the filing
+            filing_type: Type of filing
+
+        Returns:
+            Number of records deleted (0 or 1)
+        """
+        query = """
+            DELETE FROM file_cache
+            WHERE ticker = ? AND fiscal_year = ? AND filing_type = ?
+        """
+        return self._execute_with_retry(query, (ticker.upper(), fiscal_year, filing_type))
+
+    def get_tickers_with_cached_files(self, filing_type: str) -> List[str]:
+        """
+        Get list of tickers that have cached files for a filing type.
+
+        Args:
+            filing_type: Type of filing (10-K, 10-Q, etc.)
+
+        Returns:
+            List of ticker symbols with cached files
+        """
+        query = """
+            SELECT DISTINCT ticker FROM file_cache
+            WHERE filing_type = ? AND file_path IS NOT NULL
+            ORDER BY ticker
+        """
+        rows = self._execute_with_retry(query, (filing_type,), fetch_all=True)
+        return [row['ticker'] for row in rows]
 
     def clear_filing_types_cache(self, ticker: Optional[str] = None) -> int:
         """
