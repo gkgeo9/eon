@@ -337,14 +337,23 @@ def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, db:
 
 @click.command()
 @click.argument("ticker-file", type=click.Path(exists=True), required=False)
-@click.option("--years", "-y", default=5, help="Number of years to analyze per company (default: 5)")
-@click.option("--name", "-n", help="Batch job name (default: auto-generated)")
-@click.option("--analysis-type", "-t", default="multi",
-              help="Analysis type: fundamental, multi, buffett, taleb, contrarian, excellent, objective, scanner (default: multi)")
-@click.option("--resume", "-r", is_flag=True, help="Resume the most recent incomplete batch")
-@click.option("--resume-id", help="Resume a specific batch by ID")
-@click.option("--list-incomplete", "-l", is_flag=True, help="List all incomplete batches")
-@click.option("--cleanup-chrome", is_flag=True, help="Cleanup orphaned Chrome processes periodically")
+@click.option("--years", "-y", default=5, show_default=True,
+              help="Number of years to analyze per company")
+@click.option("--name", "-n", default=None,
+              help="Batch job name (default: auto-generated timestamp)")
+@click.option("--analysis-type", "-t", default="multi", show_default=True,
+              type=click.Choice(['fundamental', 'multi', 'buffett', 'taleb',
+                                'contrarian', 'excellent', 'objective', 'scanner'],
+                               case_sensitive=False),
+              help="Type of analysis to run")
+@click.option("--resume", "-r", is_flag=True,
+              help="Resume the most recent incomplete batch")
+@click.option("--resume-id", default=None,
+              help="Resume a specific batch by its ID (use --list-incomplete to find IDs)")
+@click.option("--list-incomplete", "-l", is_flag=True,
+              help="List all incomplete/paused batches that can be resumed")
+@click.option("--cleanup-chrome", is_flag=True,
+              help="Cleanup orphaned Chrome processes during daily reset waits")
 def batch(
     ticker_file: Optional[str],
     years: int,
@@ -358,29 +367,154 @@ def batch(
     """
     Multi-day batch processing of SEC filings analysis.
 
-    Processes companies from a CSV file through the analysis pipeline,
-    handling rate limits automatically by waiting for midnight PST reset.
+    Process hundreds or thousands of companies through AI analysis,
+    automatically handling API rate limits by waiting for midnight PST reset.
 
     \b
-    RESUME BEHAVIOR:
-    - Progress tracked per-COMPANY (not per-year)
-    - If interrupted mid-company, that company restarts from year 1
-    - Completed companies are never re-processed
-    - Use --resume to continue where you left off
+    ═══════════════════════════════════════════════════════════════════════════
+    QUICK START
+    ═══════════════════════════════════════════════════════════════════════════
 
     \b
-    RECOMMENDED SETUP (for multi-day runs):
-        tmux new -s fintel-batch
-        fintel batch companies.csv --years 7
-        # Detach: Ctrl+B, D
-        # Reattach: tmux attach -t fintel-batch
+    1. Create a CSV file with tickers:
+       ticker
+       AAPL
+       MSFT
+       GOOGL
 
     \b
-    Examples:
-      fintel batch tickers.csv --years 7
-      fintel batch --resume
-      fintel batch --list-incomplete
-      fintel batch tickers.csv -t buffett --years 5
+    2. Run the batch:
+       fintel batch tickers.csv --years 7
+
+    \b
+    3. If interrupted, resume later:
+       fintel batch --resume
+
+    \b
+    ═══════════════════════════════════════════════════════════════════════════
+    TIME ESTIMATES (with 25 API keys @ 20 requests/key/day = 500/day)
+    ═══════════════════════════════════════════════════════════════════════════
+
+    \b
+    Companies × Years = Total Requests → Days Needed
+    ─────────────────────────────────────────────────
+    10 × 7   =    70 requests  →  < 1 day
+    100 × 7  =   700 requests  →  1.4 days
+    500 × 7  = 3,500 requests  →  7 days
+    1000 × 7 = 7,000 requests  →  14 days
+
+    \b
+    Formula: Days = (Companies × Years) ÷ (API_Keys × 20)
+
+    \b
+    ═══════════════════════════════════════════════════════════════════════════
+    ANALYSIS TYPES
+    ═══════════════════════════════════════════════════════════════════════════
+
+    \b
+    multi       - Multi-perspective analysis (Buffett + Taleb + Contrarian)
+    fundamental - Basic 10-K financial analysis
+    buffett     - Warren Buffett value investing lens
+    taleb       - Nassim Taleb antifragility analysis
+    contrarian  - Contrarian/skeptical analysis
+    excellent   - Excellence/quality analysis
+    objective   - Objective factual analysis
+    scanner     - Quick screening mode
+
+    \b
+    ═══════════════════════════════════════════════════════════════════════════
+    RESUME BEHAVIOR
+    ═══════════════════════════════════════════════════════════════════════════
+
+    \b
+    • Progress is tracked per-COMPANY, not per-year
+    • If interrupted mid-company (e.g., year 4 of 7), that company
+      restarts from year 1 on resume
+    • Completed companies are NEVER re-processed
+    • Failed companies are retried up to 3 times
+
+    \b
+    ═══════════════════════════════════════════════════════════════════════════
+    ENVIRONMENT VARIABLES
+    ═══════════════════════════════════════════════════════════════════════════
+
+    \b
+    FINTEL_MAX_PARALLEL_WORKERS
+        Max companies processed simultaneously (default: 3)
+        - Set to 1-3 for free tier (avoids token/minute limits)
+        - Set to 10-25 for paid tier
+        - Set to 0 for unlimited (use all API keys)
+
+    \b
+    FINTEL_SEC_WORKER_STAGGER_DELAY
+        Seconds between worker starts (default: 30)
+        - Prevents all workers hitting API at once
+
+    \b
+    Example (PowerShell):
+        $env:FINTEL_MAX_PARALLEL_WORKERS = "2"
+        fintel batch tickers.csv --years 7
+
+    \b
+    Example (Linux/Mac):
+        export FINTEL_MAX_PARALLEL_WORKERS=2
+        fintel batch tickers.csv --years 7
+
+    \b
+    ═══════════════════════════════════════════════════════════════════════════
+    LONG-RUNNING SETUP (recommended for multi-day batches)
+    ═══════════════════════════════════════════════════════════════════════════
+
+    \b
+    Use tmux or screen to keep the process running after disconnect:
+
+    \b
+    # Start a tmux session
+    tmux new -s fintel-batch
+
+    \b
+    # Run your batch
+    fintel batch companies.csv --years 7
+
+    \b
+    # Detach from tmux (keeps running): Ctrl+B, then D
+
+    \b
+    # Reattach later to check progress
+    tmux attach -t fintel-batch
+
+    \b
+    # Graceful stop: Press Ctrl+C once (waits for current items)
+    # Force stop: Press Ctrl+C twice
+
+    \b
+    ═══════════════════════════════════════════════════════════════════════════
+    EXAMPLES
+    ═══════════════════════════════════════════════════════════════════════════
+
+    \b
+    # Basic: 5 years of multi-analysis
+    fintel batch tickers.csv
+
+    \b
+    # 7 years with Buffett analysis
+    fintel batch tickers.csv --years 7 --analysis-type buffett
+
+    \b
+    # Custom batch name
+    fintel batch tickers.csv -n "Q1 2024 Analysis" --years 5
+
+    \b
+    # List batches that can be resumed
+    fintel batch --list-incomplete
+
+    \b
+    # Resume most recent batch
+    fintel batch --resume
+
+    \b
+    # Resume specific batch by ID
+    fintel batch --resume-id abc12345-1234-5678-abcd-123456789abc
     """
     global _batch_service, _current_batch_id
 
