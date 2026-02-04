@@ -73,22 +73,23 @@ def _cache_new_pdfs(
         db: Database repository
         ticker: Company ticker symbol
         filing_type: Filing type
-        pdf_info_list: List of dicts with pdf_path, year, filing_date
+        pdf_info_list: List of dicts with pdf_path, fiscal_year, filing_date
     """
     for pdf_info in pdf_info_list:
-        year = pdf_info.get('year')
+        # Use fiscal_year (from metadata) not year (from accession)
+        fiscal_year = pdf_info.get('fiscal_year') or pdf_info.get('year')
         pdf_path = pdf_info.get('pdf_path')
         filing_date = pdf_info.get('filing_date')
 
-        if year and pdf_path:
+        if fiscal_year and pdf_path:
             db.cache_file(
                 ticker=ticker,
-                fiscal_year=year,
+                fiscal_year=fiscal_year,
                 filing_type=filing_type,
                 file_path=str(pdf_path),
                 filing_date=filing_date
             )
-            logger.info(f"[CACHE STORED] {ticker} {year} ({filing_type}): {pdf_path}")
+            logger.info(f"[CACHE STORED] {ticker} FY{fiscal_year} ({filing_type}): {pdf_path}")
 
 
 @click.command()
@@ -178,6 +179,7 @@ def analyze(
             # Step 2: Download only uncached years
             pdf_info_new = []
             filing_path = None
+            filing_metadata = []
 
             if years_to_download and not skip_download:
                 task = progress.add_task(f"Downloading {len(years_to_download)} {filing_type} filings for {ticker}...", total=None)
@@ -187,26 +189,54 @@ def analyze(
                     user_email=config.sec_user_email if hasattr(config, 'sec_user_email') else "user@example.com"
                 )
 
-                filing_path = downloader.download(ticker, num_filings=len(years_to_download))
+                # Use download_with_metadata to get fiscal_year info
+                filing_path, filing_metadata = downloader.download_with_metadata(
+                    ticker, num_filings=len(years_to_download), filing_type=filing_type
+                )
                 progress.update(task, completed=True)
                 console.print(f" Downloaded to {filing_path}", style="green")
+
+                # Build filing_date -> fiscal_year mapping from metadata
+                filing_date_to_fiscal_year = {}
+                if filing_metadata:
+                    for meta in filing_metadata:
+                        fd = meta.get('filing_date')
+                        fy = meta.get('fiscal_year')
+                        if fd and fy:
+                            filing_date_to_fiscal_year[fd] = fy
 
                 # Step 3: Convert HTML to PDF (only for new downloads)
                 if not skip_convert:
                     task = progress.add_task(f"Converting HTML to PDF...", total=None)
 
                     with SECConverter() as converter:
-                        # convert() returns list of dicts with pdf_path, year, etc.
+                        # convert() returns list of dicts with pdf_path, year, filing_date, etc.
                         pdf_info_new = converter.convert(
                             ticker=ticker,
                             input_path=filing_path,
-                            filing_type=filing_type
+                            filing_type=filing_type,
+                            filing_metadata=filing_metadata
                         )
 
                     progress.update(task, completed=True)
                     console.print(f" Converted {len(pdf_info_new)} filings to PDF", style="green")
 
-                    # Cache the newly downloaded PDFs
+                    # Enrich pdf_info with correct fiscal_year from metadata
+                    for pdf_info in pdf_info_new:
+                        filing_date = pdf_info.get('filing_date')
+                        accession_year = pdf_info.get('year')
+                        # Use fiscal_year from metadata, or derive it
+                        fiscal_year = filing_date_to_fiscal_year.get(filing_date)
+                        if not fiscal_year and filing_date:
+                            # For 10-K filed early in year, fiscal year is previous year
+                            month = filing_date[5:7] if len(filing_date) >= 7 else None
+                            if month in ('01', '02', '03', '04') and accession_year:
+                                fiscal_year = accession_year - 1
+                            else:
+                                fiscal_year = accession_year
+                        pdf_info['fiscal_year'] = fiscal_year or accession_year
+
+                    # Cache the newly downloaded PDFs using fiscal_year
                     _cache_new_pdfs(db, ticker, filing_type, pdf_info_new)
 
             elif skip_download:

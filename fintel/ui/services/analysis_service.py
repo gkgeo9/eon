@@ -492,10 +492,43 @@ class AnalysisService:
                 self.logger.warning(f"No PDFs generated for {identifier}")
                 return pdf_paths
 
-            # Build year->pdf mapping from converted files
-            available_pdfs = {pdf_info['year']: pdf_info for pdf_info in pdf_files}
+            # Build mapping from filing_date -> fiscal_year using SEC metadata
+            # This is crucial because:
+            # - converter.year = filing year (from accession number, e.g., 2024)
+            # - metadata.fiscal_year = actual fiscal year (e.g., 2023 for FY2023 filed in 2024)
+            # We need to use fiscal_year for caching and lookup, not filing year
+            filing_date_to_fiscal_year = {}
+            if filing_metadata:
+                for meta in filing_metadata:
+                    fd = meta.get('filing_date')
+                    fy = meta.get('fiscal_year')
+                    if fd and fy:
+                        filing_date_to_fiscal_year[fd] = fy
+                self.logger.debug(f"Built filing_date->fiscal_year mapping: {filing_date_to_fiscal_year}")
+
+            # Build fiscal_year->pdf mapping from converted files
+            # Use fiscal_year from metadata (not converter's year from accession)
+            available_pdfs = {}
+            for pdf_info in pdf_files:
+                filing_date = pdf_info.get('filing_date')
+                accession_year = pdf_info['year']  # Filing year from accession (e.g., 2024)
+
+                # Look up correct fiscal_year from metadata
+                fiscal_year = filing_date_to_fiscal_year.get(filing_date, accession_year)
+
+                # If no metadata match, derive fiscal year:
+                # For annual filings (10-K), fiscal year is typically the year before filing
+                if fiscal_year == accession_year and filing_metadata and annual:
+                    # Fallback: for 10-K filed in early part of year, fiscal year is previous year
+                    if filing_date and filing_date[5:7] in ('01', '02', '03', '04'):
+                        fiscal_year = accession_year - 1
+                        self.logger.debug(f"Derived fiscal_year={fiscal_year} for {filing_date} (filed early in year)")
+
+                pdf_info['fiscal_year'] = fiscal_year
+                available_pdfs[fiscal_year] = pdf_info
+
             available_years_sorted = sorted(available_pdfs.keys(), reverse=True)
-            self.logger.info(f"Converted {len(pdf_files)} {filing_type} filings for {identifier}. Available years: {available_years_sorted}")
+            self.logger.info(f"Converted {len(pdf_files)} {filing_type} filings for {identifier}. Available fiscal years: {available_years_sorted}")
 
             # Match requested years with available PDFs
             for year in years_to_download:
@@ -503,18 +536,19 @@ class AnalysisService:
                     pdf_info = available_pdfs[year]
                     pdf_path = pdf_info['pdf_path']
                     filing_date = pdf_info.get('filing_date')
+                    fiscal_year = pdf_info.get('fiscal_year', year)
                     pdf_paths[year] = Path(pdf_path)
 
-                    # Cache it with filing_date for future lookups
+                    # Cache using fiscal_year (not filing year from accession)
                     self.db.cache_file(
-                        identifier, year, filing_type, str(pdf_path),
+                        identifier, fiscal_year, filing_type, str(pdf_path),
                         filing_date=filing_date
                     )
-                    self.logger.info(f"Matched and cached {identifier} {year} (filed {filing_date}): {pdf_path}")
+                    self.logger.info(f"Matched and cached {identifier} FY{fiscal_year} (filed {filing_date}): {pdf_path}")
                 else:
                     self.logger.info(
-                        f"Year {year} not available for {identifier}. "
-                        f"Available years: {available_years_sorted}"
+                        f"Fiscal year {year} not available for {identifier}. "
+                        f"Available fiscal years: {available_years_sorted}"
                     )
 
             # Flexible matching: if we didn't find all requested years,
@@ -530,15 +564,16 @@ class AnalysisService:
                         pdf_info = available_pdfs[avail_year]
                         pdf_path = pdf_info['pdf_path']
                         filing_date = pdf_info.get('filing_date')
+                        fiscal_year = pdf_info.get('fiscal_year', avail_year)
                         pdf_paths[avail_year] = Path(pdf_path)
 
-                        # Cache it with filing_date
+                        # Cache using fiscal_year
                         self.db.cache_file(
-                            identifier, avail_year, filing_type, str(pdf_path),
+                            identifier, fiscal_year, filing_type, str(pdf_path),
                             filing_date=filing_date
                         )
                         self.logger.info(
-                            f"Flexible match: using {identifier} {avail_year} "
+                            f"Flexible match: using {identifier} FY{fiscal_year} "
                             f"(requested year not available): {pdf_path}"
                         )
                         needed_count -= 1
