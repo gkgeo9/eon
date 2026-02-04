@@ -102,6 +102,7 @@ analyzed_10k/
 excellent_company_factors/
 random_company_factors/
 contrarian_scans/
+*.csv
 
 # Streamlit
 .streamlit/secrets.toml
