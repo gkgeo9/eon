@@ -92,9 +92,10 @@ def _get_incomplete_batches(db: DatabaseRepository) -> list:
 
 
 def _get_running_items(db: DatabaseRepository, batch_id: str) -> List[Dict]:
-    """Get currently running items (active workers)."""
+    """Get currently running items (active workers) with year progress."""
     query = """
-        SELECT ticker, company_name, started_at, attempts
+        SELECT ticker, company_name, started_at, attempts,
+               total_years, completed_years, current_year
         FROM batch_items
         WHERE batch_id = ? AND status = 'running'
         ORDER BY started_at DESC
@@ -105,9 +106,10 @@ def _get_running_items(db: DatabaseRepository, batch_id: str) -> List[Dict]:
 
 
 def _get_recent_completed(db: DatabaseRepository, batch_id: str, limit: int = 5) -> List[Dict]:
-    """Get recently completed items."""
+    """Get recently completed items with year progress."""
     query = """
-        SELECT ticker, company_name, completed_at
+        SELECT ticker, company_name, completed_at,
+               total_years, completed_years
         FROM batch_items
         WHERE batch_id = ? AND status = 'completed'
         ORDER BY completed_at DESC
@@ -243,17 +245,30 @@ def _build_progress_display(
             padding=(0, 1)
         )
         workers_table.add_column("Ticker", style="cyan", width=10)
-        workers_table.add_column("Company", width=25)
+        workers_table.add_column("Company", width=20)
+        workers_table.add_column("Years", width=10)
         workers_table.add_column("Duration", width=10)
         workers_table.add_column("Attempt", width=8)
 
         for item in running_items[:10]:  # Show max 10 workers
-            company = (item.get('company_name') or '')[:24]
+            company = (item.get('company_name') or '')[:19]
             duration = _format_duration(item.get('started_at'))
             attempt = item.get('attempts', 1)
+
+            # Year progress display
+            total_yrs = item.get('total_years', num_years)
+            completed_yrs = item.get('completed_years', 0)
+            current_yr = item.get('current_year', '')
+
+            if current_yr:
+                years_display = f"[yellow]{completed_yrs}/{total_yrs}[/yellow] ({current_yr})"
+            else:
+                years_display = f"[yellow]{completed_yrs}/{total_yrs}[/yellow]"
+
             workers_table.add_row(
                 item['ticker'],
                 company,
+                years_display,
                 duration,
                 f"{attempt}/3"
             )
@@ -261,7 +276,7 @@ def _build_progress_display(
         if len(running_items) > 10:
             workers_table.add_row(
                 f"... +{len(running_items) - 10} more",
-                "", "", ""
+                "", "", "", ""
             )
 
         elements.append(workers_table)
@@ -278,20 +293,26 @@ def _build_progress_display(
         )
         activity_table.add_column("Status", width=10)
         activity_table.add_column("Ticker", width=10)
-        activity_table.add_column("Details", width=40)
+        activity_table.add_column("Years", width=8)
+        activity_table.add_column("Details", width=32)
 
         for item in recent_completed:
+            total_yrs = item.get('total_years', num_years)
+            completed_yrs = item.get('completed_years', total_yrs)
+            years_str = f"[green]{completed_yrs}/{total_yrs}[/green]"
             activity_table.add_row(
                 "[green]Done[/green]",
                 item['ticker'],
-                (item.get('company_name') or '')[:39]
+                years_str,
+                (item.get('company_name') or '')[:31]
             )
 
         for item in recent_failed:
-            error = (item.get('error_message') or 'Unknown error')[:39]
+            error = (item.get('error_message') or 'Unknown error')[:31]
             activity_table.add_row(
                 "[red]Failed[/red]",
                 item['ticker'],
+                "",
                 error
             )
 
@@ -346,6 +367,8 @@ def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, db:
                                 'contrarian', 'excellent', 'objective', 'scanner'],
                                case_sensitive=False),
               help="Type of analysis to run")
+@click.option("--filing-type", "-f", default="10-K", show_default=True,
+              help="SEC filing type to analyze (10-K, 20-F, 10-Q, 8-K, 4, DEF 14A, etc.)")
 @click.option("--resume", "-r", is_flag=True,
               help="Resume the most recent incomplete batch")
 @click.option("--resume-id", default=None,
@@ -359,6 +382,7 @@ def batch(
     years: int,
     name: Optional[str],
     analysis_type: str,
+    filing_type: str,
     resume: bool,
     resume_id: Optional[str],
     list_incomplete: bool,
@@ -420,6 +444,31 @@ def batch(
     excellent   - Excellence/quality analysis
     objective   - Objective factual analysis
     scanner     - Quick screening mode
+
+    \b
+    ═══════════════════════════════════════════════════════════════════════════
+    FILING TYPES
+    ═══════════════════════════════════════════════════════════════════════════
+
+    \b
+    Annual filings (one per year):
+        10-K      - US annual report (default)
+        20-F      - Foreign private issuer annual report
+        40-F      - Canadian issuer annual report
+        10-K/A    - Amended annual report
+
+    \b
+    Quarterly filings (4 per year):
+        10-Q      - US quarterly report
+        10-Q/A    - Amended quarterly report
+        6-K       - Foreign issuer semi-annual/interim
+
+    \b
+    Event-based filings (multiple per year):
+        8-K       - Current reports (material events)
+        4         - Insider trading (Form 4)
+        DEF 14A   - Proxy statements
+        SC 13D/G  - Beneficial ownership
 
     \b
     ═══════════════════════════════════════════════════════════════════════════
@@ -493,12 +542,20 @@ def batch(
     ═══════════════════════════════════════════════════════════════════════════
 
     \b
-    # Basic: 5 years of multi-analysis
+    # Basic: 5 years of multi-analysis (10-K filings)
     fintel batch tickers.csv
 
     \b
     # 7 years with Buffett analysis
     fintel batch tickers.csv --years 7 --analysis-type buffett
+
+    \b
+    # Analyze foreign company filings (20-F)
+    fintel batch foreign_tickers.csv --filing-type 20-F --years 5
+
+    \b
+    # Analyze quarterly filings (10-Q)
+    fintel batch tickers.csv --filing-type 10-Q --years 2
 
     \b
     # Custom batch name
@@ -641,6 +698,7 @@ def batch(
         f"Name: {name}\n"
         f"Companies: {len(tickers)}\n"
         f"Years per company: {years}\n"
+        f"Filing type: {filing_type}\n"
         f"Analysis type: {analysis_type}\n"
         f"API keys available: {keys_count}\n"
         f"Requests/day: ~{requests_per_day}\n"
@@ -660,7 +718,7 @@ def batch(
         name=name,
         tickers=tickers,
         analysis_type=analysis_type,
-        filing_type="10-K",
+        filing_type=filing_type,
         num_years=years,
         max_retries=2
     )

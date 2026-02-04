@@ -243,6 +243,93 @@ class BatchQueueService:
         """
         self.db._execute_with_retry(query, (now, self._lease_expires_at(), item_id))
 
+    def _update_item_year_progress(self, item_id: int, current_year: Optional[str] = None):
+        """
+        Update year progress for a batch item by querying the linked analysis run.
+
+        This method is called periodically during analysis to update the completed
+        years count for display purposes.
+
+        Args:
+            item_id: Batch item ID
+            current_year: Optional current year being processed (for display)
+        """
+        # Get the run_id for this item
+        query = """
+            SELECT run_id FROM batch_items WHERE id = ?
+        """
+        row = self.db._execute_with_retry(query, (item_id,), fetch_one=True)
+
+        if not row or not row.get('run_id'):
+            # No run_id yet, just update current_year if provided
+            if current_year:
+                query = """
+                    UPDATE batch_items SET current_year = ? WHERE id = ?
+                """
+                self.db._execute_with_retry(query, (str(current_year), item_id))
+            return
+
+        run_id = row['run_id']
+
+        # Get completed years from analysis_results
+        query = """
+            SELECT fiscal_year FROM analysis_results WHERE run_id = ?
+        """
+        rows = self.db._execute_with_retry(query, (run_id,), fetch_all=True)
+
+        completed_years_list = [str(r['fiscal_year']) for r in rows] if rows else []
+        completed_count = len(completed_years_list)
+
+        # Update batch_item with year progress
+        query = """
+            UPDATE batch_items
+            SET completed_years = ?,
+                completed_years_list = ?,
+                current_year = ?
+            WHERE id = ?
+        """
+        self.db._execute_with_retry(query, (
+            completed_count,
+            json.dumps(completed_years_list),
+            str(current_year) if current_year else None,
+            item_id
+        ))
+
+    def _finalize_item_year_progress(self, item_id: int, run_id: str):
+        """
+        Finalize year progress after analysis completion.
+
+        Called when an item completes to set the final year progress.
+
+        Args:
+            item_id: Batch item ID
+            run_id: Analysis run ID
+        """
+        # Get completed years from analysis_results
+        query = """
+            SELECT fiscal_year FROM analysis_results WHERE run_id = ?
+        """
+        rows = self.db._execute_with_retry(query, (run_id,), fetch_all=True)
+
+        completed_years_list = [str(r['fiscal_year']) for r in rows] if rows else []
+        completed_count = len(completed_years_list)
+
+        # Update batch_item with final year progress
+        query = """
+            UPDATE batch_items
+            SET completed_years = ?,
+                completed_years_list = ?,
+                current_year = NULL
+            WHERE id = ?
+        """
+        self.db._execute_with_retry(query, (
+            completed_count,
+            json.dumps(completed_years_list),
+            item_id
+        ))
+
+        self.logger.debug(f"Item {item_id} finalized with {completed_count} years: {completed_years_list}")
+
     def _start_lease_heartbeat(self, item_id: int) -> threading.Event:
         """Start a background heartbeat to keep a batch item lease alive."""
         stop_event = threading.Event()
@@ -292,14 +379,14 @@ class BatchQueueService:
             config.priority
         ))
 
-        # Create batch items
+        # Create batch items with year tracking
         for ticker in config.tickers:
             company_name = config.company_names.get(ticker) if config.company_names else None
             query = """
-                INSERT INTO batch_items (batch_id, ticker, company_name)
-                VALUES (?, ?, ?)
+                INSERT INTO batch_items (batch_id, ticker, company_name, total_years, completed_years, completed_years_list)
+                VALUES (?, ?, ?, ?, 0, '[]')
             """
-            self.db._execute_with_retry(query, (batch_id, ticker.upper(), company_name))
+            self.db._execute_with_retry(query, (batch_id, ticker.upper(), company_name, config.num_years))
 
         self.logger.info(f"Created batch job {batch_id} with {len(config.tickers)} tickers")
         return batch_id
@@ -819,6 +906,9 @@ class BatchQueueService:
                 custom_prompt=batch_config.get('custom_prompt')
             )
 
+            # Finalize year progress tracking
+            self._finalize_item_year_progress(item_id, run_id)
+
             # Mark as completed
             query = """
                 UPDATE batch_items
@@ -894,6 +984,9 @@ class BatchQueueService:
                 custom_prompt=batch_config.get('custom_prompt'),
                 api_key=api_key  # Pass pre-reserved key
             )
+
+            # Finalize year progress tracking
+            self._finalize_item_year_progress(item_id, run_id)
 
             # Mark as completed
             query = """
@@ -1063,6 +1156,9 @@ class BatchQueueService:
                 company_name=item.get('company_name'),
                 custom_prompt=batch_config.get('custom_prompt')
             )
+
+            # Finalize year progress tracking
+            self._finalize_item_year_progress(item_id, run_id)
 
             # Mark as completed
             query = """

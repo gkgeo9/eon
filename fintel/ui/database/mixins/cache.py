@@ -6,7 +6,7 @@ File cache database operations mixin.
 
 import json
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 
 class FileCacheMixin:
@@ -289,6 +289,104 @@ class FileCacheMixin:
         """
         rows = self._execute_with_retry(query, (filing_type,), fetch_all=True)
         return [row['ticker'] for row in rows]
+
+    def scan_and_cache_existing_pdfs(
+        self,
+        pdf_directory: str,
+        filing_type: str = "10-K"
+    ) -> Dict[str, int]:
+        """
+        Scan existing PDF files and populate the cache.
+
+        This is useful for populating the cache with files that were downloaded
+        before caching was implemented, or after a cache reset.
+
+        Expected filename format: {TICKER}_{FILING_TYPE}_{FILING_DATE}.pdf
+        Example: AAPL_10-K_2024-02-02.pdf
+
+        Args:
+            pdf_directory: Directory containing ticker subdirectories with PDFs
+            filing_type: Filing type to scan for (default: 10-K)
+
+        Returns:
+            Dict with 'scanned', 'cached', 'skipped' counts
+        """
+        from pathlib import Path
+        import re
+
+        results = {'scanned': 0, 'cached': 0, 'skipped': 0, 'errors': 0}
+        pdf_dir = Path(pdf_directory)
+
+        if not pdf_dir.exists():
+            return results
+
+        # Pattern: TICKER_FILING-TYPE_YYYY-MM-DD.pdf
+        # Handle filing types with slashes converted to underscores
+        safe_filing_type = filing_type.replace("/", "_").replace(" ", "_")
+        pattern = re.compile(
+            rf'^([A-Z0-9]+)_{re.escape(safe_filing_type)}_(\d{{4}}-\d{{2}}-\d{{2}})\.pdf$',
+            re.IGNORECASE
+        )
+
+        # Scan all ticker subdirectories
+        for ticker_dir in pdf_dir.iterdir():
+            if not ticker_dir.is_dir():
+                continue
+
+            ticker = ticker_dir.name.upper()
+
+            for pdf_file in ticker_dir.glob("*.pdf"):
+                results['scanned'] += 1
+
+                # Parse filename
+                match = pattern.match(pdf_file.name)
+                if not match:
+                    results['skipped'] += 1
+                    continue
+
+                file_ticker = match.group(1).upper()
+                filing_date = match.group(2)
+
+                if file_ticker != ticker:
+                    results['skipped'] += 1
+                    continue
+
+                # Derive fiscal_year from filing_date
+                # For annual filings (10-K) filed in Jan-Apr, fiscal year is previous year
+                try:
+                    year = int(filing_date[:4])
+                    month = int(filing_date[5:7])
+
+                    if filing_type.upper() in ('10-K', '10-K/A', '20-F', '40-F'):
+                        # Annual filing: if filed Jan-Apr, it's for previous fiscal year
+                        if month <= 4:
+                            fiscal_year = year - 1
+                        else:
+                            fiscal_year = year
+                    else:
+                        # Quarterly or other: fiscal year matches filing year
+                        fiscal_year = year
+
+                    # Check if already cached
+                    existing = self.get_cached_file(ticker, fiscal_year, filing_type)
+                    if existing:
+                        results['skipped'] += 1
+                        continue
+
+                    # Cache the file
+                    self.cache_file(
+                        ticker=ticker,
+                        fiscal_year=fiscal_year,
+                        filing_type=filing_type,
+                        file_path=str(pdf_file),
+                        filing_date=filing_date
+                    )
+                    results['cached'] += 1
+
+                except Exception as e:
+                    results['errors'] += 1
+
+        return results
 
     def clear_filing_types_cache(self, ticker: Optional[str] = None) -> int:
         """
