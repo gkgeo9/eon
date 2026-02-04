@@ -17,28 +17,32 @@ Fintel is a production-ready platform that analyzes SEC 10-K filings using Googl
 
 - **Multi-Perspective Analysis** - See companies through different investment lenses simultaneously
 - **Structured AI Output** - Type-safe Pydantic models ensure consistent, reliable analysis results
+- **Enterprise-Grade Batch Processing** - Analyze 1000+ companies reliably with automatic recovery
 - **Scalable Processing** - Analyze hundreds of companies in parallel with 25+ API key rotation
 - **Extensible Workflows** - Create custom analysis prompts without modifying core code
 - **Resume Capability** - Interrupted analyses can be resumed from where they left off
 - **Document Caching** - Downloaded SEC filings are cached to avoid redundant downloads
+- **Discord Notifications** - Real-time alerts for batch completion, failures, and warnings
 
 ---
 
 ## Key Features
 
-| Feature                         | Description                                       |
-| ------------------------------- | ------------------------------------------------- |
-| **Multi-Perspective Analysis**  | Buffett, Taleb, and Contrarian investment lenses  |
-| **Custom Workflows**            | Auto-discovered Python-based analysis workflows   |
-| **Batch Processing**            | Analyze 1-1000+ companies in parallel             |
-| **Contrarian Scanner**          | 6-dimension hidden gem scoring (0-600 scale)      |
-| **Compounder DNA**              | Compare against top 50 proven performers          |
-| **Resume Support**              | Continue interrupted analyses automatically       |
-| **API Key Rotation**            | Distribute load across 25+ Gemini API keys        |
-| **Web + CLI**                   | Both Streamlit UI and command-line interface      |
-| **Batch Queue**                 | Multi-day batch processing with progress tracking |
-| **Analysis Cancellation**       | Cancel running analyses gracefully                |
-| **Cross-Process Rate Limiting** | File-based locking prevents API quota errors      |
+| Feature                         | Description                                            |
+| ------------------------------- | ------------------------------------------------------ |
+| **Multi-Perspective Analysis**  | Buffett, Taleb, and Contrarian investment lenses       |
+| **Custom Workflows**            | Auto-discovered Python-based analysis workflows        |
+| **Batch Processing**            | Analyze 1-1000+ companies with automatic recovery      |
+| **Contrarian Scanner**          | 6-dimension hidden gem scoring (0-600 scale)           |
+| **Compounder DNA**              | Compare against top 50 proven performers               |
+| **Resume Support**              | Continue interrupted analyses automatically            |
+| **API Key Rotation**            | Distribute load across 25+ Gemini API keys             |
+| **Web + CLI**                   | Both Streamlit UI and command-line interface           |
+| **Batch Queue**                 | Multi-day batch processing with progress tracking      |
+| **Discord Notifications**       | Real-time alerts for batch events                      |
+| **System Monitoring**           | Disk space, memory, and Chrome process monitoring      |
+| **Database Backups**            | Automatic daily backups during batch processing        |
+| **Cross-Process Rate Limiting** | File-based locking prevents API quota errors           |
 
 ---
 
@@ -78,6 +82,9 @@ GOOGLE_API_KEY_2=your_second_key      # Optional: more keys = faster batch proce
 # Required: SEC Edgar identification (SEC requires this)
 FINTEL_SEC_USER_EMAIL=your@email.com
 FINTEL_SEC_COMPANY_NAME="Investment Research"
+
+# Optional: Discord notifications for batch processing
+FINTEL_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_TOKEN
 ```
 
 ### 3. Launch
@@ -95,7 +102,6 @@ windows
 
 .venv\Scripts\python -m streamlit run streamlit_app.py
 
-
 ```
 
 Opens at `http://localhost:8501`
@@ -108,6 +114,61 @@ fintel analyze AAPL --years 5
 
 # Batch processing
 fintel batch tickers.csv --workers 10
+```
+
+---
+
+## Discord Notifications Setup
+
+Fintel can send real-time notifications to Discord for batch processing events. This is highly recommended for overnight batch jobs processing 1000+ companies.
+
+### What Gets Notified
+
+| Event | Description | Color |
+|-------|-------------|-------|
+| **Batch Completed** | Summary of completed/failed items | Green |
+| **Batch Failed** | Error details when batch fails | Red |
+| **API Keys Exhausted** | All keys hit daily limit, waiting for reset | Orange |
+| **Warnings** | Low disk space, high memory, etc. | Yellow |
+
+### Setup Instructions
+
+1. **Create a Discord Webhook:**
+   - Open Discord and go to your server
+   - Right-click on the channel where you want notifications → **Edit Channel**
+   - Go to **Integrations** → **Webhooks** → **New Webhook**
+   - Give it a name (e.g., "Fintel Bot") and copy the webhook URL
+
+2. **Configure Environment Variable:**
+   ```bash
+   # Add to your .env file
+   FINTEL_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1234567890/abcdefghijklmnop
+   ```
+
+3. **Test the Connection:**
+   ```python
+   from fintel.core.notifications import NotificationService
+
+   notifier = NotificationService()
+   notifier.send_info("Fintel notifications configured successfully!")
+   ```
+
+### Example Notifications
+
+**Batch Completed:**
+```
+✅ Batch Completed
+Batch ID: abc12345
+Completed: 847
+Failed: 3
+Duration: 24.5 hours
+```
+
+**Batch Failed:**
+```
+❌ Batch Failed
+Batch ID: abc12345
+Error: Database connection timeout after 30 retries
 ```
 
 ---
@@ -194,6 +255,34 @@ See [docs/CUSTOM_WORKFLOWS.md](docs/CUSTOM_WORKFLOWS.md) for the complete develo
 
 ---
 
+## Batch Processing Reliability
+
+Fintel includes enterprise-grade reliability features for processing 1000+ companies over multi-day batch runs.
+
+### Reliability Features
+
+| Feature | Description |
+|---------|-------------|
+| **Disk Space Monitoring** | Preflight checks and periodic monitoring during processing |
+| **Chrome Process Cleanup** | Automatic cleanup of orphaned browser processes every 50 companies |
+| **Database Backups** | Daily automatic backups with 7-day retention |
+| **Thread-Safe Progress** | File-based locking prevents race conditions |
+| **Exponential Backoff** | Up to 10 retries with jitter for database operations |
+| **Discord Alerts** | Real-time notifications for completion, failures, and warnings |
+| **Log Rotation** | 10MB max file size with 5 backup files |
+| **SEC Rate Limiting** | Global cross-process rate limiter for SEC Edgar API |
+
+### Running Large Batches
+
+For processing 1000+ companies:
+
+1. **Configure notifications** (see Discord setup above)
+2. **Ensure sufficient disk space** (minimum 5GB free, 10GB recommended)
+3. **Use the Batch Queue page** in the web UI for overnight runs
+4. **Monitor via Discord** - you'll receive completion/failure alerts
+
+---
+
 ## Web Interface
 
 ### Pages
@@ -204,27 +293,8 @@ See [docs/CUSTOM_WORKFLOWS.md](docs/CUSTOM_WORKFLOWS.md) for the complete develo
 | **Analysis**         | Run single or batch company analysis with all options  |
 | **Analysis History** | Search, filter, and manage past analyses               |
 | **Results Viewer**   | Explore results in formatted or JSON view, export      |
+| **Batch Queue**      | Multi-day batch processing with progress monitoring    |
 | **Settings**         | API usage, database viewer, custom prompts, cache      |
-| **Batch Queue**      | Multi-day batch processing with rate limit monitoring  |
-
-### Screenshots
-
-**Home Dashboard:**
-
-- Total analyses count
-- Currently running analyses
-- Today's analysis count
-- Unique tickers analyzed
-- Recent analyses table with status
-
-**Analysis Page:**
-
-- Single or batch mode toggle
-- Ticker input with company name
-- Analysis type dropdown (including custom workflows)
-- Filing type auto-discovery
-- Year selection options
-- Real-time progress monitoring
 
 ---
 
@@ -290,18 +360,19 @@ fintel/
 │   ├── sources/sec/             # SEC Edgar integration
 │   │   ├── downloader.py        # Download 10-K/10-Q filings
 │   │   ├── converter.py         # HTML → PDF conversion
-│   │   └── extractor.py         # PDF text extraction
+│   │   ├── extractor.py         # PDF text extraction
+│   │   └── rate_limiter.py      # SEC global rate limiter (NEW)
 │   └── storage/                 # Data persistence
 │       ├── json_store.py        # JSON storage backend
 │       └── parquet_store.py     # Parquet storage (recommended for scale)
 │
 ├── ui/                          # Streamlit web interface
 │   ├── database/                # Data access layer
-│   │   ├── repository.py        # DatabaseRepository (SQLite)
-│   │   └── migrations/          # Schema migration files (v001-v010)
+│   │   ├── repository.py        # DatabaseRepository (SQLite with retry/backup)
+│   │   └── migrations/          # Schema migration files (v001-v012)
 │   ├── services/                # Business logic
 │   │   ├── analysis_service.py  # AnalysisService (main orchestrator)
-│   │   ├── batch_queue.py       # Multi-day batch processing service
+│   │   ├── batch_queue.py       # Multi-day batch processing with monitoring
 │   │   └── cancellation.py      # Analysis cancellation token system
 │   └── components/              # Reusable UI components
 │
@@ -311,11 +382,14 @@ fintel/
 ├── core/                        # Shared infrastructure
 │   ├── config.py                # Pydantic configuration management
 │   ├── exceptions.py            # Custom exception hierarchy
-│   └── logging.py               # Centralized logging
+│   ├── logging.py               # Centralized logging with rotation
+│   ├── monitoring.py            # Disk/process/health monitoring (NEW)
+│   └── notifications.py         # Discord webhook notifications (NEW)
 │
 └── processing/                  # Parallel processing
     ├── pipeline.py              # Analysis pipeline orchestration
     ├── parallel.py              # ThreadPool worker management
+    ├── progress.py              # Thread-safe progress tracking
     └── resume.py                # Resume interrupted analyses
 
 custom_workflows/                # User-defined workflows (auto-discovered)
@@ -331,8 +405,11 @@ pages/                           # Streamlit pages
 ├── 1_📊_Analysis.py             # Single/batch analysis
 ├── 2_📈_Analysis_History.py     # History and filtering
 ├── 3_🔍_Results_Viewer.py       # Results exploration
-├── 5_⚙️_Settings.py             # Settings and database viewer
-└── 5_🌙_Batch_Queue.py          # Multi-day batch processing
+├── 4_🌙_Batch_Queue.py          # Multi-day batch processing
+└── 5_⚙️_Settings.py             # Settings and database viewer
+
+scripts/                         # Utility scripts
+└── export_multi_analysis_to_csv.py  # Export results to CSV
 
 streamlit_app.py                 # Home page / dashboard
 ```
@@ -385,6 +462,20 @@ All settings are configured via `.env` file or environment variables:
 | `FINTEL_LOG_DIR`         | `./logs`  | Log file directory             |
 | `FINTEL_STORAGE_BACKEND` | parquet   | Storage: json, parquet, sqlite |
 
+#### Logging Settings
+
+| Variable                 | Default | Description                      |
+| ------------------------ | ------- | -------------------------------- |
+| `FINTEL_LOG_FILE`        | -       | Custom log file path             |
+| `FINTEL_LOG_MAX_SIZE_MB` | 10      | Max log size before rotation     |
+| `FINTEL_LOG_BACKUP_COUNT`| 5       | Number of backup logs to keep    |
+
+#### Notification Settings
+
+| Variable                     | Default | Description                        |
+| ---------------------------- | ------- | ---------------------------------- |
+| `FINTEL_DISCORD_WEBHOOK_URL` | -       | Discord webhook URL for alerts     |
+
 #### Feature Flags
 
 | Variable                          | Default | Description              |
@@ -402,6 +493,7 @@ All settings are configured via `.env` file or environment variables:
 - **Concurrency** - SQLite WAL mode + ThreadPool for parallel batch processing
 - **Extensibility** - Plugin-style custom workflows with auto-discovery
 - **Resilience** - Automatic retry, rate limiting, and resume capability
+- **Observability** - Discord notifications, log rotation, health monitoring
 
 ### Data Flow
 
@@ -418,25 +510,30 @@ All settings are configured via `.env` file or environment variables:
 └─────────────┘     └──────────────┘     └─────────────┘
         │
         ▼
-┌─────────────┐     ┌──────────────┐
-│ SQLite      │────▶│ Streamlit    │
-│ Storage     │     │ UI / Export  │
-└─────────────┘     └──────────────┘
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│ SQLite      │────▶│ Streamlit    │────▶│ Discord     │
+│ Storage     │     │ UI / Export  │     │ Alerts      │
+└─────────────┘     └──────────────┘     └─────────────┘
 ```
 
 ### Key Components
 
-| Component            | Purpose                                                    |
-| -------------------- | ---------------------------------------------------------- |
-| `AnalysisService`    | Main orchestrator - coordinates all analysis operations    |
-| `DatabaseRepository` | Data access layer with retry logic and concurrency support |
-| `APIKeyManager`      | Rotates across 25+ API keys with usage tracking            |
-| `GeminiProvider`     | LLM integration with structured output support             |
-| `SECDownloader`      | Downloads filings from SEC Edgar with caching              |
-| `CustomWorkflow`     | Base class for user-defined analysis workflows             |
-| `RequestQueue`       | Cross-process API request serialization with file locking  |
-| `BatchQueueService`  | Multi-day batch job management and scheduling              |
-| `CancellationToken`  | Graceful analysis cancellation system                      |
+| Component             | Purpose                                                     |
+| --------------------- | ----------------------------------------------------------- |
+| `AnalysisService`     | Main orchestrator - coordinates all analysis operations     |
+| `DatabaseRepository`  | Data access layer with retry logic and automatic backups    |
+| `APIKeyManager`       | Rotates across 25+ API keys with usage tracking             |
+| `GeminiProvider`      | LLM integration with structured output support              |
+| `SECDownloader`       | Downloads filings from SEC Edgar with caching               |
+| `SECRateLimiter`      | Cross-process rate limiting for SEC API compliance          |
+| `CustomWorkflow`      | Base class for user-defined analysis workflows              |
+| `RequestQueue`        | Cross-process API request serialization with file locking   |
+| `BatchQueueService`   | Multi-day batch job management with health monitoring       |
+| `NotificationService` | Discord webhook notifications for batch events              |
+| `DiskMonitor`         | Monitors disk space and pauses when low                     |
+| `ProcessMonitor`      | Cleans up orphaned Chrome processes                         |
+| `HealthChecker`       | Comprehensive system health checks                          |
+| `CancellationToken`   | Graceful analysis cancellation system                       |
 
 ---
 
@@ -464,12 +561,15 @@ This project demonstrates several advanced engineering solutions:
 - **Daily limit enforcement** per key with real-time availability checking
 - **Thread-safe + Process-safe** operations using file locking
 
-### Fault-Tolerant Architecture
+### Fault-Tolerant Batch Processing
 
+- **Disk monitoring** - Preflight checks and periodic checks during processing
+- **Chrome cleanup** - Automatic cleanup of orphaned browser processes
+- **Database backups** - Daily automatic backups with retention policy
+- **Thread-safe progress** - File-based locking for progress tracking
+- **Exponential backoff** - Up to 10 retries with jitter for database operations
+- **Discord notifications** - Real-time alerts for batch events
 - **Resume capability** - Interrupted analyses continue from last completed year
-- **Exponential backoff retry** - Up to 3 retries with configurable delays
-- **SQLite WAL mode** - Concurrent read/write without locking conflicts
-- **Completed years tracking** - Prevents re-analyzing already processed data
 - **Graceful cancellation** - Stop running analyses without data corruption
 
 ### Type-Safe AI Outputs
@@ -481,34 +581,22 @@ This project demonstrates several advanced engineering solutions:
 
 ---
 
-## Compounder DNA Scoring
-
-Compare any company against the patterns of the top 50 proven compounders:
-
-| Score  | Category                 | Interpretation                                 |
-| ------ | ------------------------ | ---------------------------------------------- |
-| 90-100 | **Future Compounder**    | Exceptional alignment with top performers      |
-| 75-89  | **Strong Potential**     | Significant alignment, foundation present      |
-| 60-74  | **Developing Contender** | Meaningful elements with room to grow          |
-| 40-59  | **Partial Alignment**    | Some positive elements, lacks cohesive pattern |
-| 20-39  | **Limited Alignment**    | Minimal resemblance to compounders             |
-| 0-19   | **Misaligned**           | Counter to top performer patterns              |
-
----
-
 ## Database Schema
 
 Fintel uses SQLite with WAL mode for concurrent access. Schema is managed through migrations.
 
 ### Core Tables
 
-| Table              | Purpose                                             |
-| ------------------ | --------------------------------------------------- |
-| `analysis_runs`    | Tracks each analysis job (status, progress, config) |
-| `analysis_results` | Stores Pydantic model outputs as JSON               |
-| `file_cache`       | Caches downloaded SEC filings                       |
-| `custom_prompts`   | User-created analysis prompts                       |
-| `user_settings`    | User preferences (key-value)                        |
+| Table                        | Purpose                                             |
+| ---------------------------- | --------------------------------------------------- |
+| `analysis_runs`              | Tracks each analysis job (status, progress, config) |
+| `analysis_results`           | Stores Pydantic model outputs as JSON               |
+| `file_cache`                 | Caches downloaded SEC filings                       |
+| `custom_prompts`             | User-created analysis prompts                       |
+| `user_settings`              | User preferences (key-value)                        |
+| `batch_jobs`                 | Batch queue job definitions                         |
+| `batch_items`                | Individual items within batch jobs                  |
+| `batch_item_year_checkpoints`| Per-year progress for resume capability             |
 
 ### Migrations
 
@@ -522,6 +610,12 @@ Located in `fintel/ui/database/migrations/`:
 | v004    | Custom workflow support                                  |
 | v005    | API usage tracking and indexes                           |
 | v006    | Resume tracking (completed_years, last_activity)         |
+| v007    | Batch queue and synthesis tables                         |
+| v008    | CIK support for SEC lookups                              |
+| v009    | Placeholder (gap filler)                                 |
+| v010    | Synthesis checkpoints                                    |
+| v011    | Batch year tracking                                      |
+| v012    | Batch improvements (indexes, year checkpoints)           |
 
 ---
 
@@ -619,12 +713,24 @@ sqlite3 data/fintel.db "PRAGMA integrity_check;"
 - Find interrupted runs in "Interrupted Analyses" section
 - Click "Resume" to continue from last completed year
 
+**"Low disk space" notifications**
+
+- Fintel monitors disk space during batch processing
+- Minimum 5GB free required, 10GB recommended
+- Clean up old PDFs in `data/pdfs/` if needed
+
+**"Discord notifications not working"**
+
+- Verify `FINTEL_DISCORD_WEBHOOK_URL` is set correctly
+- Test webhook manually: `curl -X POST -H "Content-Type: application/json" -d '{"content":"test"}' YOUR_WEBHOOK_URL`
+- Check logs for "Discord webhook" errors
+
 ### Logs
 
 Logs are stored in `logs/` directory:
 
 - `fintel.log` - Main application log
-- Rotate daily with 7-day retention
+- Automatic rotation at 10MB with 5 backup files
 
 ---
 
@@ -637,8 +743,9 @@ Logs are stored in `logs/` directory:
 | **Data**       | PyPDF2, Selenium + Chrome, SEC Edgar API           |
 | **Storage**    | SQLite (WAL mode), JSON, Parquet                   |
 | **CLI**        | Click, Rich                                        |
-| **Processing** | ThreadPool, concurrent.futures                     |
+| **Processing** | ThreadPool, concurrent.futures, portalocker        |
 | **Config**     | Pydantic Settings, python-dotenv                   |
+| **Monitoring** | psutil (optional), shutil, urllib                  |
 
 ---
 
@@ -648,6 +755,8 @@ Logs are stored in `logs/` directory:
 - Google Chrome (for HTML → PDF conversion)
 - Google Gemini API key(s)
 - 4GB+ RAM recommended for batch processing
+- 10GB+ free disk space for large batch runs
+- psutil (optional, for memory monitoring and Chrome cleanup)
 
 ---
 
