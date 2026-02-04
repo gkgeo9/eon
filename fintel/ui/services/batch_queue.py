@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 
 from fintel.core import get_logger, get_config, IKeyManager, IRateLimiter, FintelConfig
 from fintel.core import DiskMonitor, ProcessMonitor, cleanup_orphaned_chrome
+from fintel.core.notifications import NotificationService
 from fintel.ai import APIKeyManager, RateLimiter
 from fintel.ai.api_config import get_sec_limits
 from fintel.ui.database import DatabaseRepository
@@ -101,6 +102,9 @@ class BatchQueueService:
         self._process_monitor = ProcessMonitor()
         self._companies_since_chrome_cleanup = 0
         self._chrome_cleanup_interval = 50  # Cleanup every N companies
+
+        # Notifications (optional - enabled via FINTEL_DISCORD_WEBHOOK_URL)
+        self._notifier = NotificationService()
 
         # Fix #4: Cleanup stale worker state from crashed processes
         self._cleanup_stale_worker()
@@ -1695,7 +1699,7 @@ class BatchQueueService:
         return config
 
     def _complete_batch(self, batch_id: str):
-        """Mark batch as complete."""
+        """Mark batch as complete and send notification."""
         query = """
             UPDATE batch_jobs
             SET status = 'completed', completed_at = ?, last_activity_at = ?
@@ -1705,14 +1709,34 @@ class BatchQueueService:
         self.db._execute_with_retry(query, (now, now, batch_id))
         self.logger.info(f"Batch {batch_id} completed")
 
+        # Send notification
+        try:
+            batch = self.get_batch_status(batch_id)
+            if batch:
+                self._notifier.send_batch_completed(
+                    batch_id,
+                    batch['completed_tickers'],
+                    batch['failed_tickers']
+                )
+        except Exception as e:
+            self.logger.warning(f"Failed to send completion notification: {e}")
+
     def _mark_batch_failed(self, batch_id: str, error: str):
-        """Mark batch as failed."""
+        """Mark batch as failed and send notification."""
+        # Truncate error for database
+        truncated_error = self._truncate_error(error)
         query = """
             UPDATE batch_jobs
             SET status = 'failed', error_message = ?, last_activity_at = ?
             WHERE batch_id = ?
         """
-        self.db._execute_with_retry(query, (error, datetime.utcnow().isoformat(), batch_id))
+        self.db._execute_with_retry(query, (truncated_error, datetime.utcnow().isoformat(), batch_id))
+
+        # Send notification
+        try:
+            self._notifier.send_batch_failed(batch_id, error)
+        except Exception as e:
+            self.logger.warning(f"Failed to send failure notification: {e}")
 
     def _mark_batch_stopped(self, batch_id: str, reason: str):
         """Mark batch as stopped."""
