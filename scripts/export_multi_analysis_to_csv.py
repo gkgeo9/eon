@@ -3,7 +3,7 @@
 Export Multi-Perspective Analysis (Buffett/Taleb/Contrarian) from a batch to CSV.
 
 Usage:
-    python tests/export_multi_analysis_to_csv.py
+    python scripts/export_multi_analysis_to_csv.py
 
 Output:
     data/multi_analysis_export.csv
