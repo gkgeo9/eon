@@ -621,6 +621,15 @@ class APIUsageTracker:
             except Exception as e:
                 self.logger.warning(f"Failed to clean up {usage_file}: {e}")
 
+    def cleanup_old_records(self, days: int = 90):
+        """
+        Alias for cleanup_old_data for consistency.
+
+        Args:
+            days: Number of days of history to retain
+        """
+        return self.cleanup_old_data(days_to_keep=days)
+
     def reset_key_usage(self, api_key: str):
         """Reset all usage data for a specific key."""
         usage_file = self._get_usage_file(api_key)

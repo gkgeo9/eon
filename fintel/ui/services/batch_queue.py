@@ -23,6 +23,7 @@ from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
 
 from fintel.core import get_logger, get_config, IKeyManager, IRateLimiter, FintelConfig
+from fintel.core import DiskMonitor, ProcessMonitor, cleanup_orphaned_chrome
 from fintel.ai import APIKeyManager, RateLimiter
 from fintel.ai.api_config import get_sec_limits
 from fintel.ui.database import DatabaseRepository
@@ -94,6 +95,12 @@ class BatchQueueService:
         self._worker_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
         self._pause_event = threading.Event()
+
+        # Monitoring for reliability
+        self._disk_monitor = DiskMonitor()
+        self._process_monitor = ProcessMonitor()
+        self._companies_since_chrome_cleanup = 0
+        self._chrome_cleanup_interval = 50  # Cleanup every N companies
 
         # Fix #4: Cleanup stale worker state from crashed processes
         self._cleanup_stale_worker()
@@ -169,6 +176,78 @@ class BatchQueueService:
             return True
         except OSError:
             return False
+
+    def _truncate_error(self, error: str, max_length: int = 500) -> str:
+        """
+        Truncate error message to prevent database bloat.
+
+        For long error messages, keeps first 200 chars + ... + last 200 chars.
+
+        Args:
+            error: Error message to truncate
+            max_length: Maximum length (default: 500)
+
+        Returns:
+            Truncated error message
+        """
+        if not error or len(error) <= max_length:
+            return error
+
+        # Keep first and last portions
+        first_part = error[:200]
+        last_part = error[-200:]
+        return f"{first_part}...{last_part}"
+
+    def _preflight_check(self, num_tickers: int, num_years: int) -> tuple:
+        """
+        Run pre-flight checks before starting a batch job.
+
+        Checks:
+        - Disk space availability
+        - Memory availability
+
+        Args:
+            num_tickers: Number of tickers in batch
+            num_years: Years per ticker
+
+        Returns:
+            Tuple of (passed: bool, message: str)
+        """
+        # Check disk space
+        disk_ok, disk_msg = self._disk_monitor.check_space_available(num_tickers, num_years)
+        if not disk_ok:
+            return False, f"Pre-flight failed: {disk_msg}"
+
+        # Check memory
+        memory = self._process_monitor.get_memory_usage()
+        if 'error' not in memory and memory.get('percent_used', 0) > 95:
+            return False, f"Pre-flight failed: Memory usage critically high ({memory['percent_used']:.1f}%)"
+
+        return True, "Pre-flight checks passed"
+
+    def _periodic_health_check(self) -> bool:
+        """
+        Run periodic health check during batch processing.
+
+        Called every N companies to ensure system is healthy.
+
+        Returns:
+            True if healthy, False if batch should pause
+        """
+        # Check disk space
+        if self._disk_monitor.should_pause_batch():
+            self.logger.warning("Low disk space detected - pausing batch")
+            return False
+
+        # Periodic Chrome cleanup
+        self._companies_since_chrome_cleanup += 1
+        if self._companies_since_chrome_cleanup >= self._chrome_cleanup_interval:
+            self._companies_since_chrome_cleanup = 0
+            cleaned = cleanup_orphaned_chrome(max_age_minutes=30)
+            if cleaned > 0:
+                self.logger.info(f"Periodic cleanup: removed {cleaned} Chrome processes")
+
+        return True
 
     def _claim_item(self, item_id: int) -> bool:
         """
@@ -395,6 +474,10 @@ class BatchQueueService:
         """
         Start processing a batch job.
 
+        Performs pre-flight checks before starting:
+        - Disk space availability
+        - Memory availability
+
         Args:
             batch_id: The batch to start
 
@@ -405,6 +488,27 @@ class BatchQueueService:
         if self._worker_thread and self._worker_thread.is_alive():
             self.logger.warning("Worker thread already running")
             return False
+
+        # Get batch info for pre-flight checks
+        batch = self.get_batch_status(batch_id)
+        if batch:
+            # Run pre-flight checks
+            preflight_ok, preflight_msg = self._preflight_check(
+                batch['total_tickers'],
+                batch['num_years']
+            )
+            if not preflight_ok:
+                self.logger.error(preflight_msg)
+                # Update batch with error
+                query = """
+                    UPDATE batch_jobs
+                    SET error_message = ?, last_activity_at = ?
+                    WHERE batch_id = ?
+                """
+                self.db._execute_with_retry(query, (preflight_msg, datetime.utcnow().isoformat(), batch_id))
+                return False
+
+            self.logger.info(preflight_msg)
 
         # Reset any items stuck in 'running' status back to 'pending'
         # This handles the case where a previous run crashed mid-process
@@ -1652,6 +1756,8 @@ class BatchQueueService:
         # Fix #3: Use > instead of >= so max_retries retries are allowed
         if current_attempts > max_retries:
             # Mark as failed - we've exhausted all retries
+            # Truncate error to prevent database bloat
+            truncated_error = self._truncate_error(error)
             query = """
                 UPDATE batch_items
                 SET status = 'failed',
@@ -1661,7 +1767,7 @@ class BatchQueueService:
                     last_heartbeat_at = NULL
                 WHERE id = ?
             """
-            self.db._execute_with_retry(query, (error, item_id))
+            self.db._execute_with_retry(query, (truncated_error, item_id))
             self.logger.warning(
                 f"Item {item['ticker']} failed after {current_attempts} attempts "
                 f"(max_retries={max_retries}): {error}"
@@ -1732,28 +1838,64 @@ class BatchQueueService:
         This is called at the start of the reset wait period to:
         - Clean up orphaned Chrome processes
         - Perform SQLite maintenance (WAL checkpoint, ANALYZE)
+        - Create database backup
+        - Clean up old API usage records
+        - Check disk space
 
         Running during the reset wait ensures these operations don't
         interfere with active processing.
         """
         self.logger.info("Performing daily maintenance during reset wait...")
 
-        # Clean up Chrome processes
+        # 1. Clean up Chrome processes using new monitoring module
         try:
-            from fintel.data.sources.sec.converter import cleanup_orphaned_chrome_processes
-            cleanup_orphaned_chrome_processes(self.logger)
-        except ImportError:
-            self.logger.warning("Could not import Chrome cleanup function")
+            cleaned = cleanup_orphaned_chrome(max_age_minutes=30)
+            if cleaned > 0:
+                self.logger.info(f"Cleaned up {cleaned} orphaned Chrome processes")
         except Exception as e:
             self.logger.warning(f"Chrome cleanup failed: {e}")
 
-        # Database maintenance
+        # 2. Database maintenance (WAL checkpoint, ANALYZE)
         try:
             results = self.db.maintenance()
             if results.get('errors'):
                 self.logger.warning(f"Database maintenance had errors: {results['errors']}")
+            else:
+                self.logger.info(
+                    f"Database maintenance complete: "
+                    f"{results.get('size_before_mb', 0):.1f}MB -> {results.get('size_after_mb', 0):.1f}MB"
+                )
         except Exception as e:
             self.logger.warning(f"Database maintenance failed: {e}")
+
+        # 3. Create database backup
+        try:
+            backup_path = self.db.backup()
+            if backup_path:
+                self.logger.info(f"Database backup created: {backup_path}")
+        except Exception as e:
+            self.logger.warning(f"Database backup failed: {e}")
+
+        # 4. Clean up old API usage records (keep 90 days)
+        try:
+            from fintel.ai.usage_tracker import get_usage_tracker
+            tracker = get_usage_tracker()
+            if hasattr(tracker, 'cleanup_old_records'):
+                tracker.cleanup_old_records(days=90)
+                self.logger.info("Cleaned up old API usage records")
+        except Exception as e:
+            self.logger.warning(f"Usage tracker cleanup failed: {e}")
+
+        # 5. Check disk space
+        try:
+            disk_ok, disk_msg = self._disk_monitor.check_space_available()
+            if not disk_ok:
+                self.logger.warning(f"Disk space warning: {disk_msg}")
+            else:
+                space = self._disk_monitor.get_disk_space()
+                self.logger.info(f"Disk space: {space.get('free_gb', 0):.1f}GB free")
+        except Exception as e:
+            self.logger.warning(f"Disk space check failed: {e}")
 
         self.logger.info("Daily maintenance complete")
 
