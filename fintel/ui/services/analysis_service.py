@@ -577,24 +577,61 @@ class AnalysisService:
 
         pdf_paths = {}
 
+        # First, check cache for existing event filings
+        cached_filings = self.db.get_all_cached_filings(identifier, filing_type)
+        cached_count = 0
+
+        for cached in cached_filings:
+            if cached_count >= count:
+                break
+
+            cached_path = Path(cached['file_path']) if cached.get('file_path') else None
+            filing_date = cached.get('filing_date')
+
+            if cached_path and cached_path.exists() and filing_date:
+                self.logger.info(f"[CACHE HIT] Using cached {filing_type} for {identifier} filed {filing_date}")
+                pdf_paths[filing_date] = cached_path
+                cached_count += 1
+            elif cached_path and not cached_path.exists():
+                # Stale cache entry - file missing
+                self.logger.warning(
+                    f"[CACHE STALE] Cached file missing for {identifier} {filing_type} "
+                    f"filed {filing_date}, will re-download"
+                )
+
+        # If we have enough cached filings, return early
+        if cached_count >= count:
+            self.logger.info(f"All {count} requested {filing_type} filings found in cache for {identifier}")
+            return pdf_paths
+
+        # Need to download more filings
+        needed_count = count - cached_count
+        self.logger.info(
+            f"Cache status for {identifier} {filing_type}: {cached_count} cached, "
+            f"{needed_count} need download"
+        )
+
         try:
             self.db.update_run_progress(
                 run_id,
-                progress_message=f"Downloading {count} {filing_type} filings from SEC...",
+                progress_message=f"Downloading {needed_count} {filing_type} filings from SEC...",
                 progress_percent=15
             )
+
+            # Download more than needed to account for already-cached ones
+            download_count = needed_count + 5  # Buffer for overlap
 
             # Use CIK-direct download method if in CIK mode
             if input_mode == 'cik':
                 filing_dir, filing_metadata = self.downloader.download_with_metadata_by_cik(
                     cik=identifier,
-                    num_filings=count,
+                    num_filings=download_count,
                     filing_type=filing_type
                 )
             else:
                 filing_dir, filing_metadata = self.downloader.download_with_metadata(
                     ticker=identifier,
-                    num_filings=count,
+                    num_filings=download_count,
                     filing_type=filing_type
                 )
 
@@ -629,24 +666,34 @@ class AnalysisService:
                 pdf_files,
                 key=lambda x: x.get('filing_date') or str(x.get('year', '')),
                 reverse=True
-            )[:count]
+            )
 
             for idx, pdf_info in enumerate(sorted_pdfs):
+                # Stop if we have enough filings
+                if len(pdf_paths) >= count:
+                    break
+
                 pdf_path = pdf_info['pdf_path']
                 filing_date = pdf_info.get('filing_date')
                 actual_year = pdf_info.get('year')
 
+                # Skip if already in our results (from cache)
+                if filing_date and filing_date in pdf_paths:
+                    self.logger.debug(f"Skipping {filing_date} - already cached")
+                    continue
+
                 # Use filing_date as key, fallback to index for compatibility
                 if filing_date:
-                    pdf_paths[filing_date] = pdf_path
+                    pdf_paths[filing_date] = Path(pdf_path)
                     # Cache with filing_date
                     self.db.cache_file(
-                        ticker, actual_year or 0, filing_type, str(pdf_path),
+                        identifier, actual_year or 0, filing_type, str(pdf_path),
                         filing_date=filing_date
                     )
+                    self.logger.info(f"[CACHE STORED] {filing_type} filed {filing_date} for {identifier}")
                 else:
                     # Fallback: use sequence index
-                    pdf_paths[idx + 1] = pdf_path
+                    pdf_paths[idx + 1] = Path(pdf_path)
 
                 self.logger.info(
                     f"Event filing: {filing_type} filed {filing_date or f'(seq {idx+1})'} "
