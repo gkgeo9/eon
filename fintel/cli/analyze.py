@@ -87,8 +87,19 @@ def analyze(
             TextColumn("[progress.description]{task.description}"),
             console=console
         ) as progress:
+            filing_path = config.data_dir / "sec-edgar-filings" / ticker / "10-K"
+            pdf_path = filing_path.parent / "PDF_Filings"
+            existing_pdfs = sorted(pdf_path.glob("*.pdf")) if pdf_path.exists() else []
+            use_cached_pdfs = len(existing_pdfs) >= years
+
+            if use_cached_pdfs:
+                console.print(
+                    f"[yellow]Using {len(existing_pdfs)} cached PDFs from {pdf_path}[/yellow]"
+                )
 
             # Step 1: Download
+            if use_cached_pdfs:
+                skip_download = True
             if not skip_download:
                 task = progress.add_task(f"Downloading {years} 10-K filings for {ticker}...", total=None)
 
@@ -101,10 +112,11 @@ def analyze(
                 progress.update(task, completed=True)
                 console.print(f" Downloaded to {filing_path}", style="green")
             else:
-                filing_path = config.data_dir / "sec-edgar-filings" / ticker / "10-K"
                 console.print(f"[yellow]Skipped download, using {filing_path}[/yellow]")
 
             # Step 2: Convert HTML to PDF
+            if use_cached_pdfs:
+                skip_convert = True
             if not skip_convert:
                 task = progress.add_task(f"Converting HTML to PDF...", total=None)
 
@@ -121,7 +133,7 @@ def analyze(
                 progress.update(task, completed=True)
                 console.print(f" Converted {len(pdf_paths)} filings to PDF", style="green")
             else:
-                pdf_paths = list(filing_path.rglob("*.pdf"))
+                pdf_paths = existing_pdfs or list(filing_path.rglob("*.pdf"))
                 console.print(f"[yellow]Skipped conversion, found {len(pdf_paths)} PDFs[/yellow]")
 
             if not pdf_paths:
