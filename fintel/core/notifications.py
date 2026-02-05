@@ -20,6 +20,13 @@ import urllib.error
 from datetime import datetime
 from typing import Optional, Dict, Any
 
+# Load .env file before reading environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, rely on system environment
+
 from fintel.core.logging import get_logger
 
 
