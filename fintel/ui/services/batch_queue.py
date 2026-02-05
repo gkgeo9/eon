@@ -1254,6 +1254,11 @@ class BatchQueueService:
 
         heartbeat_stop = self._start_lease_heartbeat(item_id)
 
+        # Create year progress callback for real-time tracking
+        def year_progress_callback(current_year: int, completed_count: int, total_count: int):
+            """Update batch_items with year progress."""
+            self._update_item_year_progress(item_id, str(current_year))
+
         # Run analysis
         try:
             run_id = service.run_analysis(
@@ -1262,7 +1267,8 @@ class BatchQueueService:
                 filing_type=batch_config['filing_type'],
                 num_years=batch_config['num_years'],
                 company_name=item.get('company_name'),
-                custom_prompt=batch_config.get('custom_prompt')
+                custom_prompt=batch_config.get('custom_prompt'),
+                year_progress_callback=year_progress_callback
             )
 
             # Finalize year progress tracking
