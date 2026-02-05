@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple, List
 from datetime import datetime
 
-from fintel.core import get_logger
+from fintel.core.logging import get_logger
 
 logger = get_logger(__name__)
 

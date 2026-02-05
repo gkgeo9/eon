@@ -20,7 +20,7 @@ import urllib.error
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from fintel.core import get_logger
+from fintel.core.logging import get_logger
 
 
 class NotificationService:
