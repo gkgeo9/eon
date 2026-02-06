@@ -99,7 +99,8 @@ class AnalysisService:
         api_key: Optional[str] = None,
         input_mode: str = 'ticker',
         cik: Optional[str] = None,
-        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None,
+        skip_years: Optional[List[str]] = None
     ) -> str:
         """
         Run analysis and return run_id for tracking.
@@ -124,6 +125,8 @@ class AnalysisService:
             cik: Explicit CIK value (if known from ticker lookup)
             year_progress_callback: Optional callback(current_year, completed_count, total_count)
                                    called after each year is processed
+            skip_years: Optional list of fiscal year strings already completed
+                        (for per-year resume after interrupted analysis)
 
         Returns:
             run_id (UUID string) for tracking progress
@@ -245,6 +248,22 @@ class AnalysisService:
 
             self.logger.info(f"Ready to analyze {len(pdf_paths)} years: {list(pdf_paths.keys())}")
 
+            # Per-year resume: filter out years already completed in a previous run
+            if skip_years:
+                skip_set = {str(y) for y in skip_years}
+                original_count = len(pdf_paths)
+                pdf_paths = {y: p for y, p in pdf_paths.items() if str(y) not in skip_set}
+                skipped = original_count - len(pdf_paths)
+                if skipped > 0:
+                    self.logger.info(
+                        f"Per-year resume: skipping {skipped} already-completed years, "
+                        f"{len(pdf_paths)} remaining"
+                    )
+                if not pdf_paths:
+                    self.logger.info(f"All years already completed for {ticker}, nothing to do")
+                    self.db.update_run_status(run_id, 'completed')
+                    return run_id
+
             self.db.update_run_progress(
                 run_id,
                 progress_message=f"Analyzing {ticker} filings...",
@@ -254,10 +273,11 @@ class AnalysisService:
             # Run analysis based on type
             # api_key is passed to support pre-reserved keys from batch processing (Fix #1)
             # year_progress_callback is passed for batch queue progress tracking
+            # filing_type is passed for incremental per-year result storage
             if analysis_type == 'fundamental':
                 results = self._run_fundamental_analysis(
                     ticker, pdf_paths, custom_prompt, run_id, api_key=api_key,
-                    year_progress_callback=year_progress_callback
+                    year_progress_callback=year_progress_callback, filing_type=filing_type
                 )
             elif analysis_type == 'excellent':
                 results = self._run_excellent_analysis(ticker, pdf_paths, run_id, api_key=api_key,
@@ -267,16 +287,16 @@ class AnalysisService:
                     year_progress_callback=year_progress_callback)
             elif analysis_type == 'buffett':
                 results = self._run_buffett_analysis(ticker, pdf_paths, run_id, api_key=api_key,
-                    year_progress_callback=year_progress_callback)
+                    year_progress_callback=year_progress_callback, filing_type=filing_type)
             elif analysis_type == 'taleb':
                 results = self._run_taleb_analysis(ticker, pdf_paths, run_id, api_key=api_key,
-                    year_progress_callback=year_progress_callback)
+                    year_progress_callback=year_progress_callback, filing_type=filing_type)
             elif analysis_type == 'contrarian':
                 results = self._run_contrarian_analysis(ticker, pdf_paths, run_id, api_key=api_key,
-                    year_progress_callback=year_progress_callback)
+                    year_progress_callback=year_progress_callback, filing_type=filing_type)
             elif analysis_type == 'multi':
                 results = self._run_multi_perspective(ticker, pdf_paths, run_id, api_key=api_key,
-                    year_progress_callback=year_progress_callback)
+                    year_progress_callback=year_progress_callback, filing_type=filing_type)
             elif analysis_type == 'scanner':
                 results = self._run_contrarian_scanner(ticker, pdf_paths, run_id, api_key=api_key,
                     year_progress_callback=year_progress_callback)
@@ -289,17 +309,22 @@ class AnalysisService:
             else:
                 raise ValueError(f"Unknown analysis type: {analysis_type}")
 
-            # Store results
+            # Store any results not already saved incrementally
+            # (Most results are now saved per-year inside analysis methods,
+            # but this catches any that weren't saved inline)
             for year, result in results.items():
-                if result:  # Only store successful results
-                    self.db.store_result(
-                        run_id=run_id,
-                        ticker=ticker,
-                        fiscal_year=year,
-                        filing_type=filing_type,
-                        result_type=type(result).__name__,
-                        result_data=result.model_dump()
-                    )
+                if result:
+                    try:
+                        self.db.store_result(
+                            run_id=run_id,
+                            ticker=ticker,
+                            fiscal_year=year,
+                            filing_type=filing_type,
+                            result_type=type(result).__name__,
+                            result_data=result.model_dump()
+                        )
+                    except Exception:
+                        pass  # Already stored incrementally
 
             self.db.update_run_status(run_id, 'completed')
             self.logger.info(f"Analysis completed successfully: {run_id}")
@@ -762,7 +787,8 @@ class AnalysisService:
         custom_prompt: Optional[str],
         run_id: str,
         api_key: Optional[str] = None,
-        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None,
+        filing_type: str = "10-K"
     ) -> Dict[Union[int, str], Any]:
         """
         Run fundamental analyzer for each year.
@@ -771,6 +797,7 @@ class AnalysisService:
             api_key: Optional pre-reserved API key from batch processing (Fix #1).
                      When provided, this key should be used instead of reserving a new one.
             year_progress_callback: Optional callback(current_year, completed_count, total_count)
+            filing_type: Filing type for incremental result storage
         """
         # Validate PDF paths
         if not pdf_paths or len(pdf_paths) == 0:
@@ -815,6 +842,12 @@ class AnalysisService:
             )
             if result:
                 results[year] = result
+                # Incremental save: persist each year's result immediately
+                self.db.store_result(
+                    run_id=run_id, ticker=ticker, fiscal_year=year,
+                    filing_type=filing_type, result_type=type(result).__name__,
+                    result_data=result.model_dump()
+                )
 
             # Call progress callback after each year
             if year_progress_callback:
@@ -983,7 +1016,8 @@ class AnalysisService:
         run_id: str,
         perspective: str,
         api_key: Optional[str] = None,
-        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None,
+        filing_type: str = "10-K"
     ) -> Dict[int, Any]:
         """
         Run perspective analysis for a given perspective type.
@@ -998,6 +1032,7 @@ class AnalysisService:
             perspective: Perspective type ('buffett', 'taleb', 'contrarian', 'multi')
             api_key: Optional pre-reserved API key
             year_progress_callback: Optional callback(current_year, completed_count, total_count)
+            filing_type: Filing type for incremental result storage
 
         Returns:
             Dictionary mapping year to analysis result
@@ -1060,6 +1095,12 @@ class AnalysisService:
             )
             if result:
                 results[year] = result
+                # Incremental save: persist each year's result immediately
+                self.db.store_result(
+                    run_id=run_id, ticker=ticker, fiscal_year=year,
+                    filing_type=filing_type, result_type=type(result).__name__,
+                    result_data=result.model_dump()
+                )
 
             # Call progress callback after each year
             if year_progress_callback:
@@ -1076,10 +1117,11 @@ class AnalysisService:
         pdf_paths: Dict[int, Path],
         run_id: str,
         api_key: Optional[str] = None,
-        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None,
+        filing_type: str = "10-K"
     ) -> Dict[int, Any]:
         """Run Buffett perspective analyzer."""
-        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'buffett', api_key, year_progress_callback)
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'buffett', api_key, year_progress_callback, filing_type)
 
     def _run_taleb_analysis(
         self,
@@ -1087,10 +1129,11 @@ class AnalysisService:
         pdf_paths: Dict[int, Path],
         run_id: str,
         api_key: Optional[str] = None,
-        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None,
+        filing_type: str = "10-K"
     ) -> Dict[int, Any]:
         """Run Taleb perspective analyzer."""
-        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'taleb', api_key, year_progress_callback)
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'taleb', api_key, year_progress_callback, filing_type)
 
     def _run_contrarian_analysis(
         self,
@@ -1098,10 +1141,11 @@ class AnalysisService:
         pdf_paths: Dict[int, Path],
         run_id: str,
         api_key: Optional[str] = None,
-        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None,
+        filing_type: str = "10-K"
     ) -> Dict[int, Any]:
         """Run Contrarian perspective analyzer."""
-        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'contrarian', api_key, year_progress_callback)
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'contrarian', api_key, year_progress_callback, filing_type)
 
     def _run_multi_perspective(
         self,
@@ -1109,10 +1153,11 @@ class AnalysisService:
         pdf_paths: Dict[int, Path],
         run_id: str,
         api_key: Optional[str] = None,
-        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None,
+        filing_type: str = "10-K"
     ) -> Dict[int, Any]:
         """Run multi-perspective analyzer (Buffett + Taleb + Contrarian)."""
-        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'multi', api_key, year_progress_callback)
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'multi', api_key, year_progress_callback, filing_type)
 
     def _run_contrarian_scanner(
         self,

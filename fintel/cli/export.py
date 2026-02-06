@@ -2,14 +2,18 @@
 Export command for exporting analysis results to various formats.
 
 This module provides the CLI command for exporting all stored analysis results
-to CSV, Excel, or Parquet formats.
+to CSV, Excel, or Parquet formats. Supports both file-based storage backends
+and direct database export via --batch-id.
 """
 
+import csv
+import json
 import click
 from pathlib import Path
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.panel import Panel
+from rich.table import Table
 from rich import print as rprint
 
 from fintel.core import get_config, get_logger
@@ -36,12 +40,19 @@ logger = get_logger(__name__)
 )
 @click.option("--source", type=click.Choice(["json", "parquet"], case_sensitive=False), default="json", help="Source storage backend")
 @click.option("--stats", is_flag=True, help="Display summary statistics only (no export)")
+@click.option("--batch-id", "-b", default=None,
+              help="Export results from a specific batch (queries database directly)")
+@click.option("--status-filter", default=None,
+              type=click.Choice(["completed", "failed", "skipped", "all"], case_sensitive=False),
+              help="Filter batch items by status (with --batch-id)")
 def export(
     format: str,
     output: str,
     analysis_type: str,
     source: str,
-    stats: bool
+    stats: bool,
+    batch_id: str,
+    status_filter: str
 ):
     """
     Export analysis results to various formats.
@@ -60,11 +71,19 @@ def export(
       # Export to Parquet for efficient querying
       fintel export --format parquet --output results.parquet
 
+      # Export results from a specific batch run
+      fintel export --batch-id abc12345 --output batch_results.csv
+
       # Show summary statistics only
       fintel export --stats
     """
     config = get_config()
     output_path = Path(output) if output else None
+
+    # Handle batch export (direct database query)
+    if batch_id:
+        _export_batch(batch_id, output_path, format, status_filter)
+        return
 
     console.print(Panel.fit(
         f"[bold cyan]Exporting Analysis Results[/bold cyan]\n"
@@ -164,6 +183,118 @@ def export(
         console.print(f"\n Export failed: {e}", style="bold red")
         logger.exception("Export failed")
         raise click.Abort()
+
+
+def _export_batch(
+    batch_id: str,
+    output_path: Path,
+    format: str,
+    status_filter: str = None
+) -> None:
+    """
+    Export results from a specific batch job via database query.
+
+    Joins batch_items with analysis_results to produce a comprehensive export
+    of all results from a batch run.
+
+    Args:
+        batch_id: Batch ID (can be partial - first 8 chars)
+        output_path: Output file path
+        format: Output format (csv, excel)
+        status_filter: Optional status filter (completed, failed, skipped, all)
+    """
+    from fintel.ui.database import DatabaseRepository
+
+    db = DatabaseRepository()
+
+    # Resolve partial batch ID
+    query = "SELECT batch_id, name, analysis_type FROM batch_jobs WHERE batch_id LIKE ?"
+    rows = db._execute_with_retry(query, (f"{batch_id}%",), fetch_all=True)
+
+    if not rows:
+        console.print(f"[red]No batch found matching: {batch_id}[/red]")
+        return
+    if len(rows) > 1:
+        console.print(f"[red]Multiple batches match '{batch_id}'. Please be more specific.[/red]")
+        for r in rows:
+            console.print(f"  {r['batch_id'][:12]}... - {r['name']}")
+        return
+
+    full_batch_id = rows[0]['batch_id']
+    batch_name = rows[0]['name']
+
+    # Build query for results
+    status_clause = ""
+    params = [full_batch_id]
+    if status_filter and status_filter != "all":
+        status_clause = "AND bi.status = ?"
+        params.append(status_filter)
+
+    query = f"""
+        SELECT
+            bi.ticker,
+            bi.company_name,
+            bi.status AS item_status,
+            bi.attempts,
+            bi.completed_years,
+            bi.total_years,
+            ar.fiscal_year,
+            ar.filing_type,
+            ar.result_type,
+            ar.result_json,
+            ar.created_at
+        FROM batch_items bi
+        LEFT JOIN analysis_results ar ON ar.run_id = bi.run_id
+        WHERE bi.batch_id = ? {status_clause}
+        ORDER BY bi.ticker, ar.fiscal_year
+    """
+    results = db._execute_with_retry(query, tuple(params), fetch_all=True)
+
+    if not results:
+        console.print(f"[yellow]No results found for batch {batch_id}[/yellow]")
+        return
+
+    console.print(Panel.fit(
+        f"[bold cyan]Batch Export[/bold cyan]\n"
+        f"Batch: {batch_name}\n"
+        f"ID: {full_batch_id[:16]}...\n"
+        f"Results: {len(results)} rows",
+        title="Fintel Batch Export"
+    ))
+
+    if format in ["csv", "all"]:
+        csv_path = output_path if format == "csv" else output_path.with_suffix(".csv")
+        with open(csv_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "ticker", "company_name", "item_status", "attempts",
+                "completed_years", "total_years", "fiscal_year",
+                "filing_type", "result_type", "result_json", "created_at"
+            ])
+            for row in results:
+                writer.writerow([
+                    row['ticker'], row['company_name'], row['item_status'],
+                    row['attempts'], row['completed_years'], row['total_years'],
+                    row['fiscal_year'], row['filing_type'], row['result_type'],
+                    row['result_json'], row['created_at']
+                ])
+        console.print(f"[green]Exported {len(results)} rows to {csv_path}[/green]")
+
+    elif format == "excel":
+        try:
+            import pandas as pd
+            df = pd.DataFrame([dict(row) for row in results])
+            excel_path = output_path if output_path.suffix == ".xlsx" else output_path.with_suffix(".xlsx")
+            df.to_excel(excel_path, index=False)
+            console.print(f"[green]Exported {len(results)} rows to {excel_path}[/green]")
+        except ImportError:
+            console.print("[red]pandas/openpyxl required for Excel export. Use --format csv instead.[/red]")
+
+    console.print(Panel.fit(
+        f"[bold green]Batch Export Complete![/bold green]\n"
+        f"Output: {output_path}",
+        title="Success"
+    ))
 
 
 def _display_stats(exporter: ResultExporter, analysis_type: str = None) -> None:

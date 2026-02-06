@@ -307,6 +307,8 @@ def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, num
               help="List all incomplete/paused batches that can be resumed")
 @click.option("--cleanup-chrome", is_flag=True,
               help="Cleanup orphaned Chrome processes during daily reset waits")
+@click.option("--priority", "-p", default=0, show_default=True, type=int,
+              help="Processing priority (higher = processed first, default: 0)")
 @click.option("--log-level", "-L", default="none", show_default=True,
               type=click.Choice(['none', 'min', 'verbose'], case_sensitive=False),
               help="Console logging level (none=quiet, min=warnings only, verbose=all). "
@@ -321,6 +323,7 @@ def batch(
     resume_id: Optional[str],
     list_incomplete: bool,
     cleanup_chrome: bool,
+    priority: int,
     log_level: str
 ):
     """
@@ -485,7 +488,7 @@ def batch(
             f"Progress: {status['completed_tickers']}/{status['total_tickers']} companies\n"
             f"Years per company: {num_years}\n"
             f"Previous Status: {status['status']}\n\n"
-            f"[dim]Note: Any company that was mid-analysis will restart from year 1[/dim]",
+            f"[dim]Note: Already-completed years are skipped (per-year resume)[/dim]",
             title="Fintel Batch Resume"
         ))
 
@@ -536,8 +539,9 @@ def batch(
         f"API keys available: {keys_count}\n"
         f"Requests/day: ~{requests_per_day}\n"
         f"Estimated duration: ~{days_estimate:.1f} days\n"
+        f"Priority: {priority}\n"
         f"Chrome cleanup: {'Yes' if cleanup_chrome else 'No'}\n\n"
-        f"[dim]Resume behavior: Per-company (not per-year)[/dim]",
+        f"[dim]Resume behavior: Per-year (completed years are not re-processed)[/dim]",
         title="Fintel Batch"
     ))
 
@@ -553,7 +557,8 @@ def batch(
         analysis_type=analysis_type,
         filing_type=filing_type,
         num_years=years,
-        max_retries=2
+        max_retries=2,
+        priority=priority
     )
 
     batch_id = _batch_service.create_batch_job(batch_config)
