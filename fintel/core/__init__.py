@@ -18,7 +18,7 @@ from .exceptions import (
     StorageError,
     ValidationError,
 )
-from .logging import setup_logging, get_logger
+from .logging import setup_logging, setup_cli_logging, get_logger
 from .interfaces import (
     IKeyManager,
     IRateLimiter,

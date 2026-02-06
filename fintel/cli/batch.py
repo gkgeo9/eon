@@ -42,12 +42,16 @@ from rich.layout import Layout
 from rich.text import Text
 
 from fintel.core import get_config, get_logger
+from fintel.core.logging import setup_cli_logging
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services.batch_queue import BatchQueueService, BatchJobConfig
 from fintel.cli.utils import read_ticker_file
 
 console = Console()
 logger = get_logger(__name__)
+
+# Will be reconfigured based on --log-level flag
+_log_level_configured = False
 
 # Global reference for signal handler
 _batch_service: Optional[BatchQueueService] = None
@@ -377,6 +381,10 @@ def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, db:
               help="List all incomplete/paused batches that can be resumed")
 @click.option("--cleanup-chrome", is_flag=True,
               help="Cleanup orphaned Chrome processes during daily reset waits")
+@click.option("--log-level", "-L", default="none", show_default=True,
+              type=click.Choice(['none', 'min', 'verbose'], case_sensitive=False),
+              help="Console logging level (none=quiet, min=warnings only, verbose=all). "
+                   "File logging is always enabled for debugging.")
 def batch(
     ticker_file: Optional[str],
     years: int,
@@ -386,7 +394,8 @@ def batch(
     resume: bool,
     resume_id: Optional[str],
     list_incomplete: bool,
-    cleanup_chrome: bool
+    cleanup_chrome: bool,
+    log_level: str
 ):
     """
     Multi-day batch processing of SEC filings analysis.
@@ -574,6 +583,10 @@ def batch(
     fintel batch --resume-id abc12345-1234-5678-abcd-123456789abc
     """
     global _batch_service, _current_batch_id
+
+    # Configure logging based on --log-level flag
+    # File logging is always enabled, console logging is controlled by the flag
+    setup_cli_logging(console_mode=log_level.lower())
 
     config = get_config()
     db = DatabaseRepository()

@@ -4,6 +4,7 @@
 Logging configuration for Fintel.
 
 Supports log rotation for long-running batch operations.
+Console logging can be controlled separately from file logging.
 """
 
 import logging
@@ -12,7 +13,7 @@ import sys
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Literal
 
 
 # Default log rotation settings (can be overridden via environment variables)
@@ -20,10 +21,19 @@ DEFAULT_LOG_MAX_SIZE_MB = int(os.environ.get("FINTEL_LOG_MAX_SIZE_MB", "10"))
 DEFAULT_LOG_BACKUP_COUNT = int(os.environ.get("FINTEL_LOG_BACKUP_COUNT", "5"))
 DEFAULT_LOG_FILE = os.environ.get("FINTEL_LOG_FILE", None)
 
+# Log level mapping for CLI
+LOG_LEVEL_MAP = {
+    "none": None,           # No console output
+    "min": logging.WARNING,  # Only warnings and errors
+    "verbose": logging.DEBUG,  # Everything including debug
+    "info": logging.INFO,    # Standard info level (default for file)
+}
+
 
 def setup_logging(
     name: str = "fintel",
     level: int = logging.INFO,
+    console_level: Optional[int] = None,
     log_file: Optional[Path] = None,
     log_to_console: bool = True,
     log_to_file: bool = True,
@@ -36,11 +46,12 @@ def setup_logging(
     Set up logging for the application.
 
     Supports log rotation to prevent disk exhaustion during long-running
-    batch operations.
+    batch operations. Console and file logging levels can be set independently.
 
     Args:
         name: Logger name
-        level: Logging level (logging.DEBUG, logging.INFO, etc.)
+        level: Base logging level (used for file, and console if console_level not set)
+        console_level: Optional separate level for console output (None = same as level)
         log_file: Path to log file (if None, uses default or FINTEL_LOG_FILE env)
         log_to_console: Whether to log to console
         log_to_file: Whether to log to file
@@ -58,7 +69,10 @@ def setup_logging(
         FINTEL_LOG_BACKUP_COUNT: Number of backup files to keep (default: 5)
     """
     logger = logging.getLogger(name)
-    logger.setLevel(level)
+
+    # Set logger to DEBUG to allow handlers to filter
+    # This ensures file gets everything even if console is more restrictive
+    logger.setLevel(logging.DEBUG)
 
     # Remove existing handlers to avoid duplicates
     logger.handlers = []
@@ -73,12 +87,13 @@ def setup_logging(
 
     # Console handler
     if log_to_console:
+        actual_console_level = console_level if console_level is not None else level
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(level)
+        console_handler.setLevel(actual_console_level)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
-    # File handler with optional rotation
+    # File handler with optional rotation - always logs at INFO or lower
     if log_to_file:
         # Determine log file path
         if log_file is None:
@@ -108,11 +123,45 @@ def setup_logging(
             # Use standard file handler
             file_handler = logging.FileHandler(log_file, encoding='utf-8')
 
-        file_handler.setLevel(level)
+        # File always logs at INFO level minimum (or DEBUG if level is DEBUG)
+        file_handler.setLevel(min(level, logging.INFO))
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
     return logger
+
+
+def setup_cli_logging(
+    console_mode: Literal["none", "min", "verbose"] = "none",
+    log_file: Optional[Path] = None
+) -> logging.Logger:
+    """
+    Set up logging for CLI commands with controllable console output.
+
+    File logging is always enabled at INFO level for debugging purposes.
+    Console logging can be:
+    - none: No console output (default)
+    - min: Only warnings and errors
+    - verbose: Full debug output
+
+    Args:
+        console_mode: Console logging mode (none/min/verbose)
+        log_file: Optional custom log file path
+
+    Returns:
+        Configured logger instance
+    """
+    console_level = LOG_LEVEL_MAP.get(console_mode)
+
+    return setup_logging(
+        name="fintel",
+        level=logging.INFO,  # File always gets INFO
+        console_level=console_level,
+        log_file=log_file,
+        log_to_console=(console_level is not None),
+        log_to_file=True,
+        use_rotation=True
+    )
 
 
 def setup_batch_logging(
