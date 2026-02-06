@@ -11,7 +11,7 @@ and progress tracking.
 import uuid
 import threading
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Union, TYPE_CHECKING
+from typing import Optional, List, Dict, Any, Union, Callable, TYPE_CHECKING
 from datetime import datetime
 
 from fintel.core import (
@@ -98,7 +98,8 @@ class AnalysisService:
         company_name: Optional[str] = None,
         api_key: Optional[str] = None,
         input_mode: str = 'ticker',
-        cik: Optional[str] = None
+        cik: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> str:
         """
         Run analysis and return run_id for tracking.
@@ -121,6 +122,8 @@ class AnalysisService:
             api_key: Optional pre-reserved API key (for batch processing Fix #1)
             input_mode: 'ticker' or 'cik' - determines how ticker param is interpreted
             cik: Explicit CIK value (if known from ticker lookup)
+            year_progress_callback: Optional callback(current_year, completed_count, total_count)
+                                   called after each year is processed
 
         Returns:
             run_id (UUID string) for tracking progress
@@ -250,28 +253,38 @@ class AnalysisService:
 
             # Run analysis based on type
             # api_key is passed to support pre-reserved keys from batch processing (Fix #1)
+            # year_progress_callback is passed for batch queue progress tracking
             if analysis_type == 'fundamental':
                 results = self._run_fundamental_analysis(
-                    ticker, pdf_paths, custom_prompt, run_id, api_key=api_key
+                    ticker, pdf_paths, custom_prompt, run_id, api_key=api_key,
+                    year_progress_callback=year_progress_callback
                 )
             elif analysis_type == 'excellent':
-                results = self._run_excellent_analysis(ticker, pdf_paths, run_id, api_key=api_key)
+                results = self._run_excellent_analysis(ticker, pdf_paths, run_id, api_key=api_key,
+                    year_progress_callback=year_progress_callback)
             elif analysis_type == 'objective':
-                results = self._run_objective_analysis(ticker, pdf_paths, run_id, api_key=api_key)
+                results = self._run_objective_analysis(ticker, pdf_paths, run_id, api_key=api_key,
+                    year_progress_callback=year_progress_callback)
             elif analysis_type == 'buffett':
-                results = self._run_buffett_analysis(ticker, pdf_paths, run_id, api_key=api_key)
+                results = self._run_buffett_analysis(ticker, pdf_paths, run_id, api_key=api_key,
+                    year_progress_callback=year_progress_callback)
             elif analysis_type == 'taleb':
-                results = self._run_taleb_analysis(ticker, pdf_paths, run_id, api_key=api_key)
+                results = self._run_taleb_analysis(ticker, pdf_paths, run_id, api_key=api_key,
+                    year_progress_callback=year_progress_callback)
             elif analysis_type == 'contrarian':
-                results = self._run_contrarian_analysis(ticker, pdf_paths, run_id, api_key=api_key)
+                results = self._run_contrarian_analysis(ticker, pdf_paths, run_id, api_key=api_key,
+                    year_progress_callback=year_progress_callback)
             elif analysis_type == 'multi':
-                results = self._run_multi_perspective(ticker, pdf_paths, run_id, api_key=api_key)
+                results = self._run_multi_perspective(ticker, pdf_paths, run_id, api_key=api_key,
+                    year_progress_callback=year_progress_callback)
             elif analysis_type == 'scanner':
-                results = self._run_contrarian_scanner(ticker, pdf_paths, run_id, api_key=api_key)
+                results = self._run_contrarian_scanner(ticker, pdf_paths, run_id, api_key=api_key,
+                    year_progress_callback=year_progress_callback)
             elif analysis_type.startswith('custom:'):
                 workflow_id = analysis_type.replace('custom:', '')
                 results = self._run_custom_workflow(
-                    ticker, pdf_paths, workflow_id, run_id, api_key=api_key
+                    ticker, pdf_paths, workflow_id, run_id, api_key=api_key,
+                    year_progress_callback=year_progress_callback
                 )
             else:
                 raise ValueError(f"Unknown analysis type: {analysis_type}")
@@ -748,7 +761,8 @@ class AnalysisService:
         pdf_paths: Dict[Union[int, str], Path],
         custom_prompt: Optional[str],
         run_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> Dict[Union[int, str], Any]:
         """
         Run fundamental analyzer for each year.
@@ -756,6 +770,7 @@ class AnalysisService:
         Args:
             api_key: Optional pre-reserved API key from batch processing (Fix #1).
                      When provided, this key should be used instead of reserving a new one.
+            year_progress_callback: Optional callback(current_year, completed_count, total_count)
         """
         # Validate PDF paths
         if not pdf_paths or len(pdf_paths) == 0:
@@ -801,6 +816,13 @@ class AnalysisService:
             if result:
                 results[year] = result
 
+            # Call progress callback after each year
+            if year_progress_callback:
+                try:
+                    year_progress_callback(year, idx, total_years)
+                except Exception as e:
+                    self.logger.warning(f"Year progress callback error: {e}")
+
         return results
 
     def _run_excellent_analysis(
@@ -808,7 +830,8 @@ class AnalysisService:
         ticker: str,
         pdf_paths: Dict[int, Path],
         run_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> Dict[int, Any]:
         """Run excellent company analyzer (multi-year, success-focused)."""
         # Validate PDF paths
@@ -846,6 +869,13 @@ class AnalysisService:
             if result:
                 fundamental_analyses[year] = result
 
+            # Call progress callback after each year
+            if year_progress_callback:
+                try:
+                    year_progress_callback(year, idx, total_years)
+                except Exception as e:
+                    self.logger.warning(f"Year progress callback error: {e}")
+
         # Now run excellent company analysis on all years together
         if fundamental_analyses:
             self.db.update_run_progress(
@@ -876,7 +906,8 @@ class AnalysisService:
         ticker: str,
         pdf_paths: Dict[int, Path],
         run_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> Dict[int, Any]:
         """Run objective company analyzer (multi-year, unbiased)."""
         # Validate PDF paths
@@ -913,6 +944,13 @@ class AnalysisService:
             if result:
                 fundamental_analyses[year] = result
 
+            # Call progress callback after each year
+            if year_progress_callback:
+                try:
+                    year_progress_callback(year, idx, total_years)
+                except Exception as e:
+                    self.logger.warning(f"Year progress callback error: {e}")
+
         # Now run objective company analysis on all years together
         if fundamental_analyses:
             self.db.update_run_progress(
@@ -944,7 +982,8 @@ class AnalysisService:
         pdf_paths: Dict[int, Path],
         run_id: str,
         perspective: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> Dict[int, Any]:
         """
         Run perspective analysis for a given perspective type.
@@ -958,6 +997,7 @@ class AnalysisService:
             run_id: Analysis run ID for progress updates
             perspective: Perspective type ('buffett', 'taleb', 'contrarian', 'multi')
             api_key: Optional pre-reserved API key
+            year_progress_callback: Optional callback(current_year, completed_count, total_count)
 
         Returns:
             Dictionary mapping year to analysis result
@@ -1021,6 +1061,13 @@ class AnalysisService:
             if result:
                 results[year] = result
 
+            # Call progress callback after each year
+            if year_progress_callback:
+                try:
+                    year_progress_callback(year, idx, total_years)
+                except Exception as e:
+                    self.logger.warning(f"Year progress callback error: {e}")
+
         return results
 
     def _run_buffett_analysis(
@@ -1028,47 +1075,52 @@ class AnalysisService:
         ticker: str,
         pdf_paths: Dict[int, Path],
         run_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> Dict[int, Any]:
         """Run Buffett perspective analyzer."""
-        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'buffett', api_key)
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'buffett', api_key, year_progress_callback)
 
     def _run_taleb_analysis(
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
         run_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> Dict[int, Any]:
         """Run Taleb perspective analyzer."""
-        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'taleb', api_key)
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'taleb', api_key, year_progress_callback)
 
     def _run_contrarian_analysis(
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
         run_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> Dict[int, Any]:
         """Run Contrarian perspective analyzer."""
-        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'contrarian', api_key)
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'contrarian', api_key, year_progress_callback)
 
     def _run_multi_perspective(
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
         run_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> Dict[int, Any]:
         """Run multi-perspective analyzer (Buffett + Taleb + Contrarian)."""
-        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'multi', api_key)
+        return self._run_perspective_analysis(ticker, pdf_paths, run_id, 'multi', api_key, year_progress_callback)
 
     def _run_contrarian_scanner(
         self,
         ticker: str,
         pdf_paths: Dict[int, Path],
         run_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> Dict[int, Any]:
         """Run contrarian scanner (multi-year, hidden gems detection)."""
         # First, run fundamental analysis for each year
@@ -1098,6 +1150,13 @@ class AnalysisService:
             )
             if result:
                 fundamental_analyses[year] = result
+
+            # Call progress callback after each year
+            if year_progress_callback:
+                try:
+                    year_progress_callback(year, idx, total_years)
+                except Exception as e:
+                    self.logger.warning(f"Year progress callback error: {e}")
 
         # Now run objective analysis first (scanner needs this)
         if fundamental_analyses:
@@ -1162,7 +1221,8 @@ class AnalysisService:
         pdf_paths: Dict[int, Path],
         workflow_id: str,
         run_id: str,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        year_progress_callback: Optional[Callable[[int, int, int], None]] = None
     ) -> Dict[int, Any]:
         """
         Run a custom workflow analysis.
@@ -1173,6 +1233,7 @@ class AnalysisService:
             api_key: Optional pre-reserved API key from batch processing
             workflow_id: Custom workflow identifier
             run_id: Analysis run ID
+            year_progress_callback: Optional callback(current_year, completed_count, total_count)
 
         Returns:
             Dictionary mapping year to analysis result
@@ -1258,6 +1319,13 @@ class AnalysisService:
             except Exception as e:
                 self.logger.error(f"Failed to analyze {ticker} {year} with {workflow.name}: {e}")
                 continue
+
+            # Call progress callback after each year
+            if year_progress_callback:
+                try:
+                    year_progress_callback(year, idx, total_years)
+                except Exception as e:
+                    self.logger.warning(f"Year progress callback error: {e}")
 
         return results
 

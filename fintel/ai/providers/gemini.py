@@ -284,6 +284,29 @@ class GeminiProvider(LLMProvider):
         ]
         return any(indicator in error_str for indicator in transient_indicators)
 
+    def _is_transient_service_error(self, error: Exception) -> bool:
+        """
+        Check if an error is a service unavailable (503) error.
+
+        This is a more specific check for server-side issues that indicate
+        the service is temporarily unavailable.
+
+        Args:
+            error: Exception from API call
+
+        Returns:
+            True if this is a service unavailable error
+        """
+        error_str = str(error).lower()
+        service_indicators = [
+            "503",
+            "service unavailable",
+            "service temporarily unavailable",
+            "overloaded",
+            "capacity",
+        ]
+        return any(indicator in error_str for indicator in service_indicators)
+
     def generate_with_retry(
         self,
         prompt: str,

@@ -18,7 +18,7 @@ from .exceptions import (
     StorageError,
     ValidationError,
 )
-from .logging import setup_logging, get_logger
+from .logging import setup_logging, setup_cli_logging, get_logger
 from .interfaces import (
     IKeyManager,
     IRateLimiter,
@@ -38,6 +38,13 @@ from .utils import (
     get_filing_category,
 )
 from .result import Result, BatchResult
+from .monitoring import (
+    DiskMonitor,
+    ProcessMonitor,
+    HealthChecker,
+    check_disk_space,
+    cleanup_orphaned_chrome,
+)
 
 __all__ = [
     # Config
@@ -78,4 +85,10 @@ __all__ = [
     # Result types
     "Result",
     "BatchResult",
+    # Monitoring
+    "DiskMonitor",
+    "ProcessMonitor",
+    "HealthChecker",
+    "check_disk_space",
+    "cleanup_orphaned_chrome",
 ]

@@ -5,9 +5,14 @@ Main Streamlit application - Home page with dashboard.
 """
 
 import streamlit as st
+from fintel.core import setup_logging, get_logger
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService
 from fintel.ui.theme import apply_theme
+
+# Initialize logging with timestamps
+setup_logging(level=20)  # INFO level
+logger = get_logger(__name__)
 
 # Apply global theme
 apply_theme()

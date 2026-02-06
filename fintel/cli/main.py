@@ -9,11 +9,14 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 
-from fintel.core import get_config, get_logger
+from fintel.core import get_config, get_logger, setup_logging
 from fintel.cli.analyze import analyze
 from fintel.cli.batch import batch
 from fintel.cli.export import export
 from fintel.cli.scan import scan_contrarian
+
+# Initialize logging with timestamps
+setup_logging(level=20)  # INFO level
 
 console = Console()
 logger = get_logger(__name__)

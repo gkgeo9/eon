@@ -5,11 +5,20 @@ Database repository for Fintel UI - handles all database operations.
 
 This class uses mixins to organize functionality by domain while
 maintaining a single public interface.
+
+Improvements for batch processing reliability:
+- Enhanced retry logic with exponential backoff and jitter
+- SQLITE_BUSY specific handling
+- Database backup support
+- Context manager support for proper cleanup
 """
 
 import sqlite3
 import logging
+import random
+import shutil
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -68,7 +77,33 @@ class DatabaseRepository(
             db_path: Path to SQLite database file
         """
         self.db_path = db_path
+        self._closed = False
         self._init_database()
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - ensure cleanup."""
+        self.close()
+        return False
+
+    def close(self):
+        """
+        Close the repository and release resources.
+
+        This method should be called when done with the repository,
+        especially in long-running batch processes.
+        """
+        if not self._closed:
+            self._closed = True
+            # Perform a final WAL checkpoint to ensure all data is written
+            try:
+                with sqlite3.connect(self.db_path, timeout=10.0) as conn:
+                    conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
+            except Exception as e:
+                logger.warning(f"Error during repository close: {e}")
 
     def _init_database(self):
         """Initialize database schema from migration scripts."""
@@ -97,17 +132,20 @@ class DatabaseRepository(
         self,
         query: str,
         params: tuple = (),
-        max_retries: int = 5,
+        max_retries: int = 10,
         fetch_one: bool = False,
         fetch_all: bool = False
     ):
         """
         Execute query with retry logic for database locks.
 
+        Uses exponential backoff with jitter to handle concurrent access.
+        Specifically handles SQLITE_BUSY errors which are common in batch processing.
+
         Args:
             query: SQL query string
             params: Query parameters
-            max_retries: Maximum number of retry attempts (default: 5)
+            max_retries: Maximum number of retry attempts (default: 10)
             fetch_one: If True, return the first row as a dict (or None)
             fetch_all: If True, return all rows as a list of dicts
 
@@ -119,11 +157,15 @@ class DatabaseRepository(
         Raises:
             sqlite3.OperationalError: If all retries fail
         """
+        last_error = None
+
         for attempt in range(max_retries):
             try:
-                with sqlite3.connect(self.db_path, timeout=10.0) as conn:
+                with sqlite3.connect(self.db_path, timeout=30.0) as conn:
                     # Enable WAL mode for better concurrency
                     conn.execute("PRAGMA journal_mode=WAL")
+                    # Busy timeout in milliseconds (30 seconds)
+                    conn.execute("PRAGMA busy_timeout=30000")
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
                     cursor.execute(query, params)
@@ -139,13 +181,36 @@ class DatabaseRepository(
                     else:
                         # For INSERT/UPDATE/DELETE, return useful metadata
                         return cursor.lastrowid if cursor.lastrowid else cursor.rowcount
+
             except sqlite3.OperationalError as e:
-                if "locked" in str(e) and attempt < max_retries - 1:
-                    wait_time = 0.5 * (2 ** attempt)  # Exponential backoff
-                    logger.warning(f"Database locked, retry {attempt + 1}/{max_retries} in {wait_time}s")
+                last_error = e
+                error_str = str(e).lower()
+
+                # Check for retryable errors (locked, busy)
+                is_retryable = any(keyword in error_str for keyword in [
+                    "locked", "busy", "database is locked", "database is busy"
+                ])
+
+                if is_retryable and attempt < max_retries - 1:
+                    # Exponential backoff with jitter: base * 2^attempt * (0.5 to 1.5)
+                    base_wait = 0.1 * (2 ** attempt)
+                    jitter = random.uniform(0.5, 1.5)
+                    wait_time = min(base_wait * jitter, 30.0)  # Cap at 30 seconds
+
+                    logger.warning(
+                        f"Database busy/locked, retry {attempt + 1}/{max_retries} "
+                        f"in {wait_time:.2f}s: {e}"
+                    )
                     time.sleep(wait_time)
                 else:
+                    logger.error(
+                        f"Database operation failed after {attempt + 1} attempts: {e}"
+                    )
                     raise
+
+        # Should not reach here, but raise last error if we do
+        if last_error:
+            raise last_error
 
     def maintenance(self) -> dict:
         """
@@ -213,19 +278,100 @@ class DatabaseRepository(
 
         return results
 
+    def backup(self, backup_dir: Optional[str] = None) -> Optional[str]:
+        """
+        Create a backup of the database.
+
+        Uses SQLite's built-in backup API for safe, consistent backups
+        even while the database is being written to.
+
+        Args:
+            backup_dir: Directory for backup file (default: same as database)
+
+        Returns:
+            Path to backup file, or None if backup failed
+        """
+        try:
+            db_file = Path(self.db_path)
+            if not db_file.exists():
+                logger.warning(f"Database file does not exist: {self.db_path}")
+                return None
+
+            # Determine backup directory
+            if backup_dir:
+                backup_path = Path(backup_dir)
+            else:
+                backup_path = db_file.parent / "backups"
+
+            backup_path.mkdir(parents=True, exist_ok=True)
+
+            # Create backup filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_file = backup_path / f"fintel_backup_{timestamp}.db"
+
+            # Use SQLite's backup API for consistency
+            with sqlite3.connect(self.db_path, timeout=30.0) as source_conn:
+                # Perform WAL checkpoint first to ensure all data is in main file
+                source_conn.execute("PRAGMA wal_checkpoint(FULL)")
+
+                with sqlite3.connect(str(backup_file)) as dest_conn:
+                    source_conn.backup(dest_conn)
+
+            # Verify backup
+            backup_size = backup_file.stat().st_size
+            source_size = db_file.stat().st_size
+
+            logger.info(
+                f"Database backup created: {backup_file} "
+                f"({backup_size / (1024 * 1024):.1f}MB)"
+            )
+
+            # Clean up old backups (keep last 5)
+            self._cleanup_old_backups(backup_path, keep=5)
+
+            return str(backup_file)
+
+        except Exception as e:
+            logger.error(f"Database backup failed: {e}")
+            return None
+
+    def _cleanup_old_backups(self, backup_dir: Path, keep: int = 5):
+        """
+        Remove old backup files, keeping only the most recent ones.
+
+        Args:
+            backup_dir: Directory containing backup files
+            keep: Number of backups to keep
+        """
+        try:
+            backups = sorted(
+                backup_dir.glob("fintel_backup_*.db"),
+                key=lambda f: f.stat().st_mtime,
+                reverse=True
+            )
+
+            for old_backup in backups[keep:]:
+                old_backup.unlink()
+                logger.debug(f"Removed old backup: {old_backup}")
+
+        except Exception as e:
+            logger.warning(f"Error cleaning up old backups: {e}")
+
     def _read_dataframe_with_retry(
         self,
         query: str,
         params: tuple = (),
-        max_retries: int = 5
+        max_retries: int = 10
     ) -> pd.DataFrame:
         """
         Read a DataFrame from database with retry logic for database locks.
 
+        Uses exponential backoff with jitter for reliable concurrent reads.
+
         Args:
             query: SQL query string
             params: Query parameters (optional)
-            max_retries: Maximum number of retry attempts (default: 5)
+            max_retries: Maximum number of retry attempts (default: 10)
 
         Returns:
             DataFrame with query results
@@ -233,23 +379,41 @@ class DatabaseRepository(
         Raises:
             sqlite3.OperationalError: If all retries fail
         """
+        last_error = None
+
         for attempt in range(max_retries):
             try:
-                with sqlite3.connect(self.db_path, timeout=10.0) as conn:
+                with sqlite3.connect(self.db_path, timeout=30.0) as conn:
                     conn.execute("PRAGMA journal_mode=WAL")
+                    conn.execute("PRAGMA busy_timeout=30000")
                     if params:
                         return pd.read_sql(query, conn, params=params)
                     else:
                         return pd.read_sql(query, conn)
+
             except sqlite3.OperationalError as e:
-                if "locked" in str(e) and attempt < max_retries - 1:
-                    wait_time = 0.5 * (2 ** attempt)
-                    logger.warning(f"Database locked (read), retry {attempt + 1}/{max_retries} in {wait_time}s")
+                last_error = e
+                error_str = str(e).lower()
+
+                is_retryable = any(keyword in error_str for keyword in [
+                    "locked", "busy", "database is locked", "database is busy"
+                ])
+
+                if is_retryable and attempt < max_retries - 1:
+                    base_wait = 0.1 * (2 ** attempt)
+                    jitter = random.uniform(0.5, 1.5)
+                    wait_time = min(base_wait * jitter, 30.0)
+
+                    logger.warning(
+                        f"Database busy/locked (read), retry {attempt + 1}/{max_retries} "
+                        f"in {wait_time:.2f}s"
+                    )
                     time.sleep(wait_time)
                 else:
                     raise
 
         # Should not reach here, but return empty DataFrame as fallback
+        logger.error(f"All read retries failed: {last_error}")
         return pd.DataFrame()
 
     # ==================== Raw Query Helpers (for DB Viewer) ====================

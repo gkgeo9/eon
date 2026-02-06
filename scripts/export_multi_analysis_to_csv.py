@@ -3,7 +3,7 @@
 Export Multi-Perspective Analysis (Buffett/Taleb/Contrarian) from a batch to CSV.
 
 Usage:
-    python tests/export_multi_analysis_to_csv.py
+    python scripts/export_multi_analysis_to_csv.py
 
 Output:
     data/multi_analysis_export.csv
@@ -15,7 +15,7 @@ import sqlite3
 from pathlib import Path
 
 # Batch to export
-BATCH_NAME = "Massive Multi Analysis From Factset 17012026"
+BATCH_NAME = "IV40to80_2"
 
 
 def export_multi_analysis_to_csv():
