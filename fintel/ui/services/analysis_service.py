@@ -1351,6 +1351,56 @@ class AnalysisService:
 
         return {'status': 'not_found'}
 
+    def get_available_filing_types(
+        self,
+        ticker: str,
+        input_mode: str = "ticker",
+        max_cache_age_hours: int = 24,
+    ) -> list:
+        """
+        Get available SEC filing types for a company, with caching.
+
+        Checks the database cache first, then queries the SEC API if needed.
+        This centralises the logic that was previously duplicated in the
+        Analysis page.
+
+        Args:
+            ticker: Stock ticker or CIK number.
+            input_mode: ``"ticker"`` or ``"cik"``.
+            max_cache_age_hours: Cache TTL.
+
+        Returns:
+            List of filing type strings (e.g. ``["10-K", "10-Q", "8-K"]``).
+        """
+        from fintel.core.analysis_types import DEFAULT_FILING_TYPES
+        from fintel.data.sources.sec import SECDownloader
+
+        if not ticker:
+            return list(DEFAULT_FILING_TYPES)
+
+        ticker = ticker.upper().strip() if input_mode == "ticker" else ticker.strip()
+
+        # Check cache first
+        cached_types = self.db.get_cached_filing_types(ticker, max_age_hours=max_cache_age_hours)
+        if cached_types:
+            return cached_types
+
+        # Query SEC API
+        try:
+            downloader = SECDownloader()
+            if input_mode == "cik":
+                filing_types = downloader.get_available_filing_types_by_cik(ticker)
+            else:
+                filing_types = downloader.get_available_filing_types(ticker)
+
+            if filing_types:
+                self.db.cache_filing_types(ticker, filing_types)
+                return filing_types
+        except Exception as e:
+            self.logger.warning(f"Could not fetch filing types for {ticker}: {e}")
+
+        return list(DEFAULT_FILING_TYPES)
+
     def cancel_analysis(self, run_id: str, timeout: float = 30.0) -> bool:
         """
         Cancel a running analysis with actual thread termination.

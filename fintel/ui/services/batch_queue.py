@@ -1698,6 +1698,95 @@ class BatchQueueService:
         self.logger.info(f"Deleted batch {batch_id}")
         return True
 
+    # ------------------------------------------------------------------
+    # Query helpers for both CLI and UI
+    # ------------------------------------------------------------------
+
+    def get_incomplete_batches(self) -> List[Dict]:
+        """
+        Get batches that can be resumed (stopped, paused, waiting_reset, or running
+        from a crashed process).
+
+        Returns:
+            List of batch dicts with status, progress, and timing info.
+        """
+        query = """
+            SELECT batch_id, name, total_tickers, completed_tickers, failed_tickers,
+                   skipped_tickers, status, analysis_type, created_at, last_activity_at
+            FROM batch_jobs
+            WHERE status IN ('stopped', 'paused', 'waiting_reset', 'running')
+            ORDER BY last_activity_at DESC
+        """
+        rows = self.db._execute_with_retry(query, fetch_all=True)
+        return [dict(row) for row in rows] if rows else []
+
+    def get_running_items(self, batch_id: str, limit: int = 25) -> List[Dict]:
+        """
+        Get currently running items (active workers) with year progress.
+
+        Args:
+            batch_id: Batch to query.
+            limit: Maximum number of items to return.
+
+        Returns:
+            List of dicts with ticker, company_name, started_at, attempts,
+            total_years, completed_years, current_year.
+        """
+        query = """
+            SELECT ticker, company_name, started_at, attempts,
+                   total_years, completed_years, current_year
+            FROM batch_items
+            WHERE batch_id = ? AND status = 'running'
+            ORDER BY started_at DESC
+            LIMIT ?
+        """
+        rows = self.db._execute_with_retry(query, (batch_id, limit), fetch_all=True)
+        return [dict(row) for row in rows] if rows else []
+
+    def get_recent_completed(self, batch_id: str, limit: int = 5) -> List[Dict]:
+        """
+        Get recently completed items with year progress.
+
+        Args:
+            batch_id: Batch to query.
+            limit: Maximum number of items to return.
+
+        Returns:
+            List of dicts with ticker, company_name, completed_at,
+            total_years, completed_years.
+        """
+        query = """
+            SELECT ticker, company_name, completed_at,
+                   total_years, completed_years
+            FROM batch_items
+            WHERE batch_id = ? AND status = 'completed'
+            ORDER BY completed_at DESC
+            LIMIT ?
+        """
+        rows = self.db._execute_with_retry(query, (batch_id, limit), fetch_all=True)
+        return [dict(row) for row in rows] if rows else []
+
+    def get_recent_failed(self, batch_id: str, limit: int = 5) -> List[Dict]:
+        """
+        Get recently failed items.
+
+        Args:
+            batch_id: Batch to query.
+            limit: Maximum number of items to return.
+
+        Returns:
+            List of dicts with ticker, company_name, error_message, attempts.
+        """
+        query = """
+            SELECT ticker, company_name, error_message, attempts
+            FROM batch_items
+            WHERE batch_id = ? AND status = 'failed'
+            ORDER BY completed_at DESC
+            LIMIT ?
+        """
+        rows = self.db._execute_with_retry(query, (batch_id, limit), fetch_all=True)
+        return [dict(row) for row in rows] if rows else []
+
     def _get_batch_config(self, batch_id: str) -> Dict:
         """Get batch configuration."""
         query = """

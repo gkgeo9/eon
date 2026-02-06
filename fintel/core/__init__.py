@@ -38,6 +38,18 @@ from .utils import (
     get_filing_category,
 )
 from .result import Result, BatchResult
+from .formatting import format_duration
+from .analysis_types import (
+    AnalysisTypeInfo,
+    ANALYSIS_TYPES,
+    MULTI_YEAR_TYPES,
+    CLI_ANALYSIS_CHOICES,
+    DEFAULT_FILING_TYPES,
+    get_analysis_type,
+    is_valid_analysis_type,
+    requires_multi_year,
+    get_ui_options,
+)
 from .monitoring import (
     DiskMonitor,
     ProcessMonitor,
@@ -85,6 +97,18 @@ __all__ = [
     # Result types
     "Result",
     "BatchResult",
+    # Formatting
+    "format_duration",
+    # Analysis types
+    "AnalysisTypeInfo",
+    "ANALYSIS_TYPES",
+    "MULTI_YEAR_TYPES",
+    "CLI_ANALYSIS_CHOICES",
+    "DEFAULT_FILING_TYPES",
+    "get_analysis_type",
+    "is_valid_analysis_type",
+    "requires_multi_year",
+    "get_ui_options",
     # Monitoring
     "DiskMonitor",
     "ProcessMonitor",

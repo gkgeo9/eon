@@ -43,6 +43,8 @@ from rich.text import Text
 
 from fintel.core import get_config, get_logger
 from fintel.core.logging import setup_cli_logging
+from fintel.core.formatting import format_duration
+from fintel.core.analysis_types import CLI_ANALYSIS_CHOICES, is_valid_analysis_type
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services.batch_queue import BatchQueueService, BatchJobConfig
 from fintel.cli.utils import read_ticker_file
@@ -82,81 +84,8 @@ def _setup_signal_handlers():
     signal.signal(signal.SIGTERM, _signal_handler)
 
 
-def _get_incomplete_batches(db: DatabaseRepository) -> list:
-    """Get list of incomplete batches that can be resumed."""
-    query = """
-        SELECT batch_id, name, total_tickers, completed_tickers, failed_tickers,
-               skipped_tickers, status, analysis_type, created_at, last_activity_at
-        FROM batch_jobs
-        WHERE status IN ('stopped', 'paused', 'waiting_reset', 'running')
-        ORDER BY last_activity_at DESC
-    """
-    rows = db._execute_with_retry(query, fetch_all=True)
-    return [dict(row) for row in rows] if rows else []
-
-
-def _get_running_items(db: DatabaseRepository, batch_id: str) -> List[Dict]:
-    """Get currently running items (active workers) with year progress."""
-    query = """
-        SELECT ticker, company_name, started_at, attempts,
-               total_years, completed_years, current_year
-        FROM batch_items
-        WHERE batch_id = ? AND status = 'running'
-        ORDER BY started_at DESC
-        LIMIT 25
-    """
-    rows = db._execute_with_retry(query, (batch_id,), fetch_all=True)
-    return [dict(row) for row in rows] if rows else []
-
-
-def _get_recent_completed(db: DatabaseRepository, batch_id: str, limit: int = 5) -> List[Dict]:
-    """Get recently completed items with year progress."""
-    query = """
-        SELECT ticker, company_name, completed_at,
-               total_years, completed_years
-        FROM batch_items
-        WHERE batch_id = ? AND status = 'completed'
-        ORDER BY completed_at DESC
-        LIMIT ?
-    """
-    rows = db._execute_with_retry(query, (batch_id, limit), fetch_all=True)
-    return [dict(row) for row in rows] if rows else []
-
-
-def _get_recent_failed(db: DatabaseRepository, batch_id: str, limit: int = 5) -> List[Dict]:
-    """Get recently failed items."""
-    query = """
-        SELECT ticker, company_name, error_message, attempts
-        FROM batch_items
-        WHERE batch_id = ? AND status = 'failed'
-        ORDER BY completed_at DESC
-        LIMIT ?
-    """
-    rows = db._execute_with_retry(query, (batch_id, limit), fetch_all=True)
-    return [dict(row) for row in rows] if rows else []
-
-
-def _format_duration(start_time_str: Optional[str]) -> str:
-    """Format duration since start time."""
-    if not start_time_str:
-        return "N/A"
-    try:
-        start = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
-        if start.tzinfo:
-            start = start.replace(tzinfo=None)
-        duration = datetime.utcnow() - start
-        minutes = int(duration.total_seconds() // 60)
-        seconds = int(duration.total_seconds() % 60)
-        if minutes > 0:
-            return f"{minutes}m {seconds}s"
-        return f"{seconds}s"
-    except:
-        return "N/A"
-
-
 def _build_progress_display(
     batch_service: BatchQueueService,
-    db: DatabaseRepository,
     batch_id: str,
     num_years: int
 ) -> Panel:
@@ -165,10 +94,10 @@ def _build_progress_display(
     if not status:
         return Panel("[red]Batch not found[/red]")
 
-    # Get detailed item info
-    running_items = _get_running_items(db, batch_id)
-    recent_completed = _get_recent_completed(db, batch_id, limit=3)
-    recent_failed = _get_recent_failed(db, batch_id, limit=3)
+    # Use shared service methods instead of raw SQL
+    running_items = batch_service.get_running_items(batch_id)
+    recent_completed = batch_service.get_recent_completed(batch_id, limit=3)
+    recent_failed = batch_service.get_recent_failed(batch_id, limit=3)
 
     # Calculate stats
     total = status['total_tickers']
@@ -226,7 +155,7 @@ def _build_progress_display(
         try:
             est = datetime.fromisoformat(status['estimated_completion'])
             est_str = est.strftime("%Y-%m-%d %H:%M")
-        except:
+        except Exception:
             est_str = "N/A"
     else:
         est_str = "Calculating..."
@@ -256,7 +185,7 @@ def _build_progress_display(
 
         for item in running_items[:10]:  # Show max 10 workers
             company = (item.get('company_name') or '')[:19]
-            duration = _format_duration(item.get('started_at'))
+            duration = format_duration(start=item.get('started_at'))
             attempt = item.get('attempts', 1)
 
             # Year progress display
@@ -339,7 +268,7 @@ def _build_progress_display(
     )
 
 
-def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, db: DatabaseRepository, num_years: int):
+def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, num_years: int):
     """Display live progress of batch processing with detailed worker info."""
     global _shutdown_requested
 
@@ -350,7 +279,7 @@ def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, db:
                 break
 
             # Build and display progress
-            panel = _build_progress_display(batch_service, db, batch_id, num_years)
+            panel = _build_progress_display(batch_service, batch_id, num_years)
             live.update(panel)
 
             # Check if batch is complete
@@ -367,9 +296,7 @@ def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, db:
 @click.option("--name", "-n", default=None,
               help="Batch job name (default: auto-generated timestamp)")
 @click.option("--analysis-type", "-t", default="multi", show_default=True,
-              type=click.Choice(['fundamental', 'multi', 'buffett', 'taleb',
-                                'contrarian', 'excellent', 'objective', 'scanner'],
-                               case_sensitive=False),
+              type=click.Choice(CLI_ANALYSIS_CHOICES, case_sensitive=False),
               help="Type of analysis to run")
 @click.option("--filing-type", "-f", default="10-K", show_default=True,
               help="SEC filing type to analyze (10-K, 20-F, 10-Q, 8-K, 4, DEF 14A, etc.)")
@@ -429,55 +356,15 @@ def batch(
     ═══════════════════════════════════════════════════════════════════════════
 
     \b
-    Companies × Years = Total Requests → Days Needed
-    ─────────────────────────────────────────────────
-    10 × 7   =    70 requests  →  < 1 day
-    100 × 7  =   700 requests  →  1.4 days
-    500 × 7  = 3,500 requests  →  7 days
-    1000 × 7 = 7,000 requests  →  14 days
+    Companies x Years = Total Requests -> Days Needed
+    -------------------------------------------------
+    10 x 7   =    70 requests  ->  < 1 day
+    100 x 7  =   700 requests  ->  1.4 days
+    500 x 7  = 3,500 requests  ->  7 days
+    1000 x 7 = 7,000 requests  ->  14 days
 
     \b
-    Formula: Days = (Companies × Years) ÷ (API_Keys × 20)
-
-    \b
-    ═══════════════════════════════════════════════════════════════════════════
-    ANALYSIS TYPES
-    ═══════════════════════════════════════════════════════════════════════════
-
-    \b
-    multi       - Multi-perspective analysis (Buffett + Taleb + Contrarian)
-    fundamental - Basic 10-K financial analysis
-    buffett     - Warren Buffett value investing lens
-    taleb       - Nassim Taleb antifragility analysis
-    contrarian  - Contrarian/skeptical analysis
-    excellent   - Excellence/quality analysis
-    objective   - Objective factual analysis
-    scanner     - Quick screening mode
-
-    \b
-    ═══════════════════════════════════════════════════════════════════════════
-    FILING TYPES
-    ═══════════════════════════════════════════════════════════════════════════
-
-    \b
-    Annual filings (one per year):
-        10-K      - US annual report (default)
-        20-F      - Foreign private issuer annual report
-        40-F      - Canadian issuer annual report
-        10-K/A    - Amended annual report
-
-    \b
-    Quarterly filings (4 per year):
-        10-Q      - US quarterly report
-        10-Q/A    - Amended quarterly report
-        6-K       - Foreign issuer semi-annual/interim
-
-    \b
-    Event-based filings (multiple per year):
-        8-K       - Current reports (material events)
-        4         - Insider trading (Form 4)
-        DEF 14A   - Proxy statements
-        SC 13D/G  - Beneficial ownership
+    Formula: Days = (Companies x Years) / (API_Keys x 20)
 
     \b
     ═══════════════════════════════════════════════════════════════════════════
@@ -485,65 +372,11 @@ def batch(
     ═══════════════════════════════════════════════════════════════════════════
 
     \b
-    • Progress is tracked per-COMPANY, not per-year
-    • If interrupted mid-company (e.g., year 4 of 7), that company
+    - Progress is tracked per-COMPANY, not per-year
+    - If interrupted mid-company (e.g., year 4 of 7), that company
       restarts from year 1 on resume
-    • Completed companies are NEVER re-processed
-    • Failed companies are retried up to 3 times
-
-    \b
-    ═══════════════════════════════════════════════════════════════════════════
-    ENVIRONMENT VARIABLES
-    ═══════════════════════════════════════════════════════════════════════════
-
-    \b
-    FINTEL_MAX_PARALLEL_WORKERS
-        Max companies processed simultaneously (default: 3)
-        - Set to 1-3 for free tier (avoids token/minute limits)
-        - Set to 10-25 for paid tier
-        - Set to 0 for unlimited (use all API keys)
-
-    \b
-    FINTEL_SEC_WORKER_STAGGER_DELAY
-        Seconds between worker starts (default: 30)
-        - Prevents all workers hitting API at once
-
-    \b
-    Example (PowerShell):
-        $env:FINTEL_MAX_PARALLEL_WORKERS = "2"
-        fintel batch tickers.csv --years 7
-
-    \b
-    Example (Linux/Mac):
-        export FINTEL_MAX_PARALLEL_WORKERS=2
-        fintel batch tickers.csv --years 7
-
-    \b
-    ═══════════════════════════════════════════════════════════════════════════
-    LONG-RUNNING SETUP (recommended for multi-day batches)
-    ═══════════════════════════════════════════════════════════════════════════
-
-    \b
-    Use tmux or screen to keep the process running after disconnect:
-
-    \b
-    # Start a tmux session
-    tmux new -s fintel-batch
-
-    \b
-    # Run your batch
-    fintel batch companies.csv --years 7
-
-    \b
-    # Detach from tmux (keeps running): Ctrl+B, then D
-
-    \b
-    # Reattach later to check progress
-    tmux attach -t fintel-batch
-
-    \b
-    # Graceful stop: Press Ctrl+C once (waits for current items)
-    # Force stop: Press Ctrl+C twice
+    - Completed companies are NEVER re-processed
+    - Failed companies are retried up to 3 times
 
     \b
     ═══════════════════════════════════════════════════════════════════════════
@@ -561,14 +394,6 @@ def batch(
     \b
     # Analyze foreign company filings (20-F)
     fintel batch foreign_tickers.csv --filing-type 20-F --years 5
-
-    \b
-    # Analyze quarterly filings (10-Q)
-    fintel batch tickers.csv --filing-type 10-Q --years 2
-
-    \b
-    # Custom batch name
-    fintel batch tickers.csv -n "Q1 2024 Analysis" --years 5
 
     \b
     # List batches that can be resumed
@@ -595,9 +420,9 @@ def batch(
     # Setup signal handlers
     _setup_signal_handlers()
 
-    # Handle list-incomplete
+    # Handle list-incomplete — use shared service method
     if list_incomplete:
-        incomplete = _get_incomplete_batches(db)
+        incomplete = _batch_service.get_incomplete_batches()
         if not incomplete:
             console.print("[green]No incomplete batches found.[/green]")
             return
@@ -635,7 +460,7 @@ def batch(
             batch_id = resume_id
         else:
             # Find most recent incomplete batch
-            incomplete = _get_incomplete_batches(db)
+            incomplete = _batch_service.get_incomplete_batches()
             if not incomplete:
                 console.print("[red]No incomplete batches to resume.[/red]")
                 return
@@ -664,7 +489,7 @@ def batch(
         # Resume the batch
         if _batch_service.resume_batch(batch_id):
             console.print("[green]Batch resumed successfully[/green]\n")
-            _display_batch_progress(_batch_service, batch_id, db, num_years)
+            _display_batch_progress(_batch_service, batch_id, num_years)
         else:
             console.print("[red]Failed to resume batch[/red]")
         return
@@ -687,11 +512,10 @@ def batch(
         console.print(f"[red]Error: No tickers found in {ticker_file}[/red]")
         return
 
-    # Validate analysis type
-    valid_types = ['fundamental', 'multi', 'buffett', 'taleb', 'contrarian', 'excellent', 'objective', 'scanner']
-    if analysis_type not in valid_types and not analysis_type.startswith('custom:'):
+    # Validate analysis type using shared registry
+    if not is_valid_analysis_type(analysis_type):
         console.print(f"[red]Invalid analysis type: {analysis_type}[/red]")
-        console.print(f"[yellow]Valid types: {', '.join(valid_types)}[/yellow]")
+        console.print(f"[yellow]Valid types: {', '.join(CLI_ANALYSIS_CHOICES)}[/yellow]")
         console.print("[yellow]For custom workflows, use: custom:<workflow_id>[/yellow]")
         return
 
@@ -744,7 +568,7 @@ def batch(
 
     # Start batch processing
     if _batch_service.start_batch_job(batch_id):
-        _display_batch_progress(_batch_service, batch_id, db, years)
+        _display_batch_progress(_batch_service, batch_id, years)
 
         # Final status
         final_status = _batch_service.get_batch_status(batch_id)
