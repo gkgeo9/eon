@@ -326,57 +326,40 @@ class BatchQueueService:
         """
         self.db._execute_with_retry(query, (now, self._lease_expires_at(), item_id))
 
-    def _update_item_year_progress(self, item_id: int, current_year: Optional[str] = None):
+    def _update_item_year_progress(self, item_id: int, current_year: Optional[str] = None, completed_count: Optional[int] = None, total_count: Optional[int] = None):
         """
-        Update year progress for a batch item by querying the linked analysis run.
+        Update year progress for a batch item.
 
-        This method is called periodically during analysis to update the completed
-        years count for display purposes.
+        This method is called during analysis to update the progress display.
 
         Args:
             item_id: Batch item ID
-            current_year: Optional current year being processed (for display)
+            current_year: Current year being processed (for display)
+            completed_count: Number of years completed so far
+            total_count: Total number of years to process
         """
-        # Get the run_id for this item
-        query = """
-            SELECT run_id FROM batch_items WHERE id = ?
-        """
-        row = self.db._execute_with_retry(query, (item_id,), fetch_one=True)
+        # Build update query based on what we have
+        updates = []
+        params = []
 
-        if not row or not row.get('run_id'):
-            # No run_id yet, just update current_year if provided
-            if current_year:
-                query = """
-                    UPDATE batch_items SET current_year = ? WHERE id = ?
-                """
-                self.db._execute_with_retry(query, (str(current_year), item_id))
+        if current_year is not None:
+            updates.append("current_year = ?")
+            params.append(str(current_year))
+
+        if completed_count is not None:
+            updates.append("completed_years = ?")
+            params.append(completed_count)
+
+        if total_count is not None:
+            updates.append("total_years = ?")
+            params.append(total_count)
+
+        if not updates:
             return
 
-        run_id = row['run_id']
-
-        # Get completed years from analysis_results
-        query = """
-            SELECT fiscal_year FROM analysis_results WHERE run_id = ?
-        """
-        rows = self.db._execute_with_retry(query, (run_id,), fetch_all=True)
-
-        completed_years_list = [str(r['fiscal_year']) for r in rows] if rows else []
-        completed_count = len(completed_years_list)
-
-        # Update batch_item with year progress
-        query = """
-            UPDATE batch_items
-            SET completed_years = ?,
-                completed_years_list = ?,
-                current_year = ?
-            WHERE id = ?
-        """
-        self.db._execute_with_retry(query, (
-            completed_count,
-            json.dumps(completed_years_list),
-            str(current_year) if current_year else None,
-            item_id
-        ))
+        params.append(item_id)
+        query = f"UPDATE batch_items SET {', '.join(updates)} WHERE id = ?"
+        self.db._execute_with_retry(query, tuple(params))
 
     def _finalize_item_year_progress(self, item_id: int, run_id: str):
         """
@@ -1257,7 +1240,12 @@ class BatchQueueService:
         # Create year progress callback for real-time tracking
         def year_progress_callback(current_year: int, completed_count: int, total_count: int):
             """Update batch_items with year progress."""
-            self._update_item_year_progress(item_id, str(current_year))
+            self._update_item_year_progress(
+                item_id,
+                current_year=str(current_year),
+                completed_count=completed_count,
+                total_count=total_count
+            )
 
         # Run analysis
         try:
