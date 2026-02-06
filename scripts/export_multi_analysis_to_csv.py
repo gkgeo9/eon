@@ -15,7 +15,7 @@ import sqlite3
 from pathlib import Path
 
 # Batch to export
-BATCH_NAME = "Massive Multi Analysis From Factset 17012026"
+BATCH_NAME = "IV40to80_2"
 
 
 def export_multi_analysis_to_csv():
