@@ -322,6 +322,33 @@ else:
             # Progress bar
             st.progress(batch['progress_percent'] / 100)
 
+            # Active workers with year progress (adopted from CLI's superior display)
+            if batch['status'] == 'running':
+                running_items = queue.get_running_items(batch['batch_id'], limit=10)
+                if running_items:
+                    st.markdown("**Active Workers:**")
+                    worker_data = []
+                    for item in running_items:
+                        total_yrs = item.get('total_years', '-')
+                        completed_yrs = item.get('completed_years', 0)
+                        current_yr = item.get('current_year', '')
+                        years_str = f"{completed_yrs}/{total_yrs}"
+                        if current_yr:
+                            years_str += f" ({current_yr})"
+                        worker_data.append({
+                            'Ticker': item['ticker'],
+                            'Company': (item.get('company_name') or '')[:25],
+                            'Years': years_str,
+                            'Attempt': f"{item.get('attempts', 1)}/3",
+                        })
+                    if worker_data:
+                        import pandas as _pd
+                        st.dataframe(
+                            _pd.DataFrame(worker_data),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+
             # Status-specific info
             if batch['status'] == 'waiting_reset':
                 st.info("Waiting for midnight PST rate limit reset...")

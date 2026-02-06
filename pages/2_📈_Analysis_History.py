@@ -9,6 +9,8 @@ import time
 from datetime import date, timedelta
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.theme import apply_theme
+from fintel.core.formatting import format_duration, format_status as _fmt_status
+from fintel.core.analysis_types import CLI_ANALYSIS_CHOICES
 
 # Apply global theme
 apply_theme()
@@ -34,7 +36,7 @@ with st.expander("🔍 Filters", expanded=False):
     with col2:
         filter_type = st.selectbox(
             "Analysis Type",
-            ["All", "fundamental", "excellent", "objective", "buffett", "taleb", "contrarian", "multi"]
+            ["All"] + CLI_ANALYSIS_CHOICES
         )
 
     with col3:
@@ -89,59 +91,26 @@ else:
     display_df['End Time'] = pd.to_datetime(display_df['completed_at'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
     display_df['End Time'] = display_df['End Time'].fillna('-')
 
-    # Calculate duration
-    def calculate_duration(row):
-        if pd.notna(row['completed_at']) and pd.notna(row['created_at']):
-            try:
-                start = pd.to_datetime(row['created_at'])
-                end = pd.to_datetime(row['completed_at'])
-                duration = end - start
-                total_seconds = int(duration.total_seconds())
-                # Handle negative durations (shouldn't happen but be safe)
-                if total_seconds < 60 and total_seconds >= 0:
-                    return f"{total_seconds}s"
-                elif total_seconds >= 60 and total_seconds < 3600:
-                    minutes = total_seconds // 60
-                    seconds = total_seconds % 60
-                    return f"{minutes}m {seconds}s"
-                elif total_seconds >= 3600:
-                    hours = total_seconds // 3600
-                    minutes = (total_seconds % 3600) // 60
-                    return f"{hours}h {minutes}m"
-                else:
-                    # Negative duration - something's wrong
-                    return '-'
-            except:
-                return '-'
-        return '-'
+    # Calculate duration using shared formatter
+    display_df['Duration'] = display_df.apply(
+        lambda row: format_duration(
+            start=row['created_at'] if pd.notna(row.get('created_at')) else None,
+            end=row['completed_at'] if pd.notna(row.get('completed_at')) else None,
+        ).replace("N/A", "-"),
+        axis=1,
+    )
 
-    display_df['Duration'] = display_df.apply(calculate_duration, axis=1)
-
-    # Enhanced status indicator with progress for running analyses
-    def format_status(row):
-        status = row['status']
-        status_display = {
-            'completed': ('✅', 'Completed'),
-            'running': ('🔄', 'Running'),
-            'pending': ('⏳', 'Queued'),
-            'failed': ('❌', 'Failed'),
-            'cancelled': ('🛑', 'Cancelled')
-        }
-
-        emoji, label = status_display.get(status, ('❓', 'Unknown'))
-
-        # For running analyses, add progress percentage if available
-        if status == 'running' and 'progress_percent' in analyses_df.columns:
+    # Status display using shared formatter, with running-progress enhancement
+    def _status_with_progress(row):
+        base = _fmt_status(row['status'])
+        if row['status'] == 'running' and 'progress_percent' in analyses_df.columns:
             progress = row.get('progress_percent')
             if progress is not None and progress > 0:
-                return f"{emoji} {label} ({progress}%)"
-            else:
-                # Show that analysis is running but progress not yet reported
-                return f"{emoji} {label}..."
+                return f"{base} ({progress}%)"
+            return f"{base}..."
+        return base
 
-        return f"{emoji} {label}"
-
-    display_df['Status'] = analyses_df.apply(format_status, axis=1)
+    display_df['Status'] = analyses_df.apply(_status_with_progress, axis=1)
 
     # Clean up names
     display_df['Ticker'] = display_df['ticker'].str.upper()

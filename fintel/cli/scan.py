@@ -14,8 +14,9 @@ from rich.table import Table
 
 from fintel.core import get_config, get_logger
 from fintel.cli.utils import read_ticker_file
-from fintel.ai import APIKeyManager, RateLimiter
 from fintel.analysis.comparative import ContrarianScanner
+from fintel.ui.database import DatabaseRepository
+from fintel.ui.services import create_analysis_service
 
 console = Console()
 logger = get_logger(__name__)
@@ -95,18 +96,20 @@ def scan_contrarian(
     ))
 
     try:
-        # Initialize AI components
+        # Initialize shared service — reuses the same API key manager and rate
+        # limiter that the rest of the CLI and UI use, ensuring consistent key
+        # rotation and rate limiting across all commands.
         if not config.google_api_keys:
-            console.print("✗ No Google API keys configured. Set GOOGLE_API_KEY_1 in .env", style="bold red")
+            console.print("No Google API keys configured. Set GOOGLE_API_KEY_1 in .env", style="bold red")
             return
 
-        key_mgr = APIKeyManager(config.google_api_keys)
-        rate_limiter = RateLimiter(sleep_after_request=config.sleep_after_request)
+        db = DatabaseRepository()
+        service = create_analysis_service(db, config)
 
-        # Create scanner
+        # Create scanner using the service's shared components
         scanner = ContrarianScanner(
-            api_key_manager=key_mgr,
-            rate_limiter=rate_limiter
+            api_key_manager=service.api_key_manager,
+            rate_limiter=service.rate_limiter
         )
 
         # Scan companies

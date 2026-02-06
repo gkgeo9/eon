@@ -38,7 +38,7 @@ from .utils import (
     get_filing_category,
 )
 from .result import Result, BatchResult
-from .formatting import format_duration
+from .formatting import format_duration, format_status, get_status_emoji, get_status_colour
 from .analysis_types import (
     AnalysisTypeInfo,
     ANALYSIS_TYPES,
@@ -99,6 +99,9 @@ __all__ = [
     "BatchResult",
     # Formatting
     "format_duration",
+    "format_status",
+    "get_status_emoji",
+    "get_status_colour",
     # Analysis types
     "AnalysisTypeInfo",
     "ANALYSIS_TYPES",

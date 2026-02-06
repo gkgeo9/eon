@@ -6,7 +6,7 @@ Main Streamlit application - Home page with dashboard.
 
 import streamlit as st
 from fintel.core import setup_logging, get_logger
-from fintel.core.formatting import format_duration
+from fintel.core.formatting import format_duration, format_status
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService
 from fintel.ui.theme import apply_theme
@@ -101,17 +101,8 @@ def main():
             axis=1,
         )
 
-        # Enhanced status indicator with better labels
-        status_display = {
-            'completed': ('✅', 'Completed', '#28a745'),
-            'running': ('🔄', 'Running', '#17a2b8'),
-            'pending': ('⏳', 'Queued', '#ffc107'),
-            'failed': ('❌', 'Failed', '#dc3545')
-        }
-
-        display_df['Status'] = display_df['status'].apply(
-            lambda x: f"{status_display.get(x, ('❓', 'Unknown', '#6c757d'))[0]} {status_display.get(x, ('❓', 'Unknown', '#6c757d'))[1]}"
-        )
+        # Status display using shared formatter
+        display_df['Status'] = display_df['status'].apply(format_status)
 
         # Clean up analysis type names
         display_df['Analysis'] = display_df['analysis_type'].str.capitalize()

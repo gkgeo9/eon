@@ -4,11 +4,15 @@
 Shared formatting utilities used by both CLI and UI layers.
 
 This module eliminates duplicate formatting logic that was previously
-implemented independently in cli/batch.py and streamlit_app.py.
+implemented independently across multiple CLI commands and Streamlit pages.
+
+Consolidates:
+- Duration formatting (was in cli/batch.py, streamlit_app.py, page 2)
+- Status display formatting (was in streamlit_app.py, pages 2, 3, 5 — all inconsistent)
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Dict, Optional, Tuple
 
 
 def format_duration(
@@ -62,3 +66,53 @@ def format_duration(
         hours = total_seconds // 3600
         minutes = (total_seconds % 3600) // 60
         return f"{hours}h {minutes}m"
+
+
+# ------------------------------------------------------------------
+# Status display formatting
+# ------------------------------------------------------------------
+# Previously defined inconsistently in:
+#   - streamlit_app.py (4 statuses, with colours)
+#   - pages/2_Analysis_History.py (5 statuses, with emoji pairs)
+#   - pages/3_Results_Viewer.py results_display_legacy.py (3 statuses)
+#   - pages/5_Settings.py (4 statuses)
+# This is the single source of truth for all of them.
+
+_STATUS_MAP: Dict[str, Tuple[str, str, str]] = {
+    # status_key: (emoji, display_label, hex_colour)
+    "completed": ("✅", "Completed", "#28a745"),
+    "running": ("🔄", "Running", "#17a2b8"),
+    "pending": ("⏳", "Queued", "#ffc107"),
+    "failed": ("❌", "Failed", "#dc3545"),
+    "cancelled": ("🛑", "Cancelled", "#6c757d"),
+    "skipped": ("⏭️", "Skipped", "#6c757d"),
+    "waiting_reset": ("🕐", "Waiting Reset", "#ffc107"),
+    "stopped": ("⏸️", "Stopped", "#6c757d"),
+    "paused": ("⏸️", "Paused", "#6c757d"),
+}
+
+_UNKNOWN_STATUS = ("❓", "Unknown", "#6c757d")
+
+
+def format_status(status: str) -> str:
+    """
+    Format a status string with an emoji prefix for UI display.
+
+    Args:
+        status: Raw status string from the database (e.g. ``"completed"``).
+
+    Returns:
+        Formatted string like ``"✅ Completed"``.
+    """
+    emoji, label, _ = _STATUS_MAP.get(status, _UNKNOWN_STATUS)
+    return f"{emoji} {label}"
+
+
+def get_status_emoji(status: str) -> str:
+    """Return just the emoji for a given status."""
+    return _STATUS_MAP.get(status, _UNKNOWN_STATUS)[0]
+
+
+def get_status_colour(status: str) -> str:
+    """Return the hex colour for a given status (useful for Streamlit styling)."""
+    return _STATUS_MAP.get(status, _UNKNOWN_STATUS)[2]
