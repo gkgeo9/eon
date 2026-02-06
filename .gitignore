@@ -124,24 +124,8 @@ contrarian_scans/
 .tmp/
 temp/
 
-# Additional Python cache patterns
-**/.pytest_cache/
-*.cover
-.hypothesis/
-
 # Additional IDE patterns
 *.iml
-.gradle/
-.idea/modules/
-
-# Additional OS files
-.AppleDouble
-.Spotlight-V100
-._*
 
 # Build outputs
 site/
-dist/
-build/
-data/api_usage/usage_6bca3f63b6a6b95c.json
-data/fintel.db

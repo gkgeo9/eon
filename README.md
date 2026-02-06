@@ -93,15 +93,6 @@ FINTEL_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR
 
 ```bash
 streamlit run streamlit_app.py
-
-mac
-
-/Users/gkg/PycharmProjects/Fintel/.venv/bin/python -m streamlit run /Users/gkg/PycharmProjects/Fintel/streamlit_app.py
-
-windows
-
-.venv\Scripts\python -m streamlit run streamlit_app.py
-
 ```
 
 Opens at `http://localhost:8501`
@@ -272,14 +263,146 @@ Fintel includes enterprise-grade reliability features for processing 1000+ compa
 | **Log Rotation** | 10MB max file size with 5 backup files |
 | **SEC Rate Limiting** | Global cross-process rate limiter for SEC Edgar API |
 
-### Running Large Batches
+### Running Large Batches (1000+ Companies)
 
-For processing 1000+ companies:
+For processing 1000+ companies across 10+ years:
 
 1. **Configure notifications** (see Discord setup above)
 2. **Ensure sufficient disk space** (minimum 5GB free, 10GB recommended)
-3. **Use the Batch Queue page** in the web UI for overnight runs
+3. **Use the CLI for multi-day runs** (survives browser disconnects)
 4. **Monitor via Discord** - you'll receive completion/failure alerts
+
+#### CLI Batch (Recommended for Large Scale)
+
+```bash
+# Start in tmux/screen for persistence
+tmux new -s fintel-batch
+
+# 1000 companies, 10 years each, multi-perspective analysis
+fintel batch companies.csv --years 10 --analysis-type multi
+
+# Detach: Ctrl+B then D
+# Reattach later: tmux attach -t fintel-batch
+
+# If interrupted, resume from where it left off
+fintel batch --resume
+
+# Resume a specific batch
+fintel batch --resume-id <batch_id>
+
+# List all incomplete batches
+fintel batch --list-incomplete
+```
+
+#### CSV Input Format
+
+```csv
+ticker
+AAPL
+MSFT
+GOOGL
+AMZN
+```
+
+Or with optional company name:
+
+```csv
+ticker,company_name
+AAPL,Apple Inc.
+MSFT,Microsoft Corporation
+```
+
+#### Capacity Planning
+
+| Companies | Years | API Requests | Estimated Duration (25 keys) |
+|-----------|-------|-------------|------------------------------|
+| 10        | 7     | 70          | < 1 day                      |
+| 100       | 7     | 700         | ~1.5 days                    |
+| 500       | 10    | 5,000       | ~10 days                     |
+| 1,000     | 7     | 7,000       | ~14 days                     |
+| 1,000     | 10    | 10,000      | ~20 days                     |
+
+**Throughput formula:** 25 API keys x 20 requests/key/day = **500 requests/day**
+
+#### How Batch Processing Works
+
+```
+1. Create batch job → tickers stored in SQLite
+2. ThreadPoolExecutor starts N workers (up to 25)
+3. Each worker:
+   a. Reserves an API key (atomic, no collisions)
+   b. Downloads SEC filings for one company
+   c. Converts HTML → PDF → extracts text
+   d. Sends to Gemini AI for each year
+   e. Stores validated Pydantic results in DB
+   f. Releases API key → picks up next company
+4. When all keys hit daily limit → waits for midnight PST reset
+5. After reset verification → resumes processing automatically
+6. Completed companies are never re-processed on resume
+```
+
+#### Error Handling at Scale
+
+| Error Type | Behavior |
+|-----------|----------|
+| **Context length exceeded** | Company marked as SKIPPED (not retried) |
+| **API quota exhausted** | Waits for midnight PST reset, then resumes |
+| **Network/transient error** | Retried up to max_retries (default 2) |
+| **Process crash** | Resume picks up from last completed company |
+
+---
+
+## Known Limitations & Improvement Opportunities
+
+The following areas have been identified for improvement, particularly for large-scale batch processing (1000+ companies, 10+ years):
+
+### Resume Granularity
+
+**Current:** Resume tracks progress per-company. If a company fails at year 7 of 10, all 10 years are re-processed on resume. The `batch_item_year_checkpoints` table schema exists but the per-year checkpoint logic is not yet implemented.
+
+**Improvement:** Implement per-year resume so interrupted companies restart from the last completed year, not from scratch. This becomes significant at 10+ years per company.
+
+### Throughput Bottleneck
+
+**Current:** All API requests are serialized through a single global file lock with a mandatory 65-second sleep. Even with 25 keys, effective throughput is ~500 requests/day because the lock serializes requests rather than allowing parallel calls on different keys.
+
+**Improvement:** Move to per-key locks instead of a single global lock. Each API key could process requests independently, increasing theoretical throughput to 25 parallel streams. This is the single highest-impact performance improvement possible.
+
+### Batch Priority & Ordering
+
+**Current:** Companies are processed in FIFO order. No way to prioritize specific tickers or re-order the queue mid-batch.
+
+**Improvement:** Add priority levels to batch items so high-interest companies are processed first. The database column exists (`priority`) but is not exposed in the CLI or UI.
+
+### Partial Results on Failure
+
+**Current:** If multi-perspective analysis fails on the Taleb lens after Buffett lens completes, both results are lost. Each perspective is not saved independently.
+
+**Improvement:** Save each perspective result as it completes, so partial multi-analysis results are preserved even if one lens fails.
+
+### Adaptive Rate Limiting
+
+**Current:** Fixed 65-second sleep between all requests regardless of API response headers or actual rate limit state.
+
+**Improvement:** Read Gemini API response headers for rate limit information and adapt sleep duration dynamically. Under low load, requests could be faster; under contention, back off further.
+
+### Export Tooling for Large Datasets
+
+**Current:** Export is available through the UI and a script in `scripts/`. No built-in CLI export command for bulk data extraction from large batch results.
+
+**Improvement:** Add `fintel export --batch-id <id> --format csv` to export all results from a specific batch run, with filtering by status, ticker, or analysis type.
+
+### Chrome Process Management
+
+**Current:** Cleanup runs every 50 companies (arbitrary threshold). No demand-based cleanup or memory monitoring for the Chrome instances used in HTML→PDF conversion.
+
+**Improvement:** Monitor Chrome process memory usage and trigger cleanup when a threshold is exceeded rather than on a fixed schedule.
+
+### Deduplication
+
+**Current:** No check for duplicate tickers in a batch CSV. If `AAPL` appears 3 times, it gets analyzed 3 times.
+
+**Improvement:** Deduplicate tickers on batch creation and warn the user about removed duplicates.
 
 ---
 
@@ -779,5 +902,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## Documentation
 
 - [Custom Workflows Guide](docs/CUSTOM_WORKFLOWS.md) - Complete developer documentation
-- [Session State Management](docs/SESSION_STATE.md) - Streamlit state handling
-- [UI Architecture](fintel/ui/README.md) - Web interface details
+- [Contributing Guide](CONTRIBUTING.md) - Development setup and contribution guidelines
