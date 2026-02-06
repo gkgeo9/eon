@@ -122,7 +122,8 @@ Return ONLY a valid JSON object with NO additional text before or after.
     def __init__(
         self,
         api_key_manager: APIKeyManager,
-        rate_limiter: RateLimiter
+        rate_limiter: RateLimiter,
+        api_key: Optional[str] = None
     ):
         """
         Initialize the contrarian scanner.
@@ -130,9 +131,11 @@ Return ONLY a valid JSON object with NO additional text before or after.
         Args:
             api_key_manager: API key manager for rotation
             rate_limiter: Rate limiter for API calls
+            api_key: Optional pre-reserved API key (for batch queue optimization)
         """
         self.api_key_manager = api_key_manager
         self.rate_limiter = rate_limiter
+        self._pre_reserved_key = api_key
         logger.info("Initialized ContrarianScanner")
 
     def scan_company(
@@ -171,8 +174,14 @@ Return ONLY a valid JSON object with NO additional text before or after.
             company_data_str = json.dumps(success_data, indent=2)
             prompt = self.CONTRARIAN_PROMPT.format(company_data=company_data_str)
 
-            # Reserve API key atomically for parallel safety
-            api_key = self.api_key_manager.reserve_key()
+            # Use pre-reserved key if available (batch optimization), otherwise reserve
+            if self._pre_reserved_key:
+                api_key = self._pre_reserved_key
+                key_was_pre_reserved = True
+            else:
+                api_key = self.api_key_manager.reserve_key()
+                key_was_pre_reserved = False
+
             if not api_key:
                 logger.error(f"No API keys available for {ticker}")
                 return None
@@ -200,8 +209,8 @@ Return ONLY a valid JSON object with NO additional text before or after.
                     return None
 
             finally:
-                # Always release the key
-                self.api_key_manager.release_key(api_key)
+                if not key_was_pre_reserved:
+                    self.api_key_manager.release_key(api_key)
 
         except Exception as e:
             logger.error(f"Error scanning {ticker}: {e}")

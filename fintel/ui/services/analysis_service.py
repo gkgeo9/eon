@@ -1126,7 +1126,8 @@ class AnalysisService:
         # First, run fundamental analysis for each year
         fundamental_analyzer = FundamentalAnalyzer(
             api_key_manager=self.api_key_manager,
-            rate_limiter=self.rate_limiter
+            rate_limiter=self.rate_limiter,
+            api_key=api_key
         )
 
         fundamental_analyses = {}
@@ -1168,7 +1169,8 @@ class AnalysisService:
 
             objective_analyzer = ObjectiveCompanyAnalyzer(
                 api_key_manager=self.api_key_manager,
-                rate_limiter=self.rate_limiter
+                rate_limiter=self.rate_limiter,
+                api_key=api_key
             )
 
             self.logger.info(f"Running Objective analysis for scanner: {ticker}")
@@ -1196,7 +1198,8 @@ class AnalysisService:
                     # Now run contrarian scanner
                     scanner = ContrarianScanner(
                         api_key_manager=self.api_key_manager,
-                        rate_limiter=self.rate_limiter
+                        rate_limiter=self.rate_limiter,
+                        api_key=api_key
                     )
 
                     self.logger.info(f"Running Contrarian Scanner for {ticker}")
@@ -1285,15 +1288,21 @@ class AnalysisService:
                 )
                 full_prompt = f"{prompt}\n\nHere's the filing content:\n\n{text}"
 
-                # Reserve API key atomically for parallel safety
-                api_key = self.api_key_manager.reserve_key()
-                if not api_key:
+                # Use pre-reserved key if available (batch), otherwise reserve per year
+                if api_key:
+                    year_key = api_key
+                    key_was_pre_reserved = True
+                else:
+                    year_key = self.api_key_manager.reserve_key()
+                    key_was_pre_reserved = False
+
+                if not year_key:
                     self.logger.error("No API keys available for custom workflow")
                     continue
 
                 try:
                     provider = GeminiProvider(
-                        api_key=api_key,
+                        api_key=year_key,
                         model=self.config.default_model,
                         thinking_budget=self.config.thinking_budget,
                         rate_limiter=self.rate_limiter
@@ -1312,8 +1321,9 @@ class AnalysisService:
                         self.logger.info(f"Completed {workflow.name} analysis for {ticker} {year}")
 
                 finally:
-                    # Always release the key
-                    self.api_key_manager.release_key(api_key)
+                    # Only release if we reserved it (not if pre-reserved by batch)
+                    if not key_was_pre_reserved:
+                        self.api_key_manager.release_key(year_key)
 
             except Exception as e:
                 self.logger.error(f"Failed to analyze {ticker} {year} with {workflow.name}: {e}")
@@ -1640,7 +1650,8 @@ class AnalysisService:
         ticker: str,
         pdf_paths: Dict[int, Path],
         workflow_id: str,
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run custom workflow with per-year completion tracking."""
         try:
@@ -1680,14 +1691,21 @@ class AnalysisService:
                 prompt = workflow.prompt_template.format(ticker=ticker, year=year)
                 full_prompt = f"{prompt}\n\nHere's the filing content:\n\n{text}"
 
-                api_key = self.api_key_manager.reserve_key()
-                if not api_key:
+                # Use pre-reserved key if available (batch), otherwise reserve per year
+                if api_key:
+                    year_key = api_key
+                    key_was_pre_reserved = True
+                else:
+                    year_key = self.api_key_manager.reserve_key()
+                    key_was_pre_reserved = False
+
+                if not year_key:
                     self.logger.error("No API keys available")
                     continue
 
                 try:
                     provider = GeminiProvider(
-                        api_key=api_key,
+                        api_key=year_key,
                         model=self.config.default_model,
                         thinking_budget=self.config.thinking_budget,
                         rate_limiter=self.rate_limiter
@@ -1707,7 +1725,8 @@ class AnalysisService:
                         self.logger.info(f"Completed {workflow.name} for {ticker} {year}")
 
                 finally:
-                    self.api_key_manager.release_key(api_key)
+                    if not key_was_pre_reserved:
+                        self.api_key_manager.release_key(year_key)
 
             except Exception as e:
                 self.logger.error(f"Failed {ticker} {year}: {e}")
