@@ -323,8 +323,7 @@ class _BaseSuccessAnalyzer:
                 retry_delay=10
             )
 
-            # Record usage
-            self.api_key_manager.record_usage(api_key)
+            # Usage is recorded by GeminiProvider.generate() — do not double-count
 
             return result
 

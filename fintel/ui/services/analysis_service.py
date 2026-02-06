@@ -1305,8 +1305,7 @@ class AnalysisService:
                         max_retries=3,
                         retry_delay=10
                     )
-
-                    self.api_key_manager.record_usage(api_key)
+                    # Usage is recorded by GeminiProvider.generate() — do not double-count
 
                     if result:
                         results[year] = result
@@ -1700,8 +1699,7 @@ class AnalysisService:
                         max_retries=3,
                         retry_delay=10
                     )
-
-                    self.api_key_manager.record_usage(api_key)
+                    # Usage is recorded by GeminiProvider.generate() — do not double-count
 
                     if result:
                         results[year] = result
@@ -1879,8 +1877,7 @@ Be comprehensive but focus on actionable insights from the longitudinal perspect
                     max_retries=3,
                     retry_delay=10
                 )
-
-                self.api_key_manager.record_usage(api_key)
+                # Usage is recorded by GeminiProvider.generate() — do not double-count
 
                 if result:
                     # Store synthesis result

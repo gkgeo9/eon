@@ -2293,8 +2293,7 @@ Be concise but comprehensive. Focus on actionable insights.
                     max_retries=3,
                     retry_delay=10
                 )
-
-                self.api_key_manager.record_usage(api_key)
+                # Usage is recorded by GeminiProvider.generate() — do not double-count
 
                 if result:
                     # Store synthesis result

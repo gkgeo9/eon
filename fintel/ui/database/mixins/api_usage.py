@@ -2,6 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 API usage tracking database operations mixin.
+
+Note: The primary usage tracking system is the JSON-based APIUsageTracker in
+``fintel/ai/usage_tracker.py``. This mixin provides supplementary database-backed
+tracking. Both must use the same timezone (America/Los_Angeles / PST) to stay
+consistent with the Gemini API's daily quota reset window.
 """
 
 from datetime import datetime
@@ -9,6 +14,16 @@ from datetime import datetime
 import pandas as pd
 
 from fintel.core import mask_api_key
+
+
+def _get_today_pst() -> str:
+    """Return today's date in YYYY-MM-DD format using the API reset timezone (PST)."""
+    try:
+        import pytz
+        tz = pytz.timezone("America/Los_Angeles")
+        return datetime.now(tz).strftime('%Y-%m-%d')
+    except ImportError:
+        return datetime.utcnow().strftime('%Y-%m-%d')
 
 
 class APIUsageMixin:
@@ -23,7 +38,7 @@ class APIUsageMixin:
             count: Number of requests to record (default: 1)
         """
         masked_key = mask_api_key(api_key)
-        today = datetime.utcnow().strftime('%Y-%m-%d')
+        today = _get_today_pst()
 
         query = """
             INSERT INTO api_usage (api_key_suffix, usage_date, request_count, updated_at)
@@ -44,7 +59,7 @@ class APIUsageMixin:
         Returns:
             Number of API calls today
         """
-        today = datetime.utcnow().strftime('%Y-%m-%d')
+        today = _get_today_pst()
 
         if api_key:
             masked_key = mask_api_key(api_key)
