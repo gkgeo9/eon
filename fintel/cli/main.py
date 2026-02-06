@@ -14,6 +14,7 @@ from fintel.cli.analyze import analyze
 from fintel.cli.batch import batch
 from fintel.cli.export import export
 from fintel.cli.scan import scan_contrarian
+from fintel.cli.workflows import workflows
 
 # Initialize logging with timestamps
 setup_logging(level=20)  # INFO level
@@ -191,6 +192,7 @@ cli.add_command(batch)
 cli.add_command(export)
 cli.add_command(scan_contrarian)
 cli.add_command(cache)
+cli.add_command(workflows)
 
 
 if __name__ == "__main__":

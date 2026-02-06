@@ -20,6 +20,11 @@ from datetime import datetime
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services.batch_queue import BatchQueueService, BatchJobConfig
 from fintel.ui.theme import apply_theme
+from fintel.core.analysis_types import (
+    get_analysis_type,
+    get_ui_options,
+    requires_multi_year,
+)
 
 # Import custom workflows discovery
 try:
@@ -155,32 +160,12 @@ with st.expander("New Batch", expanded=False):
             except Exception as e:
                 st.error(f"Error reading CSV: {e}")
 
-    # Build analysis type options including custom workflows
-    builtin_options = [
-        ("Fundamental Analysis", "fundamental"),
-        ("Excellent Company Success Factors", "excellent"),
-        ("Objective Company Analysis", "objective"),
-        ("Buffett Lens", "buffett"),
-        ("Taleb Lens", "taleb"),
-        ("Contrarian Lens", "contrarian"),
-        ("Multi-Perspective", "multi"),
-        ("Contrarian Scanner", "scanner"),
-    ]
-
-    # Get custom workflows
+    # Build analysis type options from shared registry + custom workflows
     custom_workflows = list_workflows()
-
-    # Build options list
-    analysis_options = [opt[0] for opt in builtin_options]
-    analysis_type_map = {opt[0]: opt[1] for opt in builtin_options}
-
-    # Add custom workflows if any exist
-    if custom_workflows:
-        analysis_options.append("--- Custom Workflows ---")
-        for wf in custom_workflows:
-            display_name = f"{wf['icon']} {wf['name']}"
-            analysis_options.append(display_name)
-            analysis_type_map[display_name] = f"custom:{wf['id']}"
+    analysis_options, analysis_type_map = get_ui_options(
+        include_custom_workflows=True,
+        custom_workflows=custom_workflows,
+    )
 
     col1, col2 = st.columns(2)
     with col1:
@@ -191,7 +176,7 @@ with st.expander("New Batch", expanded=False):
         )
 
         # Handle separator selection
-        if analysis_type_display.startswith("---"):
+        if analysis_type_display.startswith("─") or analysis_type_display.startswith("---"):
             analysis_type = "fundamental"
         else:
             analysis_type = analysis_type_map.get(analysis_type_display, "fundamental")
@@ -203,23 +188,14 @@ with st.expander("New Batch", expanded=False):
             key="batch_filing_type"
         )
 
-    # Analysis type descriptions
-    analysis_descriptions = {
-        "fundamental": "Analyzes business model, financials, risks, and key strategies.",
-        "excellent": "Multi-year analysis for proven winners - identifies what made excellent companies succeed. Requires 3+ years.",
-        "objective": "Multi-year unbiased analysis - objective assessment of strengths and weaknesses. Requires 3+ years.",
-        "buffett": "Warren Buffett perspective: economic moat, management quality, pricing power.",
-        "taleb": "Nassim Taleb perspective: fragility assessment, tail risks, and antifragility.",
-        "contrarian": "Contrarian perspective: variant perception, hidden opportunities.",
-        "multi": "Combined analysis through all three investment lenses.",
-        "scanner": "Six-dimension scoring system (0-600) for hidden compounder potential. Requires 3+ years."
-    }
+    # Analysis type description (from shared registry)
+    type_info = get_analysis_type(analysis_type)
+    if type_info:
+        min_note = " Requires 3+ years." if type_info.min_years >= 3 else ""
+        st.info(f"{type_info.description}{min_note}")
 
-    if analysis_type in analysis_descriptions:
-        st.info(analysis_descriptions[analysis_type])
-
-    # Check multi-year requirement
-    multi_year_required = analysis_type in ['excellent', 'objective', 'scanner']
+    # Check multi-year requirement (from shared registry)
+    multi_year_required = requires_multi_year(analysis_type)
     if analysis_type.startswith('custom:'):
         for wf in custom_workflows:
             if f"custom:{wf['id']}" == analysis_type and wf.get('min_years', 1) >= 3:
@@ -345,6 +321,33 @@ else:
 
             # Progress bar
             st.progress(batch['progress_percent'] / 100)
+
+            # Active workers with year progress (adopted from CLI's superior display)
+            if batch['status'] == 'running':
+                running_items = queue.get_running_items(batch['batch_id'], limit=10)
+                if running_items:
+                    st.markdown("**Active Workers:**")
+                    worker_data = []
+                    for item in running_items:
+                        total_yrs = item.get('total_years', '-')
+                        completed_yrs = item.get('completed_years', 0)
+                        current_yr = item.get('current_year', '')
+                        years_str = f"{completed_yrs}/{total_yrs}"
+                        if current_yr:
+                            years_str += f" ({current_yr})"
+                        worker_data.append({
+                            'Ticker': item['ticker'],
+                            'Company': (item.get('company_name') or '')[:25],
+                            'Years': years_str,
+                            'Attempt': f"{item.get('attempts', 1)}/3",
+                        })
+                    if worker_data:
+                        import pandas as _pd
+                        st.dataframe(
+                            _pd.DataFrame(worker_data),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
 
             # Status-specific info
             if batch['status'] == 'waiting_reset':

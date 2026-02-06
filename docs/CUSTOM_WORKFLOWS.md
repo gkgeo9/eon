@@ -122,12 +122,24 @@ Be specific and cite numbers from the filing.
 
 ### Step 3: Test Your Workflow
 
-Your workflow will be automatically discovered! Restart the Streamlit app and check:
+Your workflow will be automatically discovered! You can use it from both the CLI and web UI.
 
+**CLI (recommended for quick testing):**
+```bash
+# List all discovered workflows
+fintel workflows
+
+# Run your workflow on a single company
+fintel analyze AAPL --analysis-type custom:my_analyzer
+
+# Batch process with your workflow
+fintel batch tickers.csv --analysis-type custom:my_analyzer --years 5
+```
+
+**Web UI:**
 ```bash
 streamlit run streamlit_app.py
 ```
-
 Navigate to Analysis → Select your workflow from the dropdown.
 
 ---
@@ -520,13 +532,13 @@ def validate_config(self, years: int) -> bool:
 
 ## Troubleshooting
 
-### Workflow Not Appearing in UI
+### Workflow Not Appearing
 
 1. Check file is in `custom_workflows/` or `custom_workflows/examples/`
 2. Ensure filename doesn't start with `_`
 3. Verify class inherits from `CustomWorkflow`
 4. Check for Python syntax errors
-5. Restart the Streamlit app
+5. Run `fintel workflows` to verify discovery (CLI) or restart the Streamlit app (UI)
 
 ### Schema Validation Errors
 
@@ -770,11 +782,38 @@ Your goal is to assess the SAFETY and SUSTAINABILITY of the dividend.
 
 ---
 
+## CLI Reference
+
+### List Workflows
+
+```bash
+# List all available custom workflows
+fintel workflows
+
+# With extra detail (category, etc.)
+fintel workflows --verbose
+```
+
+### Run a Custom Workflow
+
+```bash
+# Single company analysis
+fintel analyze AAPL --analysis-type custom:my_analyzer
+
+# Batch processing
+fintel batch tickers.csv --analysis-type custom:examples.moonshot_analyzer --years 5
+```
+
+The workflow ID is shown in the `fintel workflows` output (e.g. `custom:examples.growth_analyzer`).
+
+---
+
 ## Need Help?
 
 - **Example workflows**: See `custom_workflows/examples/`
 - **Base class**: See `custom_workflows/base.py`
 - **Discovery logic**: See `custom_workflows/__init__.py`
 - **Integration**: See `fintel/ui/services/analysis_service.py`
+- **CLI commands**: Run `fintel workflows --help` or `fintel analyze --help`
 
-Happy analyzing! 🎯
+Happy analyzing!

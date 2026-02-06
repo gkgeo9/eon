@@ -6,6 +6,7 @@ Main Streamlit application - Home page with dashboard.
 
 import streamlit as st
 from fintel.core import setup_logging, get_logger
+from fintel.core.formatting import format_duration, format_status
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService
 from fintel.ui.theme import apply_theme
@@ -91,45 +92,17 @@ def main():
         display_df['End Time'] = pd.to_datetime(display_df['completed_at'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
         display_df['End Time'] = display_df['End Time'].fillna('-')
 
-        # Calculate duration for completed analyses
-        def calculate_duration(row):
-            if pd.notna(row['completed_at']) and pd.notna(row['started_at']):
-                try:
-                    start = pd.to_datetime(row['started_at'])
-                    end = pd.to_datetime(row['completed_at'])
-                    duration = end - start
-                    total_seconds = int(duration.total_seconds())
-                    # Handle negative durations (shouldn't happen but be safe)
-                    if total_seconds < 60 and total_seconds >= 0:
-                        return f"{total_seconds}s"
-                    elif total_seconds >= 60 and total_seconds < 3600:
-                        minutes = total_seconds // 60
-                        seconds = total_seconds % 60
-                        return f"{minutes}m {seconds}s"
-                    elif total_seconds >= 3600:
-                        hours = total_seconds // 3600
-                        minutes = (total_seconds % 3600) // 60
-                        return f"{hours}h {minutes}m"
-                    else:
-                        # Negative duration - something's wrong
-                        return '-'
-                except:
-                    return '-'
-            return '-'
-
-        display_df['Duration'] = display_df.apply(calculate_duration, axis=1)
-
-        # Enhanced status indicator with better labels
-        status_display = {
-            'completed': ('✅', 'Completed', '#28a745'),
-            'running': ('🔄', 'Running', '#17a2b8'),
-            'pending': ('⏳', 'Queued', '#ffc107'),
-            'failed': ('❌', 'Failed', '#dc3545')
-        }
-
-        display_df['Status'] = display_df['status'].apply(
-            lambda x: f"{status_display.get(x, ('❓', 'Unknown', '#6c757d'))[0]} {status_display.get(x, ('❓', 'Unknown', '#6c757d'))[1]}"
+        # Calculate duration using shared formatter
+        display_df['Duration'] = display_df.apply(
+            lambda row: format_duration(
+                start=row['started_at'] if pd.notna(row['started_at']) else None,
+                end=row['completed_at'] if pd.notna(row['completed_at']) else None,
+            ).replace("N/A", "-"),
+            axis=1,
         )
+
+        # Status display using shared formatter
+        display_df['Status'] = display_df['status'].apply(format_status)
 
         # Clean up analysis type names
         display_df['Analysis'] = display_df['analysis_type'].str.capitalize()

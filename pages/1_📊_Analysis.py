@@ -14,8 +14,14 @@ from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService
 from fintel.ui.theme import apply_theme
 from fintel.ui.utils.validators import validate_ticker
-from fintel.data.sources.sec import SECDownloader
 from fintel.core import get_filing_category
+from fintel.core.analysis_types import (
+    ANALYSIS_TYPES,
+    DEFAULT_FILING_TYPES,
+    get_analysis_type,
+    get_ui_options,
+    requires_multi_year,
+)
 
 # Import custom workflows discovery
 try:
@@ -73,31 +79,13 @@ if 'batch_errors' not in st.session_state:
     st.session_state.batch_errors = {}
 
 
-def get_available_filing_types(ticker: str, db: DatabaseRepository) -> list:
-    """Get available filing types for a ticker, using cache when possible."""
-    if not ticker:
-        return ["10-K", "10-Q", "8-K", "4", "DEF 14A"]
-
-    ticker = ticker.upper().strip()
-
-    # Check cache first
-    cached_types = db.get_cached_filing_types(ticker, max_age_hours=24)
-    if cached_types:
-        return cached_types
-
-    # Query SEC API
+def get_available_filing_types(ticker: str, service: AnalysisService, input_mode: str = "ticker") -> list:
+    """Get available filing types via the shared AnalysisService."""
     try:
-        downloader = SECDownloader()
-        filing_types = downloader.get_available_filing_types(ticker)
-
-        if filing_types:
-            db.cache_filing_types(ticker, filing_types)
-            return filing_types
-        else:
-            return ["10-K", "10-Q", "8-K", "4", "DEF 14A"]
+        return service.get_available_filing_types(ticker, input_mode=input_mode)
     except Exception as e:
         st.warning(f"Could not fetch filing types for {ticker}: {str(e)}")
-        return ["10-K", "10-Q", "8-K", "4", "DEF 14A"]
+        return list(DEFAULT_FILING_TYPES)
 
 
 def run_analysis_background(service, params, result_container):
@@ -333,13 +321,10 @@ else:
             if st.button("📋 Get Filing Types", help="Query SEC to find available filing types"):
                 if ticker:
                     with st.spinner(f"Querying SEC for {ticker}..."):
-                        if input_mode == "CIK":
-                            # Use CIK-direct method
-                            from fintel.data.sources.sec import SECDownloader
-                            downloader = SECDownloader()
-                            filing_types = downloader.get_available_filing_types_by_cik(ticker)
-                        else:
-                            filing_types = get_available_filing_types(ticker, st.session_state.db)
+                        mode = "cik" if input_mode == "CIK" else "ticker"
+                        filing_types = get_available_filing_types(
+                            ticker, st.session_state.analysis_service, input_mode=mode
+                        )
                         st.session_state.available_filing_types = filing_types
                         st.session_state.last_queried_ticker = ticker
                         st.success(f"Found {len(filing_types)} filing types")
@@ -369,39 +354,20 @@ else:
             time_since_change = time.time() - st.session_state.ticker_last_changed
             if time_since_change >= FILING_TYPES_DEBOUNCE_DELAY:
                 with st.spinner(f"Fetching available filing types for {ticker}..."):
-                    if input_mode == "CIK":
-                        from fintel.data.sources.sec import SECDownloader
-                        downloader = SECDownloader()
-                        filing_types = downloader.get_available_filing_types_by_cik(ticker)
-                    else:
-                        filing_types = get_available_filing_types(ticker, st.session_state.db)
+                    mode = "cik" if input_mode == "CIK" else "ticker"
+                    filing_types = get_available_filing_types(
+                        ticker, st.session_state.analysis_service, input_mode=mode
+                    )
                     st.session_state.available_filing_types = filing_types
                     st.session_state.last_queried_ticker = ticker
                     st.session_state.pending_ticker = None
 
-        # Build analysis type options including custom workflows
-        builtin_options = [
-            ("📋 Fundamental Analysis", "fundamental"),
-            ("⭐ Excellent Company Success Factors", "excellent"),
-            ("🎯 Objective Company Analysis", "objective"),
-            ("💰 Buffett Lens", "buffett"),
-            ("🛡️ Taleb Lens", "taleb"),
-            ("🔍 Contrarian Lens", "contrarian"),
-            ("🎭 Multi-Perspective", "multi"),
-            ("💎 Contrarian Scanner", "scanner"),
-        ]
-
-        # Get custom workflows
+        # Build analysis type options from shared registry + custom workflows
         custom_workflows = list_workflows()
-
-        # Build options list
-        analysis_options = [opt[0] for opt in builtin_options]
-
-        # Add custom workflows if any exist
-        if custom_workflows:
-            analysis_options.append("───── Custom Workflows ─────")
-            for wf in custom_workflows:
-                analysis_options.append(f"{wf['icon']} {wf['name']}")
+        analysis_options, analysis_type_map = get_ui_options(
+            include_custom_workflows=True,
+            custom_workflows=custom_workflows,
+        )
 
         # Analysis type selector
         analysis_type_display = st.selectbox(
@@ -411,52 +377,34 @@ else:
             key="single_analysis_type"
         )
 
-        # Determine if this is a custom workflow
-        is_custom_workflow = False
-        custom_workflow_id = None
-        custom_workflow_min_years = 1
-
-        # Map display name to internal type
-        analysis_type_map = {opt[0]: opt[1] for opt in builtin_options}
-
-        if analysis_type_display in analysis_type_map:
-            analysis_type = analysis_type_map[analysis_type_display]
-        elif analysis_type_display.startswith("─"):
-            # This is the separator, default to fundamental
+        # Map display name to internal type (from shared registry)
+        if analysis_type_display.startswith("─"):
+            # Separator line, default to fundamental
             analysis_type = "fundamental"
         else:
-            # This is a custom workflow
-            is_custom_workflow = True
-            # Find the matching workflow
-            for wf in custom_workflows:
-                if f"{wf['icon']} {wf['name']}" == analysis_type_display:
-                    custom_workflow_id = wf['id']
-                    custom_workflow_min_years = wf['min_years']
-                    break
-            analysis_type = f"custom:{custom_workflow_id}"
+            analysis_type = analysis_type_map.get(analysis_type_display, "fundamental")
 
-        # Show analysis type description
-        analysis_descriptions = {
-            "fundamental": "📋 Analyzes business model, financials, risks, and key strategies.",
-            "excellent": "⭐ Multi-year analysis for proven winners - identifies what made excellent companies succeed. **Requires at least 3 years**.",
-            "objective": "🎯 Multi-year unbiased analysis - objective assessment of any company's strengths and weaknesses. **Requires at least 3 years**.",
-            "buffett": "💰 Warren Buffett perspective: economic moat, management quality, pricing power, and intrinsic value.",
-            "taleb": "🛡️ Nassim Taleb perspective: fragility assessment, tail risks, and antifragility.",
-            "contrarian": "🔍 Contrarian perspective: variant perception, hidden opportunities, and market mispricings.",
-            "multi": "🎭 Combined analysis through all three investment lenses: Buffett, Taleb, and Contrarian.",
-            "scanner": "💎 Six-dimension scoring system (0-600 scale) to identify companies with hidden compounder potential. **Requires at least 3 years**."
-        }
-
+        is_custom_workflow = analysis_type.startswith("custom:")
+        custom_workflow_id = analysis_type.split(":", 1)[1] if is_custom_workflow else None
+        custom_workflow_min_years = 1
         if is_custom_workflow and custom_workflow_id:
-            # Get description from custom workflow
+            for wf in custom_workflows:
+                if wf['id'] == custom_workflow_id:
+                    custom_workflow_min_years = wf.get('min_years', 1)
+                    break
+
+        # Show analysis type description (from shared registry)
+        if is_custom_workflow and custom_workflow_id:
             for wf in custom_workflows:
                 if wf['id'] == custom_workflow_id:
                     min_years_note = f" **Requires at least {wf['min_years']} years**." if wf['min_years'] > 1 else ""
                     st.info(f"{wf['icon']} {wf['description']}{min_years_note}")
                     break
         else:
-            if analysis_type in analysis_descriptions:
-                st.info(analysis_descriptions[analysis_type])
+            type_info = get_analysis_type(analysis_type)
+            if type_info:
+                min_note = f" **Requires at least {type_info.min_years} years**." if type_info.min_years > 1 else ""
+                st.info(f"{type_info.icon} {type_info.description}{min_note}")
 
         # Filing type
         if st.session_state.available_filing_types:
@@ -477,8 +425,8 @@ else:
         # Period selection - adapts based on filing type periodicity
         st.subheader("Filing Period Selection")
 
-        # Check if multi-year is required (builtin or custom workflow)
-        multi_year_required = analysis_type in ['excellent', 'objective', 'scanner']
+        # Check if multi-year is required (from shared registry or custom workflow)
+        multi_year_required = requires_multi_year(analysis_type)
         if is_custom_workflow and custom_workflow_min_years >= 3:
             multi_year_required = True
         current_year = datetime.now().year
@@ -818,29 +766,12 @@ They can occur multiple times per year. Fintel will fetch the N most recent fili
         # Default settings for batch
         st.subheader("Batch Settings")
 
-        # Build analysis type options including custom workflows (same as single mode)
-        batch_builtin_options = [
-            ("📋 Fundamental Analysis", "fundamental"),
-            ("⭐ Excellent Company Success Factors", "excellent"),
-            ("🎯 Objective Company Analysis", "objective"),
-            ("💰 Buffett Lens", "buffett"),
-            ("🛡️ Taleb Lens", "taleb"),
-            ("🔍 Contrarian Lens", "contrarian"),
-            ("🎭 Multi-Perspective", "multi"),
-            ("💎 Contrarian Scanner", "scanner"),
-        ]
-
-        # Get custom workflows
+        # Build analysis type options from shared registry (same as single mode)
         batch_custom_workflows = list_workflows()
-
-        # Build options list
-        batch_analysis_options = [opt[0] for opt in batch_builtin_options]
-
-        # Add custom workflows if any exist
-        if batch_custom_workflows:
-            batch_analysis_options.append("───── Custom Workflows ─────")
-            for wf in batch_custom_workflows:
-                batch_analysis_options.append(f"{wf['icon']} {wf['name']}")
+        batch_analysis_options, batch_analysis_type_map = get_ui_options(
+            include_custom_workflows=True,
+            custom_workflows=batch_custom_workflows,
+        )
 
         col1, col2 = st.columns(2)
 
@@ -852,29 +783,24 @@ They can occur multiple times per year. Fintel will fetch the N most recent fili
                 key="batch_analysis_type"
             )
 
-            # Determine if this is a custom workflow
-            batch_is_custom_workflow = False
-            batch_custom_workflow_id = None
-            batch_custom_workflow_min_years = 1
-
-            # Map display name to internal type
-            batch_analysis_type_map = {opt[0]: opt[1] for opt in batch_builtin_options}
-
-            if batch_analysis_type_display in batch_analysis_type_map:
-                batch_analysis_type = batch_analysis_type_map[batch_analysis_type_display]
-            elif batch_analysis_type_display.startswith("─"):
-                # This is the separator, default to fundamental
+            # Map display name to internal type (from shared registry)
+            if batch_analysis_type_display.startswith("─"):
                 batch_analysis_type = "fundamental"
             else:
-                # This is a custom workflow
-                batch_is_custom_workflow = True
-                # Find the matching workflow
+                batch_analysis_type = batch_analysis_type_map.get(
+                    batch_analysis_type_display, "fundamental"
+                )
+
+            batch_is_custom_workflow = batch_analysis_type.startswith("custom:")
+            batch_custom_workflow_id = (
+                batch_analysis_type.split(":", 1)[1] if batch_is_custom_workflow else None
+            )
+            batch_custom_workflow_min_years = 1
+            if batch_is_custom_workflow and batch_custom_workflow_id:
                 for wf in batch_custom_workflows:
-                    if f"{wf['icon']} {wf['name']}" == batch_analysis_type_display:
-                        batch_custom_workflow_id = wf['id']
-                        batch_custom_workflow_min_years = wf['min_years']
+                    if wf['id'] == batch_custom_workflow_id:
+                        batch_custom_workflow_min_years = wf.get('min_years', 1)
                         break
-                batch_analysis_type = f"custom:{batch_custom_workflow_id}"
 
         with col2:
             batch_filing_type = st.selectbox(
@@ -884,34 +810,23 @@ They can occur multiple times per year. Fintel will fetch the N most recent fili
                 key="batch_filing_type"
             )
 
-        # Show analysis type description
-        batch_analysis_descriptions = {
-            "fundamental": "📋 Analyzes business model, financials, risks, and key strategies.",
-            "excellent": "⭐ Multi-year analysis for proven winners - identifies what made excellent companies succeed. **Requires at least 3 years**.",
-            "objective": "🎯 Multi-year unbiased analysis - objective assessment of any company's strengths and weaknesses. **Requires at least 3 years**.",
-            "buffett": "💰 Warren Buffett perspective: economic moat, management quality, pricing power, and intrinsic value.",
-            "taleb": "🛡️ Nassim Taleb perspective: fragility assessment, tail risks, and antifragility.",
-            "contrarian": "🔍 Contrarian perspective: variant perception, hidden opportunities, and market mispricings.",
-            "multi": "🎭 Combined analysis through all three investment lenses: Buffett, Taleb, and Contrarian.",
-            "scanner": "💎 Six-dimension scoring system (0-600 scale) to identify companies with hidden compounder potential. **Requires at least 3 years**."
-        }
-
+        # Show analysis type description (from shared registry)
         if batch_is_custom_workflow and batch_custom_workflow_id:
-            # Get description from custom workflow
             for wf in batch_custom_workflows:
                 if wf['id'] == batch_custom_workflow_id:
                     min_years_note = f" **Requires at least {wf['min_years']} years**." if wf['min_years'] > 1 else ""
                     st.info(f"{wf['icon']} {wf['description']}{min_years_note}")
                     break
         else:
-            if batch_analysis_type in batch_analysis_descriptions:
-                st.info(batch_analysis_descriptions[batch_analysis_type])
+            batch_type_info = get_analysis_type(batch_analysis_type)
+            if batch_type_info:
+                min_note = f" **Requires at least {batch_type_info.min_years} years**." if batch_type_info.min_years > 1 else ""
+                st.info(f"{batch_type_info.icon} {batch_type_info.description}{min_note}")
 
         # Year selection for batch
         st.subheader("Time Period (applies to all)")
 
-        batch_multi_year_required = batch_analysis_type in ['excellent', 'objective', 'scanner']
-        # Also check custom workflow min_years requirement
+        batch_multi_year_required = requires_multi_year(batch_analysis_type)
         if batch_is_custom_workflow and batch_custom_workflow_min_years >= 3:
             batch_multi_year_required = True
         current_year = datetime.now().year

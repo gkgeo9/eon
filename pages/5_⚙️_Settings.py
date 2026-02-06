@@ -12,6 +12,7 @@ from pathlib import Path
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.utils.validators import validate_prompt_template, validate_prompt_name
 from fintel.ui.theme import apply_theme
+from fintel.core.analysis_types import CLI_ANALYSIS_CHOICES
 
 # Apply global theme
 apply_theme()
@@ -84,7 +85,7 @@ with tab1:
         with col3:
             filter_type = st.selectbox(
                 "Filter by Type",
-                ["All", "fundamental", "excellent", "objective", "buffett", "taleb", "contrarian", "multi", "scanner"],
+                ["All"] + CLI_ANALYSIS_CHOICES,
                 key="runs_type_filter"
             )
 

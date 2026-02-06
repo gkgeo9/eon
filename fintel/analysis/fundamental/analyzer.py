@@ -313,9 +313,7 @@ class FundamentalAnalyzer:
                 max_retries=3,
                 retry_delay=10
             )
-
-            # Record usage in key manager
-            self.api_key_manager.record_usage(api_key)
+            # Usage is recorded by GeminiProvider.generate() — do not double-count
 
             return result
 

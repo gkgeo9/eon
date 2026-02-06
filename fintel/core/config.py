@@ -113,6 +113,18 @@ class FintelConfig(BaseSettings):
         description="Run browser in headless mode"
     )
 
+    # Notification Settings
+    discord_progress_interval: int = Field(
+        default=10,
+        ge=0,
+        le=100,
+        description=(
+            "Send Discord notification every N% of batch progress. "
+            "Set to 0 to disable progress notifications (only completion/failure). "
+            "E.g. 10 = notify at 10%, 20%, 30%, etc."
+        ),
+    )
+
     # Feature Flags
     enable_caching: bool = Field(
         default=True,

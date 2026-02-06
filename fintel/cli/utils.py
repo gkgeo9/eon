@@ -1,15 +1,73 @@
 """
 CLI utility functions shared across commands.
 
-Provides common functionality for ticker file reading and validation.
+Provides common functionality for ticker file reading, validation,
+and custom Click parameter types.
 """
 
+import click
 from pathlib import Path
 from typing import List
 
 from fintel.core import get_logger
+from fintel.core.analysis_types import CLI_ANALYSIS_CHOICES
 
 logger = get_logger(__name__)
+
+
+class AnalysisTypeParam(click.ParamType):
+    """
+    Custom Click parameter type that accepts both built-in analysis types
+    and ``custom:<workflow_id>`` values.
+
+    Built-in types are validated against CLI_ANALYSIS_CHOICES.
+    Custom workflow IDs (``custom:*``) are validated against the
+    auto-discovered workflow registry.
+    """
+
+    name = "analysis_type"
+
+    def get_metavar(self, param):
+        choices_str = "|".join(CLI_ANALYSIS_CHOICES)
+        return f"[{choices_str}|custom:<id>]"
+
+    def convert(self, value, param, ctx):
+        # Accept built-in types (case-insensitive)
+        lower = value.lower()
+        if lower in CLI_ANALYSIS_CHOICES:
+            return lower
+
+        # Accept custom:<workflow_id>
+        if lower.startswith("custom:"):
+            workflow_id = value.split(":", 1)[1]  # preserve original case for ID
+            if not workflow_id:
+                self.fail(
+                    "Missing workflow ID after 'custom:'. "
+                    "Use 'fintel workflows' to list available IDs.",
+                    param, ctx,
+                )
+
+            # Validate the workflow actually exists
+            from custom_workflows import get_workflow
+            if get_workflow(workflow_id) is None:
+                self.fail(
+                    f"Unknown custom workflow: '{workflow_id}'. "
+                    f"Run 'fintel workflows' to see available workflows.",
+                    param, ctx,
+                )
+            return f"custom:{workflow_id}"
+
+        self.fail(
+            f"Invalid analysis type: '{value}'. "
+            f"Valid built-in types: {', '.join(CLI_ANALYSIS_CHOICES)}. "
+            f"For custom workflows use: custom:<workflow_id> "
+            f"(run 'fintel workflows' to list them).",
+            param, ctx,
+        )
+
+
+# Singleton instance for use in Click options
+ANALYSIS_TYPE = AnalysisTypeParam()
 
 
 def read_ticker_file(ticker_path: Path) -> List[str]:

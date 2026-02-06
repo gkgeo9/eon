@@ -1126,7 +1126,8 @@ class AnalysisService:
         # First, run fundamental analysis for each year
         fundamental_analyzer = FundamentalAnalyzer(
             api_key_manager=self.api_key_manager,
-            rate_limiter=self.rate_limiter
+            rate_limiter=self.rate_limiter,
+            api_key=api_key
         )
 
         fundamental_analyses = {}
@@ -1168,7 +1169,8 @@ class AnalysisService:
 
             objective_analyzer = ObjectiveCompanyAnalyzer(
                 api_key_manager=self.api_key_manager,
-                rate_limiter=self.rate_limiter
+                rate_limiter=self.rate_limiter,
+                api_key=api_key
             )
 
             self.logger.info(f"Running Objective analysis for scanner: {ticker}")
@@ -1196,7 +1198,8 @@ class AnalysisService:
                     # Now run contrarian scanner
                     scanner = ContrarianScanner(
                         api_key_manager=self.api_key_manager,
-                        rate_limiter=self.rate_limiter
+                        rate_limiter=self.rate_limiter,
+                        api_key=api_key
                     )
 
                     self.logger.info(f"Running Contrarian Scanner for {ticker}")
@@ -1285,15 +1288,21 @@ class AnalysisService:
                 )
                 full_prompt = f"{prompt}\n\nHere's the filing content:\n\n{text}"
 
-                # Reserve API key atomically for parallel safety
-                api_key = self.api_key_manager.reserve_key()
-                if not api_key:
+                # Use pre-reserved key if available (batch), otherwise reserve per year
+                if api_key:
+                    year_key = api_key
+                    key_was_pre_reserved = True
+                else:
+                    year_key = self.api_key_manager.reserve_key()
+                    key_was_pre_reserved = False
+
+                if not year_key:
                     self.logger.error("No API keys available for custom workflow")
                     continue
 
                 try:
                     provider = GeminiProvider(
-                        api_key=api_key,
+                        api_key=year_key,
                         model=self.config.default_model,
                         thinking_budget=self.config.thinking_budget,
                         rate_limiter=self.rate_limiter
@@ -1305,16 +1314,16 @@ class AnalysisService:
                         max_retries=3,
                         retry_delay=10
                     )
-
-                    self.api_key_manager.record_usage(api_key)
+                    # Usage is recorded by GeminiProvider.generate() — do not double-count
 
                     if result:
                         results[year] = result
                         self.logger.info(f"Completed {workflow.name} analysis for {ticker} {year}")
 
                 finally:
-                    # Always release the key
-                    self.api_key_manager.release_key(api_key)
+                    # Only release if we reserved it (not if pre-reserved by batch)
+                    if not key_was_pre_reserved:
+                        self.api_key_manager.release_key(year_key)
 
             except Exception as e:
                 self.logger.error(f"Failed to analyze {ticker} {year} with {workflow.name}: {e}")
@@ -1350,6 +1359,56 @@ class AnalysisService:
             return details
 
         return {'status': 'not_found'}
+
+    def get_available_filing_types(
+        self,
+        ticker: str,
+        input_mode: str = "ticker",
+        max_cache_age_hours: int = 24,
+    ) -> list:
+        """
+        Get available SEC filing types for a company, with caching.
+
+        Checks the database cache first, then queries the SEC API if needed.
+        This centralises the logic that was previously duplicated in the
+        Analysis page.
+
+        Args:
+            ticker: Stock ticker or CIK number.
+            input_mode: ``"ticker"`` or ``"cik"``.
+            max_cache_age_hours: Cache TTL.
+
+        Returns:
+            List of filing type strings (e.g. ``["10-K", "10-Q", "8-K"]``).
+        """
+        from fintel.core.analysis_types import DEFAULT_FILING_TYPES
+        from fintel.data.sources.sec import SECDownloader
+
+        if not ticker:
+            return list(DEFAULT_FILING_TYPES)
+
+        ticker = ticker.upper().strip() if input_mode == "ticker" else ticker.strip()
+
+        # Check cache first
+        cached_types = self.db.get_cached_filing_types(ticker, max_age_hours=max_cache_age_hours)
+        if cached_types:
+            return cached_types
+
+        # Query SEC API
+        try:
+            downloader = SECDownloader()
+            if input_mode == "cik":
+                filing_types = downloader.get_available_filing_types_by_cik(ticker)
+            else:
+                filing_types = downloader.get_available_filing_types(ticker)
+
+            if filing_types:
+                self.db.cache_filing_types(ticker, filing_types)
+                return filing_types
+        except Exception as e:
+            self.logger.warning(f"Could not fetch filing types for {ticker}: {e}")
+
+        return list(DEFAULT_FILING_TYPES)
 
     def cancel_analysis(self, run_id: str, timeout: float = 30.0) -> bool:
         """
@@ -1591,7 +1650,8 @@ class AnalysisService:
         ticker: str,
         pdf_paths: Dict[int, Path],
         workflow_id: str,
-        run_id: str
+        run_id: str,
+        api_key: Optional[str] = None
     ) -> Dict[int, Any]:
         """Run custom workflow with per-year completion tracking."""
         try:
@@ -1631,14 +1691,21 @@ class AnalysisService:
                 prompt = workflow.prompt_template.format(ticker=ticker, year=year)
                 full_prompt = f"{prompt}\n\nHere's the filing content:\n\n{text}"
 
-                api_key = self.api_key_manager.reserve_key()
-                if not api_key:
+                # Use pre-reserved key if available (batch), otherwise reserve per year
+                if api_key:
+                    year_key = api_key
+                    key_was_pre_reserved = True
+                else:
+                    year_key = self.api_key_manager.reserve_key()
+                    key_was_pre_reserved = False
+
+                if not year_key:
                     self.logger.error("No API keys available")
                     continue
 
                 try:
                     provider = GeminiProvider(
-                        api_key=api_key,
+                        api_key=year_key,
                         model=self.config.default_model,
                         thinking_budget=self.config.thinking_budget,
                         rate_limiter=self.rate_limiter
@@ -1650,8 +1717,7 @@ class AnalysisService:
                         max_retries=3,
                         retry_delay=10
                     )
-
-                    self.api_key_manager.record_usage(api_key)
+                    # Usage is recorded by GeminiProvider.generate() — do not double-count
 
                     if result:
                         results[year] = result
@@ -1659,7 +1725,8 @@ class AnalysisService:
                         self.logger.info(f"Completed {workflow.name} for {ticker} {year}")
 
                 finally:
-                    self.api_key_manager.release_key(api_key)
+                    if not key_was_pre_reserved:
+                        self.api_key_manager.release_key(year_key)
 
             except Exception as e:
                 self.logger.error(f"Failed {ticker} {year}: {e}")
@@ -1829,8 +1896,7 @@ Be comprehensive but focus on actionable insights from the longitudinal perspect
                     max_retries=3,
                     retry_delay=10
                 )
-
-                self.api_key_manager.record_usage(api_key)
+                # Usage is recorded by GeminiProvider.generate() — do not double-count
 
                 if result:
                     # Store synthesis result
