@@ -255,7 +255,7 @@ Fintel includes enterprise-grade reliability features for processing 1000+ compa
 | Feature | Description |
 |---------|-------------|
 | **Disk Space Monitoring** | Preflight checks and periodic monitoring during processing |
-| **Chrome Process Cleanup** | Automatic cleanup of orphaned browser processes every 50 companies |
+| **Chrome Process Cleanup** | Demand-based cleanup triggered by memory pressure (>80%) or fallback interval |
 | **Database Backups** | Daily automatic backups with 7-day retention |
 | **Thread-Safe Progress** | File-based locking prevents race conditions |
 | **Exponential Backoff** | Up to 10 retries with jitter for database operations |
@@ -348,61 +348,24 @@ MSFT,Microsoft Corporation
 | **Context length exceeded** | Company marked as SKIPPED (not retried) |
 | **API quota exhausted** | Waits for midnight PST reset, then resumes |
 | **Network/transient error** | Retried up to max_retries (default 2) |
-| **Process crash** | Resume picks up from last completed company |
+| **Process crash** | Resume picks up from last completed *year* (not company) |
 
 ---
 
-## Known Limitations & Improvement Opportunities
+## Batch Processing Features
 
-The following areas have been identified for improvement, particularly for large-scale batch processing (1000+ companies, 10+ years):
+These features are specifically designed for large-scale processing (1000+ companies, 10+ years):
 
-### Resume Granularity
-
-**Current:** Resume tracks progress per-company. If a company fails at year 7 of 10, all 10 years are re-processed on resume. The `batch_item_year_checkpoints` table schema exists but the per-year checkpoint logic is not yet implemented.
-
-**Improvement:** Implement per-year resume so interrupted companies restart from the last completed year, not from scratch. This becomes significant at 10+ years per company.
-
-### Throughput Bottleneck
-
-**Current:** All API requests are serialized through a single global file lock with a mandatory 65-second sleep. Even with 25 keys, effective throughput is ~500 requests/day because the lock serializes requests rather than allowing parallel calls on different keys.
-
-**Improvement:** Move to per-key locks instead of a single global lock. Each API key could process requests independently, increasing theoretical throughput to 25 parallel streams. This is the single highest-impact performance improvement possible.
-
-### Batch Priority & Ordering
-
-**Current:** Companies are processed in FIFO order. No way to prioritize specific tickers or re-order the queue mid-batch.
-
-**Improvement:** Add priority levels to batch items so high-interest companies are processed first. The database column exists (`priority`) but is not exposed in the CLI or UI.
-
-### Partial Results on Failure
-
-**Current:** If multi-perspective analysis fails on the Taleb lens after Buffett lens completes, both results are lost. Each perspective is not saved independently.
-
-**Improvement:** Save each perspective result as it completes, so partial multi-analysis results are preserved even if one lens fails.
-
-### Adaptive Rate Limiting
-
-**Current:** Fixed 65-second sleep between all requests regardless of API response headers or actual rate limit state.
-
-**Improvement:** Read Gemini API response headers for rate limit information and adapt sleep duration dynamically. Under low load, requests could be faster; under contention, back off further.
-
-### Export Tooling for Large Datasets
-
-**Current:** Export is available through the UI and a script in `scripts/`. No built-in CLI export command for bulk data extraction from large batch results.
-
-**Improvement:** Add `fintel export --batch-id <id> --format csv` to export all results from a specific batch run, with filtering by status, ticker, or analysis type.
-
-### Chrome Process Management
-
-**Current:** Cleanup runs every 50 companies (arbitrary threshold). No demand-based cleanup or memory monitoring for the Chrome instances used in HTML→PDF conversion.
-
-**Improvement:** Monitor Chrome process memory usage and trigger cleanup when a threshold is exceeded rather than on a fixed schedule.
-
-### Deduplication
-
-**Current:** No check for duplicate tickers in a batch CSV. If `AAPL` appears 3 times, it gets analyzed 3 times.
-
-**Improvement:** Deduplicate tickers on batch creation and warn the user about removed duplicates.
+| Feature | Description |
+|---------|-------------|
+| **Per-year resume** | Results saved incrementally after each year. Interrupted companies resume from last completed year, not from scratch. |
+| **Parallel throughput** | Per-key file locks + configurable concurrency (`FINTEL_MAX_CONCURRENT_REQUESTS`, default 25). All 25 keys can process in parallel. |
+| **Priority ordering** | `--priority` flag in CLI. Higher-priority tickers are processed first (`ORDER BY priority DESC, id`). |
+| **Partial results** | Each year's result is saved to the database immediately. If analysis fails at year 7/10, years 1-6 are preserved. |
+| **Adaptive rate limiting** | Sleep duration decreases after consecutive successes (down to ~20s). Increases by 50% on 429 errors. Resets on other errors. |
+| **Batch export** | `fintel export --batch-id <id> --format csv` exports all results from a specific batch with optional `--status-filter`. |
+| **Demand-based Chrome cleanup** | Triggered by memory pressure (>80% usage) instead of a fixed interval. Fallback interval still runs as safety net. |
+| **Ticker deduplication** | Duplicate tickers in batch CSV are automatically removed with logging. |
 
 ---
 
@@ -438,17 +401,22 @@ fintel scan --tickers-file universe.txt --min-score 400
 
 # Export results
 fintel export --format csv --output results.csv
-fintel export --format json --output results.json
+
+# Export from a specific batch run
+fintel export --batch-id abc12345 --output batch_results.csv
+
+# Export only completed items
+fintel export --batch-id abc12345 --status-filter completed --output completed.csv
 ```
 
 ### CLI Options
 
-| Command   | Options                         | Description                       |
-| --------- | ------------------------------- | --------------------------------- |
-| `analyze` | `--years`, `--type`, `--filing` | Single company analysis           |
-| `batch`   | `--workers`, `--type`           | Parallel multi-company processing |
-| `scan`    | `--min-score`, `--tickers-file` | Contrarian opportunity scanning   |
-| `export`  | `--format`, `--output`          | Export results to file            |
+| Command   | Options                                     | Description                       |
+| --------- | ------------------------------------------- | --------------------------------- |
+| `analyze` | `--years`, `--type`, `--filing`              | Single company analysis           |
+| `batch`   | `--years`, `--type`, `--priority`, `--resume`| Multi-day batch processing        |
+| `scan`    | `--min-score`, `--tickers-file`              | Contrarian opportunity scanning   |
+| `export`  | `--format`, `--output`, `--batch-id`         | Export results to file            |
 
 ---
 
