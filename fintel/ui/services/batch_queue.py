@@ -986,6 +986,16 @@ class BatchQueueService:
         # Get batch config
         batch_config = self._get_batch_config(batch_id)
 
+        # Create year progress callback for real-time tracking
+        def year_progress_callback(current_year: int, completed_count: int, total_count: int):
+            """Update batch_items with year progress."""
+            self._update_item_year_progress(
+                item_id,
+                current_year=str(current_year),
+                completed_count=completed_count,
+                total_count=total_count
+            )
+
         # Run analysis
         try:
             run_id = analysis_service.run_analysis(
@@ -994,7 +1004,8 @@ class BatchQueueService:
                 filing_type=batch_config['filing_type'],
                 num_years=batch_config['num_years'],
                 company_name=item.get('company_name'),
-                custom_prompt=batch_config.get('custom_prompt')
+                custom_prompt=batch_config.get('custom_prompt'),
+                year_progress_callback=year_progress_callback
             )
 
             # Finalize year progress tracking
@@ -1065,6 +1076,16 @@ class BatchQueueService:
             # Get batch config
             batch_config = self._get_batch_config(batch_id)
 
+            # Create year progress callback for real-time tracking
+            def year_progress_callback(current_year: int, completed_count: int, total_count: int):
+                """Update batch_items with year progress."""
+                self._update_item_year_progress(
+                    item_id,
+                    current_year=str(current_year),
+                    completed_count=completed_count,
+                    total_count=total_count
+                )
+
             # Run analysis with the pre-reserved key
             run_id = analysis_service.run_analysis(
                 ticker=ticker,
@@ -1073,7 +1094,8 @@ class BatchQueueService:
                 num_years=batch_config['num_years'],
                 company_name=item.get('company_name'),
                 custom_prompt=batch_config.get('custom_prompt'),
-                api_key=api_key  # Pass pre-reserved key
+                api_key=api_key,  # Pass pre-reserved key
+                year_progress_callback=year_progress_callback
             )
 
             # Finalize year progress tracking
