@@ -168,6 +168,67 @@ class NotificationService:
             embeds=[embed]
         )
 
+    def send_batch_progress(
+        self,
+        batch_id: str,
+        completed: int,
+        total: int,
+        failed: int,
+        skipped: int = 0,
+        estimated_completion: Optional[str] = None,
+    ) -> bool:
+        """
+        Send notification for batch progress milestone.
+
+        Args:
+            batch_id: Batch ID
+            completed: Completed items
+            total: Total items
+            failed: Failed items
+            skipped: Skipped items
+            estimated_completion: ISO timestamp of estimated completion
+
+        Returns:
+            True if sent successfully
+        """
+        pct = round((completed / total) * 100, 1) if total > 0 else 0
+        remaining = total - completed - failed - skipped
+
+        # Build a text progress bar
+        bar_length = 20
+        filled = int(bar_length * completed / max(total, 1))
+        bar = "\u2588" * filled + "\u2591" * (bar_length - filled)
+
+        eta_str = ""
+        if estimated_completion:
+            try:
+                eta = datetime.fromisoformat(estimated_completion)
+                eta_str = eta.strftime("%Y-%m-%d %H:%M UTC")
+            except Exception:
+                eta_str = "N/A"
+
+        fields = [
+            {"name": "Progress", "value": f"`{bar}` {pct}%", "inline": False},
+            {"name": "Completed", "value": str(completed), "inline": True},
+            {"name": "Remaining", "value": str(remaining), "inline": True},
+            {"name": "Failed", "value": str(failed), "inline": True},
+        ]
+        if eta_str:
+            fields.append({"name": "ETA", "value": eta_str, "inline": True})
+
+        embed = {
+            "title": f"\U0001F4CA Batch Progress — {pct}%",
+            "color": 0x3498DB,  # Blue
+            "fields": fields,
+            "footer": {"text": f"Fintel | Batch {batch_id[:8]}"},
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        return self._send_discord(
+            content=f"Batch `{batch_id[:8]}` progress: {completed}/{total} ({pct}%)",
+            embeds=[embed],
+        )
+
     def send_batch_failed(self, batch_id: str, error: str) -> bool:
         """
         Send notification when batch fails.

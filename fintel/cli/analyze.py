@@ -14,9 +14,10 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskPr
 from rich.panel import Panel
 
 from fintel.core import get_config, get_logger
-from fintel.core.analysis_types import CLI_ANALYSIS_CHOICES, get_analysis_type
+from fintel.core.analysis_types import get_analysis_type
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services import AnalysisService, create_analysis_service
+from fintel.cli.utils import ANALYSIS_TYPE
 
 console = Console()
 logger = get_logger(__name__)
@@ -28,9 +29,9 @@ logger = get_logger(__name__)
 @click.option(
     "--analysis-type",
     "-t",
-    type=click.Choice(CLI_ANALYSIS_CHOICES, case_sensitive=False),
+    type=ANALYSIS_TYPE,
     default="fundamental",
-    help="Type of analysis to perform",
+    help="Type of analysis to perform (use 'custom:<id>' for custom workflows; run 'fintel workflows' to list them)",
 )
 @click.option(
     "--filing-type",
@@ -67,14 +68,20 @@ def analyze(
     ═══════════════════════════════════════════════════════════════
 
     \b
-    fundamental - Basic 10-K financial analysis
-    excellent   - Multi-year excellence / success factors (3+ years)
-    objective   - Multi-year unbiased assessment (3+ years)
-    buffett     - Warren Buffett value investing lens
-    taleb       - Nassim Taleb antifragility analysis
-    contrarian  - Contrarian / skeptical analysis
-    multi       - All three perspectives combined
-    scanner     - Quick contrarian screening (3+ years)
+    Built-in types:
+      fundamental - Basic 10-K financial analysis
+      excellent   - Multi-year excellence / success factors (3+ years)
+      objective   - Multi-year unbiased assessment (3+ years)
+      buffett     - Warren Buffett value investing lens
+      taleb       - Nassim Taleb antifragility analysis
+      contrarian  - Contrarian / skeptical analysis
+      multi       - All three perspectives combined
+      scanner     - Quick contrarian screening (3+ years)
+
+    \b
+    Custom workflows:
+      Use custom:<workflow_id> for any custom workflow.
+      Run 'fintel workflows' to list all available custom workflows.
 
     \b
     ═══════════════════════════════════════════════════════════════
@@ -92,6 +99,10 @@ def analyze(
     \b
     # Analyze foreign issuer 20-F filings
     fintel analyze TSM --filing-type 20-F --years 5
+
+    \b
+    # Use a custom workflow
+    fintel analyze AAPL --analysis-type custom:examples.moonshot_analyzer
 
     \b
     # Analyze by CIK number
@@ -112,18 +123,31 @@ def analyze(
         )
         raise click.Abort()
 
-    # Validate min-years for multi-year types
+    # Validate min-years for multi-year types (built-in and custom)
     type_info = get_analysis_type(analysis_type)
-    if type_info and type_info.min_years > 1 and years < type_info.min_years:
+    min_years_required = 1
+    analysis_label = analysis_type
+
+    if type_info:
+        min_years_required = type_info.min_years
+        analysis_label = type_info.name
+    elif analysis_type.startswith("custom:"):
+        from custom_workflows import get_workflow
+        workflow_id = analysis_type.split(":", 1)[1]
+        wf_class = get_workflow(workflow_id)
+        if wf_class:
+            min_years_required = wf_class.min_years
+            analysis_label = f"{wf_class.icon} {wf_class.name}"
+
+    if min_years_required > 1 and years < min_years_required:
         console.print(
-            f"[bold red]{analysis_type} analysis requires at least "
-            f"{type_info.min_years} years (got {years})[/bold red]"
+            f"[bold red]{analysis_label} requires at least "
+            f"{min_years_required} years (got {years})[/bold red]"
         )
         raise click.Abort()
 
     # Display header
     display_id = ticker if input_mode == "ticker" else f"CIK:{ticker}"
-    analysis_label = type_info.name if type_info else analysis_type
     console.print(
         Panel.fit(
             f"[bold cyan]Analyzing {display_id}[/bold cyan]\n"

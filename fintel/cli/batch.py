@@ -44,10 +44,9 @@ from rich.text import Text
 from fintel.core import get_config, get_logger
 from fintel.core.logging import setup_cli_logging
 from fintel.core.formatting import format_duration
-from fintel.core.analysis_types import CLI_ANALYSIS_CHOICES, is_valid_analysis_type
 from fintel.ui.database import DatabaseRepository
 from fintel.ui.services.batch_queue import BatchQueueService, BatchJobConfig
-from fintel.cli.utils import read_ticker_file
+from fintel.cli.utils import read_ticker_file, ANALYSIS_TYPE
 
 console = Console()
 logger = get_logger(__name__)
@@ -296,8 +295,8 @@ def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, num
 @click.option("--name", "-n", default=None,
               help="Batch job name (default: auto-generated timestamp)")
 @click.option("--analysis-type", "-t", default="multi", show_default=True,
-              type=click.Choice(CLI_ANALYSIS_CHOICES, case_sensitive=False),
-              help="Type of analysis to run")
+              type=ANALYSIS_TYPE,
+              help="Type of analysis to run (use 'custom:<id>' for custom workflows; run 'fintel workflows' to list them)")
 @click.option("--filing-type", "-f", default="10-K", show_default=True,
               help="SEC filing type to analyze (10-K, 20-F, 10-Q, 8-K, 4, DEF 14A, etc.)")
 @click.option("--resume", "-r", is_flag=True,
@@ -390,6 +389,10 @@ def batch(
     \b
     # 7 years with Buffett analysis
     fintel batch tickers.csv --years 7 --analysis-type buffett
+
+    \b
+    # Use a custom workflow (run 'fintel workflows' to list them)
+    fintel batch tickers.csv --analysis-type custom:examples.moonshot_analyzer
 
     \b
     # Analyze foreign company filings (20-F)
@@ -510,13 +513,6 @@ def batch(
 
     if not tickers:
         console.print(f"[red]Error: No tickers found in {ticker_file}[/red]")
-        return
-
-    # Validate analysis type using shared registry
-    if not is_valid_analysis_type(analysis_type):
-        console.print(f"[red]Invalid analysis type: {analysis_type}[/red]")
-        console.print(f"[yellow]Valid types: {', '.join(CLI_ANALYSIS_CHOICES)}[/yellow]")
-        console.print("[yellow]For custom workflows, use: custom:<workflow_id>[/yellow]")
         return
 
     # Generate batch name

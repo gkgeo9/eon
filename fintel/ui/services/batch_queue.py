@@ -106,6 +106,10 @@ class BatchQueueService:
         # Notifications (optional - enabled via FINTEL_DISCORD_WEBHOOK_URL)
         self._notifier = NotificationService()
 
+        # Progress notification tracking — maps batch_id → last notified % milestone
+        self._last_notified_pct: Dict[str, int] = {}
+        self._progress_interval = self.config.discord_progress_interval
+
         # Fix #4: Cleanup stale worker state from crashed processes
         self._cleanup_stale_worker()
 
@@ -1398,7 +1402,7 @@ class BatchQueueService:
                 )
 
     def _update_batch_progress(self, batch_id: str):
-        """Update batch progress statistics."""
+        """Update batch progress statistics and send milestone notifications."""
         query = """
             SELECT
                 SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
@@ -1426,6 +1430,9 @@ class BatchQueueService:
             completed, failed, skipped, estimate, datetime.utcnow().isoformat(), batch_id
         ))
 
+        # Send progress notification if a milestone has been crossed
+        self._maybe_send_progress_notification(batch_id, completed, failed, skipped, estimate)
+
     def _estimate_completion(self, batch_id: str, completed: int) -> Optional[str]:
         """Estimate when batch will complete."""
         batch = self.get_batch_status(batch_id)
@@ -1445,6 +1452,63 @@ class BatchQueueService:
 
         estimate = datetime.utcnow() + timedelta(days=days_remaining)
         return estimate.isoformat()
+
+    def _maybe_send_progress_notification(
+        self,
+        batch_id: str,
+        completed: int,
+        failed: int,
+        skipped: int,
+        estimated_completion: Optional[str],
+    ):
+        """
+        Send a Discord progress notification if a new percentage milestone has
+        been crossed since the last notification for this batch.
+
+        The interval is controlled by ``FINTEL_DISCORD_PROGRESS_INTERVAL`` (default 10%).
+        Set to 0 to disable progress notifications entirely.
+        """
+        interval = self._progress_interval
+        if interval <= 0:
+            return  # Progress notifications disabled
+
+        # Get total from batch status (avoid extra query — use cached batch data)
+        batch = self.get_batch_status(batch_id)
+        if not batch or batch['total_tickers'] <= 0:
+            return
+
+        total = batch['total_tickers']
+        pct = (completed / total) * 100
+
+        # Which milestone have we reached? e.g. interval=10, pct=34.5 → milestone=30
+        current_milestone = int(pct // interval) * interval
+
+        # Don't notify for 0% or 100% (100% is handled by _complete_batch)
+        if current_milestone <= 0 or current_milestone >= 100:
+            return
+
+        last = self._last_notified_pct.get(batch_id, 0)
+        if current_milestone <= last:
+            return  # Already notified for this milestone
+
+        # Record before sending to avoid duplicates even if send fails
+        self._last_notified_pct[batch_id] = current_milestone
+
+        try:
+            self._notifier.send_batch_progress(
+                batch_id=batch_id,
+                completed=completed,
+                total=total,
+                failed=failed,
+                skipped=skipped,
+                estimated_completion=estimated_completion,
+            )
+            self.logger.info(
+                f"Sent progress notification for batch {batch_id[:8]}: "
+                f"{current_milestone}% ({completed}/{total})"
+            )
+        except Exception as e:
+            self.logger.warning(f"Failed to send progress notification: {e}")
 
     def pause_batch(self, batch_id: str):
         """Pause batch processing."""
