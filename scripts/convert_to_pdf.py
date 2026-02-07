@@ -336,7 +336,7 @@ def process_value(key, value, styles):
     return elements
 
 
-def process_section(section_name, section_data, styles, canvas=None):
+def process_section(section_name, year, section_data, styles, canvas=None):
     """Process a section (like 'buffett', 'taleb', etc.) and return elements."""
     elements = []
     
@@ -346,7 +346,7 @@ def process_section(section_name, section_data, styles, canvas=None):
         header_text = f"{format_field_name(section_name)} Analysis"
     
     # Add bookmark for PDF outline/navigation
-    bookmark_key = f"section_{section_name}"
+    bookmark_key = f"section_{section_name}_{year}"
     elements.append(BookmarkAction(header_text, bookmark_key, level=1))
     elements.append(Paragraph(header_text, styles['CustomSectionHeader']))
     elements.append(Spacer(1, 0.15 * inch))
@@ -395,7 +395,13 @@ def json_to_pdf(json_input, pdf_filename, company_name, stock_name, logo_path=No
         rightMargin=MARGIN,
         topMargin=MARGIN,
         bottomMargin=MARGIN,
+        title=f"{stock_name} - Multi-Perspective Analysis",
+        author=company_name,
+        subject=f"Multi-Perspective Analysis for {stock_name}",
+        creator=company_name,
+        keywords=["Investment Analysis", "Financial Report", "Multi-Perspective Analysis" ,"EON", company_name, stock_name]
     )
+
     
     # Create custom canvas for title page
     def add_title_page(canvas, doc):
@@ -423,7 +429,7 @@ def json_to_pdf(json_input, pdf_filename, company_name, stock_name, logo_path=No
             
             # Process each section in year
             for section_name, section_data in year_data.items():
-                section_elements = process_section(section_name, section_data, styles)
+                section_elements = process_section(section_name, year, section_data, styles)
                 story.extend(section_elements)
             
             # Page break after each year (except last)
