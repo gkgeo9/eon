@@ -122,13 +122,15 @@ class PDFTemplate:
         canvas.restoreState()
 
 
-def create_title_page(canvas, company_name, logo_path=None):
+def create_title_page(canvas, company_name, stock_name, logo_path=None):
     """Create professional title page."""
     canvas.saveState()
     
     # Background accent bar
     canvas.setFillColor(COLOR_PRIMARY)
     canvas.rect(0, PAGE_HEIGHT - 2.2 * inch, PAGE_WIDTH, 2.2 * inch, fill=1, stroke=0)
+    canvas.bookmarkPage("title")
+    canvas.addOutlineEntry("Multi-Perspective Analysis", "title", level=0)
     
     # Logo (large, centered - takes up ~40% of page)
     if logo_path and os.path.exists(logo_path):
@@ -169,12 +171,17 @@ def create_title_page(canvas, company_name, logo_path=None):
     canvas.setFont("Times-Italic", 20)
     canvas.setFillColor(COLOR_ACCENT)
     canvas.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT / 2 - 2.65 * inch, "Multi-Perspective Analysis")
+
+    # Subtitle
+    canvas.setFont("Times-Italic", 20)
+    canvas.setFillColor(COLOR_ACCENT)
+    canvas.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT / 2 - 3.2 * inch, stock_name)
     
     # Date
     canvas.setFont("Times-Roman", 11)
     canvas.setFillColor(COLOR_MUTED)
     date_str = datetime.now().strftime("%B %d, %Y")
-    canvas.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT / 2 - 3.15 * inch, date_str)
+    canvas.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT / 2 - 3.65 * inch, date_str)
     
     # Confidential footer
     canvas.setFillColor(COLOR_PRIMARY)
@@ -360,7 +367,7 @@ def process_section(section_name, section_data, styles, canvas=None):
     return elements
 
 
-def json_to_pdf(json_input, pdf_filename, company_name, logo_path=None, watermark_path=None):
+def json_to_pdf(json_input, pdf_filename, company_name, stock_name, logo_path=None, watermark_path=None):
     """
     Convert structured JSON to professional PDF report.
     
@@ -392,7 +399,7 @@ def json_to_pdf(json_input, pdf_filename, company_name, logo_path=None, watermar
     
     # Create custom canvas for title page
     def add_title_page(canvas, doc):
-        create_title_page(canvas, company_name, logo_path)
+        create_title_page(canvas, company_name, stock_name, logo_path)
     
     # Story (content)
     story = []
@@ -442,6 +449,7 @@ if __name__ == "__main__":
         "./scripts/test.json",
         "./scripts/output.pdf",
         "Erebus Observatory Network",
+        "Pentair",
         logo_path="./logo.png",
         watermark_path="./watermark.png",
     )
