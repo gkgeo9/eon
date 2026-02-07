@@ -5,7 +5,7 @@
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd EON
+cd eon
 
 # Create virtual environment
 python -m venv .venv

@@ -1,6 +1,6 @@
 # Custom Workflows Developer Guide
 
-This guide explains how to create custom analysis workflows for EON. Custom workflows allow you to define specialized prompts and structured output schemas to extract specific insights from SEC filings.
+This guide explains how to create custom analysis workflows for Erebus Observatory Network (EON). Custom workflows allow you to define specialized prompts and structured output schemas to extract specific insights from SEC filings.
 
 ## Table of Contents
 

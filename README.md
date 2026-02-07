@@ -11,7 +11,7 @@
 
 ## Overview
 
-EON is a production-ready platform that analyzes SEC 10-K filings using Google Gemini AI to extract actionable investment insights. It combines multiple investment philosophies—Warren Buffett's value investing, Nassim Taleb's antifragility framework, and contrarian opportunity detection—into a unified analysis system.
+**Erebus Observatory Network (EON)** is a production-ready platform that analyzes SEC 10-K filings using Google Gemini AI to extract actionable investment insights. It combines multiple investment philosophies—Warren Buffett's value investing, Nassim Taleb's antifragility framework, and contrarian opportunity detection—into a unified analysis system.
 
 ### Why EON?
 

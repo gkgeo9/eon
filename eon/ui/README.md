@@ -1,6 +1,6 @@
 # EON Web UI
 
-Streamlit-based web interface for the EON financial analysis platform.
+Streamlit-based web interface for the Erebus Observatory Network (EON) financial analysis platform.
 
 ## Features
 

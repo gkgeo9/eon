@@ -1,6 +1,6 @@
 # CLAUDE.md - AI Assistant Guidelines for EON
 
-This document provides essential context for AI assistants working with the EON codebase.
+This document provides essential context for AI assistants working with the Erebus Observatory Network (EON) codebase.
 
 ## Project Overview
 
