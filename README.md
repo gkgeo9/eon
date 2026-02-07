@@ -1,8 +1,8 @@
 <picture>
-        <img src="https://raw.githubusercontent.com/gkgeo9/eon/main/docs/assets/logo.png" alt="" width="500">
+        <img src="https://github.com/gkgeo9/eon/blob/main/logo.png?raw=true" alt="" width="500">
 </picture>
 <picture>
-        <img src="https://raw.githubusercontent.com/gkgeo9/eon/main/docs/assets/watermark.png" alt="" width="900">
+        <img src="https://github.com/gkgeo9/eon/blob/main/watermark.png?raw=true" alt="" width="900">
 </picture>
 
 # Erebus Observatory Network (EON)
