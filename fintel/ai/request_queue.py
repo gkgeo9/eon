@@ -94,6 +94,12 @@ class GeminiRequestQueue:
         self._total_requests = 0
         self._total_wait_time = 0.0
 
+        # Adaptive rate limiting: adjust sleep based on API response patterns
+        self._base_sleep = self._sleep_duration  # Original configured value
+        self._min_sleep = max(10, self._sleep_duration // 3)  # Floor: never go below 10s
+        self._consecutive_successes = 0
+        self._adaptive_lock = threading.Lock()
+
         # Ensure lock directory exists
         self.lock_dir.mkdir(parents=True, exist_ok=True)
 
@@ -196,13 +202,16 @@ class GeminiRequestQueue:
                         # Update statistics
                         self._update_stats(key_hash, masked_key, request_duration, False)
 
+                        # Adaptive sleep: reduce sleep after consecutive successes
+                        sleep_time = self._adaptive_sleep_success()
+
                         self.logger.debug(
                             f"Request complete for key {masked_key} "
-                            f"({request_duration:.2f}s), sleeping {self._sleep_duration}s"
+                            f"({request_duration:.2f}s), sleeping {sleep_time}s"
                         )
 
                         # Sleep per-key (doesn't block other keys)
-                        time.sleep(self._sleep_duration)
+                        time.sleep(sleep_time)
 
                         return result
 
@@ -210,13 +219,18 @@ class GeminiRequestQueue:
                         # Update statistics for failed request
                         self._update_stats(key_hash, masked_key, 0, True)
 
+                        # Adaptive sleep: increase sleep on rate limit errors
+                        error_str = str(e).lower()
+                        is_rate_limit = '429' in error_str or 'rate limit' in error_str
+                        sleep_time = self._adaptive_sleep_error(is_rate_limit)
+
                         self.logger.warning(
                             f"Request failed for key {masked_key}: {e}, "
-                            f"still sleeping {self._sleep_duration}s"
+                            f"sleeping {sleep_time}s"
                         )
 
                         # Still sleep to avoid hammering API on errors
-                        time.sleep(self._sleep_duration)
+                        time.sleep(sleep_time)
                         raise
 
                 finally:
@@ -229,6 +243,51 @@ class GeminiRequestQueue:
             if semaphore_acquired:
                 self._semaphore.release()
                 self.logger.debug(f"Released semaphore slot for key {masked_key}")
+
+    def _adaptive_sleep_success(self) -> int:
+        """
+        Calculate sleep duration after a successful request.
+
+        After 5 consecutive successes, gradually reduce sleep toward the minimum.
+        This allows faster processing when we're well within rate limits.
+
+        Returns:
+            Sleep duration in seconds
+        """
+        with self._adaptive_lock:
+            self._consecutive_successes += 1
+            if self._consecutive_successes >= 5:
+                # Reduce by 5s for every 5 consecutive successes, down to min_sleep
+                reduction = (self._consecutive_successes // 5) * 5
+                self._sleep_duration = max(self._min_sleep, self._base_sleep - reduction)
+            return self._sleep_duration
+
+    def _adaptive_sleep_error(self, is_rate_limit: bool) -> int:
+        """
+        Calculate sleep duration after a failed request.
+
+        Rate limit errors reset sleep to base + 50% penalty.
+        Other errors reset to base duration.
+
+        Args:
+            is_rate_limit: True if this was a 429/rate limit error
+
+        Returns:
+            Sleep duration in seconds
+        """
+        with self._adaptive_lock:
+            self._consecutive_successes = 0
+            if is_rate_limit:
+                # Penalty: 50% increase over base on rate limit hit
+                self._sleep_duration = int(self._base_sleep * 1.5)
+                self.logger.info(
+                    f"Rate limit hit: increased sleep to {self._sleep_duration}s "
+                    f"(base: {self._base_sleep}s)"
+                )
+            else:
+                # Non-rate-limit error: reset to base
+                self._sleep_duration = self._base_sleep
+            return self._sleep_duration
 
     def _update_stats(
         self,

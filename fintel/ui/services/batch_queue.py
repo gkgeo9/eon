@@ -247,13 +247,14 @@ class BatchQueueService:
             self.logger.warning("Low disk space detected - pausing batch")
             return False
 
-        # Periodic Chrome cleanup
+        # Demand-based Chrome cleanup: trigger on memory pressure instead of fixed interval
         self._companies_since_chrome_cleanup += 1
-        if self._companies_since_chrome_cleanup >= self._chrome_cleanup_interval:
+        if (self._process_monitor.should_cleanup_chrome(memory_threshold_pct=80.0)
+                or self._companies_since_chrome_cleanup >= self._chrome_cleanup_interval):
             self._companies_since_chrome_cleanup = 0
             cleaned = cleanup_orphaned_chrome(max_age_minutes=30)
             if cleaned > 0:
-                self.logger.info(f"Periodic cleanup: removed {cleaned} Chrome processes")
+                self.logger.info(f"Chrome cleanup: removed {cleaned} processes")
 
         return True
 
@@ -400,6 +401,28 @@ class BatchQueueService:
 
         self.logger.debug(f"Item {item_id} finalized with {completed_count} years: {completed_years_list}")
 
+    def _get_item_completed_years(self, item_id: int) -> List[str]:
+        """
+        Get the list of already-completed fiscal years for a batch item.
+
+        Used for per-year resume: when an item is retried after partial completion,
+        this returns the years that were successfully analyzed so they can be skipped.
+
+        Args:
+            item_id: Batch item ID
+
+        Returns:
+            List of fiscal year strings (e.g., ['2024', '2023', '2022'])
+        """
+        query = "SELECT completed_years_list FROM batch_items WHERE id = ?"
+        row = self.db._execute_with_retry(query, (item_id,), fetch_one=True)
+        if row and row['completed_years_list']:
+            try:
+                return json.loads(row['completed_years_list'])
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+
     def _start_lease_heartbeat(self, item_id: int) -> threading.Event:
         """Start a background heartbeat to keep a batch item lease alive."""
         stop_event = threading.Event()
@@ -429,6 +452,21 @@ class BatchQueueService:
         """
         batch_id = str(uuid.uuid4())
 
+        # Deduplicate tickers (preserving order)
+        seen = set()
+        unique_tickers = []
+        for t in config.tickers:
+            upper_t = t.upper()
+            if upper_t not in seen:
+                seen.add(upper_t)
+                unique_tickers.append(upper_t)
+        duplicates_removed = len(config.tickers) - len(unique_tickers)
+        if duplicates_removed > 0:
+            self.logger.info(
+                f"Deduplicated tickers: removed {duplicates_removed} duplicates, "
+                f"{len(unique_tickers)} unique tickers remaining"
+            )
+
         # Create batch job record
         query = """
             INSERT INTO batch_jobs
@@ -438,7 +476,7 @@ class BatchQueueService:
         self.db._execute_with_retry(query, (
             batch_id,
             config.name,
-            len(config.tickers),
+            len(unique_tickers),
             config.analysis_type,
             config.filing_type,
             config.num_years,
@@ -449,14 +487,14 @@ class BatchQueueService:
             config.priority
         ))
 
-        # Create batch items with year tracking
-        for ticker in config.tickers:
+        # Create batch items with year tracking and priority
+        for ticker in unique_tickers:
             company_name = config.company_names.get(ticker) if config.company_names else None
             query = """
-                INSERT INTO batch_items (batch_id, ticker, company_name, total_years, completed_years, completed_years_list)
-                VALUES (?, ?, ?, ?, 0, '[]')
+                INSERT INTO batch_items (batch_id, ticker, company_name, total_years, completed_years, completed_years_list, priority)
+                VALUES (?, ?, ?, ?, 0, '[]', ?)
             """
-            self.db._execute_with_retry(query, (batch_id, ticker.upper(), company_name, config.num_years))
+            self.db._execute_with_retry(query, (batch_id, ticker.upper(), company_name, config.num_years, config.priority))
 
         self.logger.info(f"Created batch job {batch_id} with {len(config.tickers)} tickers")
         return batch_id
@@ -772,12 +810,12 @@ class BatchQueueService:
             self._cleanup_worker(batch_id)
 
     def _get_next_pending_item(self, batch_id: str) -> Optional[Dict]:
-        """Get next pending item from batch."""
+        """Get next pending item from batch (highest priority first)."""
         query = """
             SELECT id, ticker, company_name, attempts
             FROM batch_items
             WHERE batch_id = ? AND status = 'pending'
-            ORDER BY id
+            ORDER BY priority DESC, id
             LIMIT 1
         """
         row = self.db._execute_with_retry(query, (batch_id,), fetch_one=True)
@@ -831,12 +869,12 @@ class BatchQueueService:
                     AND lease_expires_at < ?
                 """, (batch_id, now))
 
-                # Get all pending items
+                # Get all pending items (highest priority first)
                 cursor.execute("""
                     SELECT id, ticker, company_name, attempts
                     FROM batch_items
                     WHERE batch_id = ? AND status = 'pending'
-                    ORDER BY id
+                    ORDER BY priority DESC, id
                 """, (batch_id,))
                 rows = cursor.fetchall()
 
@@ -1080,6 +1118,9 @@ class BatchQueueService:
             # Get batch config
             batch_config = self._get_batch_config(batch_id)
 
+            # Load previously completed years for per-year resume
+            completed_years_list = self._get_item_completed_years(item_id)
+
             # Create year progress callback for real-time tracking
             def year_progress_callback(current_year: int, completed_count: int, total_count: int):
                 """Update batch_items with year progress."""
@@ -1091,6 +1132,7 @@ class BatchQueueService:
                 )
 
             # Run analysis with the pre-reserved key
+            # skip_years enables per-year resume: already-completed years are not re-processed
             run_id = analysis_service.run_analysis(
                 ticker=ticker,
                 analysis_type=batch_config['analysis_type'],
@@ -1099,7 +1141,8 @@ class BatchQueueService:
                 company_name=item.get('company_name'),
                 custom_prompt=batch_config.get('custom_prompt'),
                 api_key=api_key,  # Pass pre-reserved key
-                year_progress_callback=year_progress_callback
+                year_progress_callback=year_progress_callback,
+                skip_years=completed_years_list if completed_years_list else None
             )
 
             # Finalize year progress tracking

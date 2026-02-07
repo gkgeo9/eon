@@ -37,8 +37,9 @@ class APILimits:
 
     # Maximum total concurrent requests across all keys
     # This controls how many parallel API calls can run simultaneously
-    # Set higher for more parallelism (requires more API keys)
-    MAX_CONCURRENT_REQUESTS: int = 5
+    # Set via FINTEL_MAX_CONCURRENT_REQUESTS env var
+    # Default: 25 (one per API key for full parallel throughput)
+    MAX_CONCURRENT_REQUESTS: int = 25
 
     # Time zone for daily reset (Google uses Pacific time)
     RESET_TIMEZONE: str = "America/Los_Angeles"
@@ -129,6 +130,7 @@ def get_api_limits() -> APILimits:
 
     Environment variables:
         FINTEL_KEY_WAIT_TIMEOUT: Seconds to wait for API key (default: 600)
+        FINTEL_MAX_CONCURRENT_REQUESTS: Max parallel API calls (default: 25)
 
     Returns:
         APILimits instance with configured values
@@ -138,6 +140,7 @@ def get_api_limits() -> APILimits:
         import os
         _api_limits_instance = APILimits(
             KEY_WAIT_TIMEOUT=int(os.getenv('FINTEL_KEY_WAIT_TIMEOUT', 600)),
+            MAX_CONCURRENT_REQUESTS=int(os.getenv('FINTEL_MAX_CONCURRENT_REQUESTS', 25)),
         )
     return _api_limits_instance
 

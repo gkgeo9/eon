@@ -37,7 +37,7 @@ class AnalysisResultsMixin:
             result_data: Result as dictionary (from model_dump())
         """
         query = """
-            INSERT INTO analysis_results
+            INSERT OR IGNORE INTO analysis_results
             (run_id, ticker, fiscal_year, filing_type, result_type, result_json)
             VALUES (?, ?, ?, ?, ?, ?)
         """

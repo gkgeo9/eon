@@ -93,15 +93,6 @@ FINTEL_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR
 
 ```bash
 streamlit run streamlit_app.py
-
-mac
-
-/Users/gkg/PycharmProjects/Fintel/.venv/bin/python -m streamlit run /Users/gkg/PycharmProjects/Fintel/streamlit_app.py
-
-windows
-
-.venv\Scripts\python -m streamlit run streamlit_app.py
-
 ```
 
 Opens at `http://localhost:8501`
@@ -264,7 +255,7 @@ Fintel includes enterprise-grade reliability features for processing 1000+ compa
 | Feature | Description |
 |---------|-------------|
 | **Disk Space Monitoring** | Preflight checks and periodic monitoring during processing |
-| **Chrome Process Cleanup** | Automatic cleanup of orphaned browser processes every 50 companies |
+| **Chrome Process Cleanup** | Demand-based cleanup triggered by memory pressure (>80%) or fallback interval |
 | **Database Backups** | Daily automatic backups with 7-day retention |
 | **Thread-Safe Progress** | File-based locking prevents race conditions |
 | **Exponential Backoff** | Up to 10 retries with jitter for database operations |
@@ -272,14 +263,109 @@ Fintel includes enterprise-grade reliability features for processing 1000+ compa
 | **Log Rotation** | 10MB max file size with 5 backup files |
 | **SEC Rate Limiting** | Global cross-process rate limiter for SEC Edgar API |
 
-### Running Large Batches
+### Running Large Batches (1000+ Companies)
 
-For processing 1000+ companies:
+For processing 1000+ companies across 10+ years:
 
 1. **Configure notifications** (see Discord setup above)
 2. **Ensure sufficient disk space** (minimum 5GB free, 10GB recommended)
-3. **Use the Batch Queue page** in the web UI for overnight runs
+3. **Use the CLI for multi-day runs** (survives browser disconnects)
 4. **Monitor via Discord** - you'll receive completion/failure alerts
+
+#### CLI Batch (Recommended for Large Scale)
+
+```bash
+# Start in tmux/screen for persistence
+tmux new -s fintel-batch
+
+# 1000 companies, 10 years each, multi-perspective analysis
+fintel batch companies.csv --years 10 --analysis-type multi
+
+# Detach: Ctrl+B then D
+# Reattach later: tmux attach -t fintel-batch
+
+# If interrupted, resume from where it left off
+fintel batch --resume
+
+# Resume a specific batch
+fintel batch --resume-id <batch_id>
+
+# List all incomplete batches
+fintel batch --list-incomplete
+```
+
+#### CSV Input Format
+
+```csv
+ticker
+AAPL
+MSFT
+GOOGL
+AMZN
+```
+
+Or with optional company name:
+
+```csv
+ticker,company_name
+AAPL,Apple Inc.
+MSFT,Microsoft Corporation
+```
+
+#### Capacity Planning
+
+| Companies | Years | API Requests | Estimated Duration (25 keys) |
+|-----------|-------|-------------|------------------------------|
+| 10        | 7     | 70          | < 1 day                      |
+| 100       | 7     | 700         | ~1.5 days                    |
+| 500       | 10    | 5,000       | ~10 days                     |
+| 1,000     | 7     | 7,000       | ~14 days                     |
+| 1,000     | 10    | 10,000      | ~20 days                     |
+
+**Throughput formula:** 25 API keys x 20 requests/key/day = **500 requests/day**
+
+#### How Batch Processing Works
+
+```
+1. Create batch job → tickers stored in SQLite
+2. ThreadPoolExecutor starts N workers (up to 25)
+3. Each worker:
+   a. Reserves an API key (atomic, no collisions)
+   b. Downloads SEC filings for one company
+   c. Converts HTML → PDF → extracts text
+   d. Sends to Gemini AI for each year
+   e. Stores validated Pydantic results in DB
+   f. Releases API key → picks up next company
+4. When all keys hit daily limit → waits for midnight PST reset
+5. After reset verification → resumes processing automatically
+6. Completed companies are never re-processed on resume
+```
+
+#### Error Handling at Scale
+
+| Error Type | Behavior |
+|-----------|----------|
+| **Context length exceeded** | Company marked as SKIPPED (not retried) |
+| **API quota exhausted** | Waits for midnight PST reset, then resumes |
+| **Network/transient error** | Retried up to max_retries (default 2) |
+| **Process crash** | Resume picks up from last completed *year* (not company) |
+
+---
+
+## Batch Processing Features
+
+These features are specifically designed for large-scale processing (1000+ companies, 10+ years):
+
+| Feature | Description |
+|---------|-------------|
+| **Per-year resume** | Results saved incrementally after each year. Interrupted companies resume from last completed year, not from scratch. |
+| **Parallel throughput** | Per-key file locks + configurable concurrency (`FINTEL_MAX_CONCURRENT_REQUESTS`, default 25). All 25 keys can process in parallel. |
+| **Priority ordering** | `--priority` flag in CLI. Higher-priority tickers are processed first (`ORDER BY priority DESC, id`). |
+| **Partial results** | Each year's result is saved to the database immediately. If analysis fails at year 7/10, years 1-6 are preserved. |
+| **Adaptive rate limiting** | Sleep duration decreases after consecutive successes (down to ~20s). Increases by 50% on 429 errors. Resets on other errors. |
+| **Batch export** | `fintel export --batch-id <id> --format csv` exports all results from a specific batch with optional `--status-filter`. |
+| **Demand-based Chrome cleanup** | Triggered by memory pressure (>80% usage) instead of a fixed interval. Fallback interval still runs as safety net. |
+| **Ticker deduplication** | Duplicate tickers in batch CSV are automatically removed with logging. |
 
 ---
 
@@ -315,17 +401,22 @@ fintel scan --tickers-file universe.txt --min-score 400
 
 # Export results
 fintel export --format csv --output results.csv
-fintel export --format json --output results.json
+
+# Export from a specific batch run
+fintel export --batch-id abc12345 --output batch_results.csv
+
+# Export only completed items
+fintel export --batch-id abc12345 --status-filter completed --output completed.csv
 ```
 
 ### CLI Options
 
-| Command   | Options                         | Description                       |
-| --------- | ------------------------------- | --------------------------------- |
-| `analyze` | `--years`, `--type`, `--filing` | Single company analysis           |
-| `batch`   | `--workers`, `--type`           | Parallel multi-company processing |
-| `scan`    | `--min-score`, `--tickers-file` | Contrarian opportunity scanning   |
-| `export`  | `--format`, `--output`          | Export results to file            |
+| Command   | Options                                     | Description                       |
+| --------- | ------------------------------------------- | --------------------------------- |
+| `analyze` | `--years`, `--type`, `--filing`              | Single company analysis           |
+| `batch`   | `--years`, `--type`, `--priority`, `--resume`| Multi-day batch processing        |
+| `scan`    | `--min-score`, `--tickers-file`              | Contrarian opportunity scanning   |
+| `export`  | `--format`, `--output`, `--batch-id`         | Export results to file            |
 
 ---
 
@@ -779,5 +870,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## Documentation
 
 - [Custom Workflows Guide](docs/CUSTOM_WORKFLOWS.md) - Complete developer documentation
-- [Session State Management](docs/SESSION_STATE.md) - Streamlit state handling
-- [UI Architecture](fintel/ui/README.md) - Web interface details
+- [Contributing Guide](CONTRIBUTING.md) - Development setup and contribution guidelines

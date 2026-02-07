@@ -180,6 +180,31 @@ class ProcessMonitor:
         """Initialize process monitor."""
         self.logger = get_logger(f"{__name__}.ProcessMonitor")
 
+    def should_cleanup_chrome(self, memory_threshold_pct: float = 80.0) -> bool:
+        """
+        Check if Chrome cleanup should be triggered based on memory usage.
+
+        Instead of cleaning up on a fixed schedule (every N companies),
+        this checks actual memory pressure and triggers cleanup when needed.
+
+        Args:
+            memory_threshold_pct: Trigger cleanup when memory usage exceeds this %
+
+        Returns:
+            True if cleanup should be performed
+        """
+        memory = self.get_memory_usage()
+        if 'error' in memory:
+            return False
+        used_pct = memory.get('percent_used', 0)
+        if used_pct >= memory_threshold_pct:
+            self.logger.info(
+                f"Memory usage {used_pct:.1f}% exceeds threshold {memory_threshold_pct}%. "
+                "Chrome cleanup recommended."
+            )
+            return True
+        return False
+
     def cleanup_chrome_processes(self, max_age_minutes: int = 60) -> int:
         """
         Clean up orphaned Chrome/Chromium processes.
