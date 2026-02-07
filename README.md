@@ -1,14 +1,14 @@
-<div style="text-align: center;">
-  <picture>
+<p align="center">  
+    <picture>
     <img src="https://github.com/gkgeo9/eon/blob/main/logo.png?raw=true" alt="" width="500">
   </picture>
-</div>
+</p>
 
-<div style="text-align: center;">
+<p align="center">
   <picture>
     <img src="https://github.com/gkgeo9/eon/blob/main/watermark.png?raw=true" alt="" width="900">
   </picture>
-</div>
+</p>
 
 # Erebus Observatory Network (EON)
 
