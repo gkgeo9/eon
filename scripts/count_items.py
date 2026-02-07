@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load your CSV
-df = pd.read_csv("/Users/gkg/PycharmProjects/Fintel/data/multi_analysis_export.csv")
+df = pd.read_csv("/Users/gkg/PycharmProjects/eon/data/multi_analysis_export.csv")
 
 # Replace 'ticker' with the actual column name if different
 ticker_counts = df["ticker"].value_counts()
