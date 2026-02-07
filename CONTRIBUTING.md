@@ -1,11 +1,11 @@
-# Contributing to Fintel
+# Contributing to EON
 
 ## Development Setup
 
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd Fintel
+cd eon
 
 # Create virtual environment
 python -m venv .venv
@@ -31,19 +31,19 @@ Run before committing:
 
 ```bash
 # Format code
-black fintel/ tests/
+black eon/ tests/
 
 # Lint and fix
-ruff check fintel/ tests/ --fix
+ruff check eon/ tests/ --fix
 
 # Type check
-mypy fintel/
+mypy eon/
 ```
 
 ## Project Structure
 
 ```
-fintel/
+eon/
 ├── analysis/           # Core analysis logic
 │   ├── fundamental/    # Basic 10-K analysis
 │   ├── perspectives/   # Buffett, Taleb, Contrarian lenses
@@ -102,7 +102,7 @@ The workflow will automatically appear in the Analysis page dropdown.
 pytest
 
 # Run with coverage
-pytest --cov=fintel --cov-report=html
+pytest --cov=eon --cov-report=html
 
 # Run specific test file
 pytest tests/test_workflows.py
@@ -113,7 +113,7 @@ pytest -k "test_analysis"
 
 ## Database Migrations
 
-Database migrations are in `fintel/ui/database/migrations/`. Files are named with version prefixes (e.g., `v001_initial.sql`, `v002_add_column.sql`) and are applied in order on startup.
+Database migrations are in `eon/ui/database/migrations/`. Files are named with version prefixes (e.g., `v001_initial.sql`, `v002_add_column.sql`) and are applied in order on startup.
 
 To add a migration:
 
@@ -158,10 +158,10 @@ class AnalysisResult(BaseModel):
 
 ### Error Handling
 
-Use the custom exceptions in `fintel/core/exceptions.py`:
+Use the custom exceptions in `eon/core/exceptions.py`:
 
 ```python
-from fintel.core.exceptions import AnalysisError, DownloadError
+from eon.core.exceptions import AnalysisError, DownloadError
 
 if not pdf_path.exists():
     raise DownloadError(f"Filing not found: {pdf_path}")

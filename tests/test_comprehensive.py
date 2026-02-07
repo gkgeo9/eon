@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Comprehensive test suite for entire Fintel project.
+Comprehensive test suite for entire EON project.
 Tests all filing types, analysis types, and core functionality.
 """
 
@@ -16,12 +16,12 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.services import AnalysisService
+from eon.ui.database import DatabaseRepository
+from eon.ui.services import AnalysisService
 
 
 class TestSuite:
-    """Comprehensive test suite for Fintel."""
+    """Comprehensive test suite for EON."""
 
     def __init__(self):
         self.db = DatabaseRepository()
@@ -591,7 +591,7 @@ class TestSuite:
         print("\n")
         print("╔" + "="*78 + "╗")
         print("║" + " "*78 + "║")
-        print("║" + "COMPREHENSIVE FINTEL TEST SUITE".center(78) + "║")
+        print("║" + "COMPREHENSIVE EON TEST SUITE".center(78) + "║")
         print("║" + " "*78 + "║")
         print("╚" + "="*78 + "╝")
 

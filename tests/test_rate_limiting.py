@@ -18,14 +18,14 @@ class TestRetryDelayParsing:
     @pytest.fixture
     def mock_provider(self, temp_usage_dir):
         """Create a GeminiProvider with mocked dependencies."""
-        from fintel.ai.providers.gemini import GeminiProvider
-        from fintel.ai.rate_limiter import RateLimiter
-        from fintel.ai.usage_tracker import APIUsageTracker
+        from eon.ai.providers.gemini import GeminiProvider
+        from eon.ai.rate_limiter import RateLimiter
+        from eon.ai.usage_tracker import APIUsageTracker
 
         tracker = APIUsageTracker(usage_dir=temp_usage_dir)
         rate_limiter = RateLimiter(sleep_after_request=0, tracker=tracker)
 
-        with patch('fintel.ai.providers.gemini.genai.Client'):
+        with patch('eon.ai.providers.gemini.genai.Client'):
             provider = GeminiProvider(
                 api_key="test_key",
                 model="gemini-2.5-flash",
@@ -84,7 +84,7 @@ class TestRetryDelayParsing:
     @pytest.mark.unit
     def test_is_rate_limit_error_429(self, mock_provider):
         """Test detection of 429 rate limit error."""
-        from fintel.core import AIProviderError
+        from eon.core import AIProviderError
 
         error = AIProviderError("429 RESOURCE_EXHAUSTED: Rate limit exceeded")
 
@@ -93,7 +93,7 @@ class TestRetryDelayParsing:
     @pytest.mark.unit
     def test_is_rate_limit_error_resource_exhausted(self, mock_provider):
         """Test detection of RESOURCE_EXHAUSTED error."""
-        from fintel.core import AIProviderError
+        from eon.core import AIProviderError
 
         error = AIProviderError("RESOURCE_EXHAUSTED: Quota exceeded")
 
@@ -102,7 +102,7 @@ class TestRetryDelayParsing:
     @pytest.mark.unit
     def test_is_rate_limit_error_other_error(self, mock_provider):
         """Test that non-rate-limit errors return False."""
-        from fintel.core import AIProviderError
+        from eon.core import AIProviderError
 
         error = AIProviderError("500 Internal Server Error")
 
@@ -115,14 +115,14 @@ class TestRetryWithDynamicDelay:
     @pytest.fixture
     def mock_provider(self, temp_usage_dir):
         """Create a GeminiProvider with mocked dependencies."""
-        from fintel.ai.providers.gemini import GeminiProvider
-        from fintel.ai.rate_limiter import RateLimiter
-        from fintel.ai.usage_tracker import APIUsageTracker
+        from eon.ai.providers.gemini import GeminiProvider
+        from eon.ai.rate_limiter import RateLimiter
+        from eon.ai.usage_tracker import APIUsageTracker
 
         tracker = APIUsageTracker(usage_dir=temp_usage_dir)
         rate_limiter = RateLimiter(sleep_after_request=0, tracker=tracker)
 
-        with patch('fintel.ai.providers.gemini.genai.Client'):
+        with patch('eon.ai.providers.gemini.genai.Client'):
             provider = GeminiProvider(
                 api_key="test_key",
                 model="gemini-2.5-flash",
@@ -134,7 +134,7 @@ class TestRetryWithDynamicDelay:
     @pytest.mark.unit
     def test_retry_uses_api_delay_plus_buffer(self, mock_provider):
         """Test that retry waits API delay + buffer on 429 errors."""
-        from fintel.core import AIProviderError
+        from eon.core import AIProviderError
 
         call_count = 0
         wait_times = []
@@ -173,7 +173,7 @@ class TestRetryWithDynamicDelay:
     @pytest.mark.unit
     def test_rate_limit_retries_dont_count_against_max(self, mock_provider):
         """Test that rate limit retries don't count against max_retries."""
-        from fintel.core import AIProviderError
+        from eon.core import AIProviderError
 
         call_count = 0
 
@@ -202,7 +202,7 @@ class TestRetryWithDynamicDelay:
     @pytest.mark.unit
     def test_non_rate_limit_errors_count_against_max(self, mock_provider):
         """Test that non-rate-limit errors count against max_retries."""
-        from fintel.core import AIProviderError
+        from eon.core import AIProviderError
 
         call_count = 0
 
@@ -229,7 +229,7 @@ class TestRetryWithDynamicDelay:
     @pytest.mark.unit
     def test_fallback_delay_when_no_api_delay(self, mock_provider):
         """Test fallback delay when retryDelay can't be parsed."""
-        from fintel.core import AIProviderError
+        from eon.core import AIProviderError
 
         call_count = 0
         wait_times = []
@@ -267,9 +267,9 @@ class TestRealWorldErrorPatterns:
     @pytest.fixture
     def mock_provider(self, temp_usage_dir):
         """Create a GeminiProvider with mocked dependencies."""
-        from fintel.ai.providers.gemini import GeminiProvider
+        from eon.ai.providers.gemini import GeminiProvider
 
-        with patch('fintel.ai.providers.gemini.genai.Client'):
+        with patch('eon.ai.providers.gemini.genai.Client'):
             provider = GeminiProvider(
                 api_key="test_key",
                 model="gemini-2.5-flash"

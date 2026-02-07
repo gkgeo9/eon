@@ -1,10 +1,10 @@
-# CLAUDE.md - AI Assistant Guidelines for Fintel
+# CLAUDE.md - AI Assistant Guidelines for EON
 
-This document provides essential context for AI assistants working with the Fintel codebase.
+This document provides essential context for AI assistants working with the Erebus Observatory Network (EON) codebase.
 
 ## Project Overview
 
-Fintel is an AI-powered SEC filing analysis platform for investment research. It analyzes SEC 10-K and other filings using Google Gemini AI to extract actionable investment insights through multiple investment philosophies (Warren Buffett value investing, Nassim Taleb antifragility, contrarian analysis).
+EON is an AI-powered SEC filing analysis platform for investment research. It analyzes SEC 10-K and other filings using Google Gemini AI to extract actionable investment insights through multiple investment philosophies (Warren Buffett value investing, Nassim Taleb antifragility, contrarian analysis).
 
 **Key capabilities:**
 - Multi-perspective financial analysis (Buffett, Taleb, Contrarian lenses)
@@ -29,7 +29,7 @@ Fintel is an AI-powered SEC filing analysis platform for investment research. It
 ## Project Structure
 
 ```
-fintel/
+eon/
 ├── analysis/                    # Core analysis engines
 │   ├── fundamental/             # 10-K analysis
 │   │   ├── analyzer.py          # FundamentalAnalyzer
@@ -45,7 +45,7 @@ fintel/
 │   └── request_queue.py         # Cross-process request serialization
 │
 ├── core/                        # Shared infrastructure
-│   ├── config.py                # FintelConfig (Pydantic Settings)
+│   ├── config.py                # EonConfig (Pydantic Settings)
 │   ├── exceptions.py            # Custom exception hierarchy
 │   ├── interfaces.py            # Protocol definitions (IKeyManager, etc.)
 │   └── logging.py               # Centralized logging
@@ -84,19 +84,19 @@ pip install -e ".[dev]"
 streamlit run streamlit_app.py
 
 # Run CLI
-fintel analyze AAPL --years 5
-fintel batch tickers.csv --workers 10
+eon analyze AAPL --years 5
+eon batch tickers.csv --workers 10
 
 # Testing
 pytest                           # Run all tests
-pytest --cov=fintel             # With coverage
+pytest --cov=eon             # With coverage
 pytest tests/test_file.py -v    # Specific file
 pytest -k "test_analysis"       # Pattern match
 
 # Code Quality
-black fintel/ tests/ pages/     # Format (line-length: 100)
-ruff check fintel/ --fix        # Lint
-mypy fintel/                    # Type check
+black eon/ tests/ pages/     # Format (line-length: 100)
+ruff check eon/ --fix        # Lint
+mypy eon/                    # Type check
 ```
 
 ## Code Conventions
@@ -114,12 +114,12 @@ class AnalysisResult(BaseModel):
 ```
 
 ### Exception Handling
-Use the custom exception hierarchy in `fintel/core/exceptions.py`:
+Use the custom exception hierarchy in `eon/core/exceptions.py`:
 ```python
-from fintel.core.exceptions import AnalysisError, DownloadError, RateLimitError
+from eon.core.exceptions import AnalysisError, DownloadError, RateLimitError
 
 # Exception hierarchy:
-# FintelException (base)
+# EonException (base)
 # ├── ConfigurationError
 # ├── DataSourceError
 # │   ├── DownloadError
@@ -136,7 +136,7 @@ from fintel.core.exceptions import AnalysisError, DownloadError, RateLimitError
 ### Logging
 Use module-level loggers:
 ```python
-from fintel.core import get_logger
+from eon.core import get_logger
 logger = get_logger(__name__)
 
 logger.info(f"Processing {ticker}")
@@ -146,7 +146,7 @@ logger.error(f"Failed: {e}")
 ### Configuration
 Access config via singleton:
 ```python
-from fintel.core import get_config
+from eon.core import get_config
 
 config = get_config()
 data_path = config.get_data_path("pdfs", ticker)
@@ -159,7 +159,7 @@ class AnalysisService:
     def __init__(
         self,
         db: DatabaseRepository,
-        config: Optional[FintelConfig] = None,
+        config: Optional[EonConfig] = None,
         key_manager: Optional[IKeyManager] = None,
         rate_limiter: Optional[IRateLimiter] = None,
     ):
@@ -211,7 +211,7 @@ class MyWorkflow(CustomWorkflow):
 ```
 
 ### Database Migrations
-Located in `fintel/ui/database/migrations/` with version prefixes:
+Located in `eon/ui/database/migrations/` with version prefixes:
 - Use `IF NOT EXISTS` for idempotent SQL
 - Applied automatically on startup
 
@@ -244,33 +244,33 @@ def mock_gemini_provider():
 
 Required:
 - `GOOGLE_API_KEY_1` (through `GOOGLE_API_KEY_25`) - Gemini API keys
-- `FINTEL_SEC_USER_EMAIL` - Email for SEC Edgar compliance
-- `FINTEL_SEC_COMPANY_NAME` - Company name for SEC compliance
+- `EON_SEC_USER_EMAIL` - Email for SEC Edgar compliance
+- `EON_SEC_COMPANY_NAME` - Company name for SEC compliance
 
 Key settings:
-- `FINTEL_DEFAULT_MODEL=gemini-2.5-flash`
-- `FINTEL_NUM_WORKERS=25`
-- `FINTEL_SLEEP_AFTER_REQUEST=65`
-- `FINTEL_STORAGE_BACKEND=parquet`
+- `EON_DEFAULT_MODEL=gemini-2.5-flash`
+- `EON_NUM_WORKERS=25`
+- `EON_SLEEP_AFTER_REQUEST=65`
+- `EON_STORAGE_BACKEND=parquet`
 
 ## Common Tasks
 
 ### Adding a New Analysis Type
-1. Create models in `fintel/analysis/<type>/models/`
-2. Create prompts in `fintel/analysis/<type>/prompts/`
-3. Implement analyzer in `fintel/analysis/<type>/analyzer.py`
+1. Create models in `eon/analysis/<type>/models/`
+2. Create prompts in `eon/analysis/<type>/prompts/`
+3. Implement analyzer in `eon/analysis/<type>/analyzer.py`
 4. Register in `AnalysisService._run_analysis_by_type()`
 5. Add to UI dropdown in `pages/1_📊_Analysis.py`
 
 ### Adding a Database Migration
-1. Create `fintel/ui/database/migrations/v0XX_description.sql`
+1. Create `eon/ui/database/migrations/v0XX_description.sql`
 2. Write idempotent SQL (use `IF NOT EXISTS`)
 3. Test with fresh database
 
 ### Debugging Rate Limit Issues
 - Check `data/api_usage/` for usage files
 - Review lock file at `data/api_usage/gemini_request.lock`
-- Increase `FINTEL_SLEEP_AFTER_REQUEST` if needed
+- Increase `EON_SLEEP_AFTER_REQUEST` if needed
 - Add more API keys (up to 25)
 
 ## Important Files Reference
@@ -278,14 +278,14 @@ Key settings:
 | Purpose | File |
 |---------|------|
 | Main entry point (web) | `streamlit_app.py` |
-| Main entry point (CLI) | `fintel/cli/main.py` |
-| Configuration | `fintel/core/config.py` |
-| Exceptions | `fintel/core/exceptions.py` |
-| Analysis orchestrator | `fintel/ui/services/analysis_service.py` |
-| Database repository | `fintel/ui/database/repository.py` |
-| Gemini provider | `fintel/ai/providers/gemini.py` |
-| API key manager | `fintel/ai/key_manager.py` |
-| Rate limiter | `fintel/ai/rate_limiter.py` |
+| Main entry point (CLI) | `eon/cli/main.py` |
+| Configuration | `eon/core/config.py` |
+| Exceptions | `eon/core/exceptions.py` |
+| Analysis orchestrator | `eon/ui/services/analysis_service.py` |
+| Database repository | `eon/ui/database/repository.py` |
+| Gemini provider | `eon/ai/providers/gemini.py` |
+| API key manager | `eon/ai/key_manager.py` |
+| Rate limiter | `eon/ai/rate_limiter.py` |
 | Custom workflow base | `custom_workflows/base.py` |
 | Test fixtures | `tests/conftest.py` |
 

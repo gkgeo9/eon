@@ -5,11 +5,11 @@ Main Streamlit application - Home page with dashboard.
 """
 
 import streamlit as st
-from fintel.core import setup_logging, get_logger
-from fintel.core.formatting import format_duration, format_status
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.services import AnalysisService
-from fintel.ui.theme import apply_theme
+from eon.core import setup_logging, get_logger
+from eon.core.formatting import format_duration, format_status
+from eon.ui.database import DatabaseRepository
+from eon.ui.services import AnalysisService
+from eon.ui.theme import apply_theme
 
 # Initialize logging with timestamps
 setup_logging(level=20)  # INFO level
@@ -20,7 +20,7 @@ apply_theme()
 
 # Configure page
 st.set_page_config(
-    page_title="Fintel - Financial Intelligence Platform",
+    page_title="Erebus Observatory Network",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -45,7 +45,7 @@ def main():
     db = st.session_state.db
 
     # Header
-    st.title("📊 Fintel Financial Intelligence Platform")
+    st.title("📊 Erebus Observatory Network")
     st.markdown(
         "AI-powered SEC filing analysis with multiple investment perspectives"
     )
@@ -153,7 +153,7 @@ def main():
 
     # Footer
     st.markdown("---")
-    st.caption("Fintel v0.1.0")
+    st.caption("EON v0.1.0")
 
 
 if __name__ == "__main__":

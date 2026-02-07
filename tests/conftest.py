@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Shared test fixtures for Fintel tests.
+Shared test fixtures for EON tests.
 
 Provides reusable fixtures for:
 - Temporary directories and databases
@@ -48,7 +48,7 @@ def temp_usage_dir(temp_dir: Path) -> Path:
 @pytest.fixture
 def temp_db_path(temp_dir: Path) -> Path:
     """Temporary SQLite database path."""
-    return temp_dir / "test_fintel.db"
+    return temp_dir / "test_eon.db"
 
 
 # =============================================================================
@@ -74,14 +74,14 @@ def many_api_keys() -> List[str]:
 @pytest.fixture
 def mock_usage_tracker(temp_usage_dir: Path):
     """Create an APIUsageTracker with temporary storage."""
-    from fintel.ai.usage_tracker import APIUsageTracker
+    from eon.ai.usage_tracker import APIUsageTracker
     return APIUsageTracker(usage_dir=temp_usage_dir)
 
 
 @pytest.fixture
 def mock_api_key_manager(sample_api_keys: List[str], mock_usage_tracker):
     """Create an APIKeyManager with mock tracker."""
-    from fintel.ai.key_manager import APIKeyManager
+    from eon.ai.key_manager import APIKeyManager
     return APIKeyManager(api_keys=sample_api_keys, tracker=mock_usage_tracker)
 
 
@@ -92,7 +92,7 @@ def mock_api_key_manager(sample_api_keys: List[str], mock_usage_tracker):
 @pytest.fixture
 def test_db(temp_db_path: Path):
     """Create a test DatabaseRepository with migrations applied."""
-    from fintel.ui.database import DatabaseRepository
+    from eon.ui.database import DatabaseRepository
 
     # Create and initialize database
     db = DatabaseRepository(str(temp_db_path))
@@ -109,7 +109,7 @@ def test_db(temp_db_path: Path):
 @pytest.fixture
 def db_with_batch(test_db):
     """Database with a pre-created batch job for testing."""
-    from fintel.ui.services.batch_queue import BatchQueueService, BatchJobConfig
+    from eon.ui.services.batch_queue import BatchQueueService, BatchJobConfig
 
     service = BatchQueueService(test_db)
     batch_id = service.create_batch_job(BatchJobConfig(
@@ -131,14 +131,14 @@ def db_with_batch(test_db):
 @pytest.fixture
 def batch_queue_service(test_db):
     """Create a BatchQueueService for testing."""
-    from fintel.ui.services.batch_queue import BatchQueueService
+    from eon.ui.services.batch_queue import BatchQueueService
     return BatchQueueService(test_db)
 
 
 @pytest.fixture
 def sample_batch_config():
     """Sample batch configuration for testing."""
-    from fintel.ui.services.batch_queue import BatchJobConfig
+    from eon.ui.services.batch_queue import BatchJobConfig
     return BatchJobConfig(
         name="Test Batch",
         tickers=["AAPL", "MSFT"],
@@ -173,7 +173,7 @@ def mock_gemini_provider():
 @pytest.fixture
 def mock_analysis_service(test_db, mock_gemini_provider):
     """Mock AnalysisService that doesn't make real API calls."""
-    from fintel.ui.services.analysis_service import AnalysisService
+    from eon.ui.services.analysis_service import AnalysisService
 
     service = AnalysisService(test_db)
 

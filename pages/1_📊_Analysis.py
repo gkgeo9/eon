@@ -10,12 +10,12 @@ import threading
 import time
 from datetime import datetime
 
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.services import AnalysisService
-from fintel.ui.theme import apply_theme
-from fintel.ui.utils.validators import validate_ticker
-from fintel.core import get_filing_category
-from fintel.core.analysis_types import (
+from eon.ui.database import DatabaseRepository
+from eon.ui.services import AnalysisService
+from eon.ui.theme import apply_theme
+from eon.ui.utils.validators import validate_ticker
+from eon.core import get_filing_category
+from eon.core.analysis_types import (
     ANALYSIS_TYPES,
     DEFAULT_FILING_TYPES,
     get_analysis_type,
@@ -506,7 +506,7 @@ else:
             # EVENT-BASED FILING SELECTION (8-K, etc.)
             st.markdown(f"""
 **Event filings ({filing_type})** are filed when material events occur, not on a fixed schedule.
-They can occur multiple times per year. Fintel will fetch the N most recent filings automatically.
+They can occur multiple times per year. EON will fetch the N most recent filings automatically.
             """)
 
             if multi_year_required:
@@ -653,7 +653,7 @@ They can occur multiple times per year. Fintel will fetch the N most recent fili
                 st.error("❌ Please enter a ticker symbol or CIK")
             else:
                 # Use mode-aware validation
-                from fintel.ui.utils.validators import validate_company_identifier
+                from eon.ui.utils.validators import validate_company_identifier
                 is_valid, error_msg = validate_company_identifier(
                     ticker,
                     mode='cik' if input_mode == "CIK" else 'ticker'
@@ -731,7 +731,7 @@ They can occur multiple times per year. Fintel will fetch the N most recent fili
                 st.download_button(
                     label="📥 Download Template",
                     data=csv_template,
-                    file_name="fintel_batch_template.csv",
+                    file_name="eon_batch_template.csv",
                     mime="text/csv",
                     width="stretch"
                 )

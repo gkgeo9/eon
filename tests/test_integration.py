@@ -10,8 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.services import AnalysisService
+from eon.ui.database import DatabaseRepository
+from eon.ui.services import AnalysisService
 
 print("\n" + "="*80)
 print("INTEGRATION TEST: Analysis Start & Tracking")

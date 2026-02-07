@@ -6,9 +6,9 @@ This test uses a ticker that hasn't been analyzed before.
 """
 
 import time
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.services.analysis_service import AnalysisService
-from fintel.ui.services.workflow_service import WorkflowService
+from eon.ui.database import DatabaseRepository
+from eon.ui.services.analysis_service import AnalysisService
+from eon.ui.services.workflow_service import WorkflowService
 
 # Initialize services
 db = DatabaseRepository()

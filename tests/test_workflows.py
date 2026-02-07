@@ -6,9 +6,9 @@ Creates 5 test workflows with increasing complexity and executes them.
 """
 
 import json
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.services.analysis_service import AnalysisService
-from fintel.ui.services.workflow_service import WorkflowService
+from eon.ui.database import DatabaseRepository
+from eon.ui.services.analysis_service import AnalysisService
+from eon.ui.services.workflow_service import WorkflowService
 
 # Initialize services
 db = DatabaseRepository()

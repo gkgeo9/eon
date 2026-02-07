@@ -222,7 +222,7 @@ class TestCorpusManager:
     @pytest.fixture
     def corpus_manager(self, db_with_cache):
         """Create CorpusManager with mocked SEC downloader."""
-        from fintel.data.corpus import CorpusManager
+        from eon.data.corpus import CorpusManager
 
         test_db, pdf_dir = db_with_cache
         mock_downloader = MagicMock()

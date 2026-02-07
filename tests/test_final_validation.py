@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Final validation test suite for Fintel project.
+Final validation test suite for EON project.
 Tests all functionality including caching, multi-year, single-year, and full workflows.
 """
 
@@ -14,8 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.services import AnalysisService
+from eon.ui.database import DatabaseRepository
+from eon.ui.services import AnalysisService
 
 
 class FinalValidationSuite:
@@ -425,7 +425,7 @@ class FinalValidationSuite:
         print("\n")
         print("╔" + "="*78 + "╗")
         print("║" + " "*78 + "║")
-        print("║" + "FINTEL FINAL VALIDATION TEST SUITE".center(78) + "║")
+        print("║" + "EON FINAL VALIDATION TEST SUITE".center(78) + "║")
         print("║" + " "*78 + "║")
         print("╚" + "="*78 + "╝")
 

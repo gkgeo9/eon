@@ -66,8 +66,8 @@ class TestAPIKeyRaceCondition:
         self, temp_usage_dir, sample_api_keys
     ):
         """Test that reserve_key returns None when all keys are exhausted."""
-        from fintel.ai.usage_tracker import APIUsageTracker
-        from fintel.ai.key_manager import APIKeyManager
+        from eon.ai.usage_tracker import APIUsageTracker
+        from eon.ai.key_manager import APIKeyManager
 
         tracker = APIUsageTracker(usage_dir=temp_usage_dir)
         manager = APIKeyManager(api_keys=sample_api_keys, tracker=tracker)
@@ -91,9 +91,9 @@ class TestAPIKeyRaceCondition:
         self, temp_usage_dir
     ):
         """Test that reserve_key skips keys that have hit daily limit."""
-        from fintel.ai.usage_tracker import APIUsageTracker
-        from fintel.ai.key_manager import APIKeyManager
-        from fintel.ai.api_config import get_api_limits
+        from eon.ai.usage_tracker import APIUsageTracker
+        from eon.ai.key_manager import APIKeyManager
+        from eon.ai.api_config import get_api_limits
 
         keys = ["key1", "key2"]
         tracker = APIUsageTracker(usage_dir=temp_usage_dir)
@@ -116,8 +116,8 @@ class TestAPIKeyRaceCondition:
         self, temp_usage_dir, sample_api_keys, thread_error_collector
     ):
         """Stress test: 25 threads competing for 5 keys."""
-        from fintel.ai.usage_tracker import APIUsageTracker
-        from fintel.ai.key_manager import APIKeyManager
+        from eon.ai.usage_tracker import APIUsageTracker
+        from eon.ai.key_manager import APIKeyManager
 
         tracker = APIUsageTracker(usage_dir=temp_usage_dir)
         manager = APIKeyManager(api_keys=sample_api_keys, tracker=tracker)
@@ -215,7 +215,7 @@ class TestStaleWorkerPIDCleanup:
     @pytest.mark.unit
     def test_detects_and_cleans_stale_pid(self, test_db):
         """Test that stale PIDs from crashed processes are detected and cleaned."""
-        from fintel.ui.services.batch_queue import BatchQueueService
+        from eon.ui.services.batch_queue import BatchQueueService
 
         # Simulate a crashed worker by setting a fake PID in queue_state
         fake_pid = 999999  # PID that doesn't exist
@@ -238,7 +238,7 @@ class TestStaleWorkerPIDCleanup:
     @pytest.mark.unit
     def test_does_not_clean_live_worker(self, test_db):
         """Test that live worker PIDs are not cleaned up."""
-        from fintel.ui.services.batch_queue import BatchQueueService
+        from eon.ui.services.batch_queue import BatchQueueService
 
         # Use current process PID (which is definitely running)
         current_pid = os.getpid()
@@ -260,7 +260,7 @@ class TestStaleWorkerPIDCleanup:
     @pytest.mark.unit
     def test_is_process_alive_returns_correct_value(self, test_db):
         """Test the _is_process_alive helper method."""
-        from fintel.ui.services.batch_queue import BatchQueueService
+        from eon.ui.services.batch_queue import BatchQueueService
 
         service = BatchQueueService(test_db)
 
@@ -329,7 +329,7 @@ class TestDatabaseBatching:
         self, test_db, thread_error_collector
     ):
         """Test that concurrent calls don't return same items."""
-        from fintel.ui.services.batch_queue import BatchQueueService, BatchJobConfig
+        from eon.ui.services.batch_queue import BatchQueueService, BatchJobConfig
 
         # Create batch with many items
         service = BatchQueueService(test_db)
