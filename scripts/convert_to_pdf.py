@@ -434,8 +434,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, PageBreak, 
-    Table, TableStyle, KeepTogether
+    SimpleDocTemplate, Paragraph, Spacer, PageBreak,
+    Table, TableStyle, KeepTogether, Flowable
 )
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
@@ -461,32 +461,20 @@ PAGE_WIDTH, PAGE_HEIGHT = letter
 MARGIN = 0.75 * inch
 
 
-class BookmarkAction:
+class BookmarkAction(Flowable):
     """Custom flowable to add bookmarks to PDF outline."""
     def __init__(self, title, key, level=0):
+        Flowable.__init__(self)
         self.title = title
         self.key = key
         self.level = level
-        self.width = 0
-        self.height = 0
-    
+
     def wrap(self, availWidth, availHeight):
         return (0, 0)
-    
+
     def draw(self):
-        # Add bookmark to PDF outline
-        canvas = self.canv
-        canvas.bookmarkPage(self.key)
-        canvas.addOutlineEntry(self.title, self.key, level=self.level)
-    
-    def getKeepWithNext(self):
-        return False
-    
-    def getSpaceAfter(self):
-        return 0
-    
-    def getSpaceBefore(self):
-        return 0
+        self.canv.bookmarkPage(self.key)
+        self.canv.addOutlineEntry(self.title, self.key, level=self.level)
 
 
 def get_signal_color(signal_text):
@@ -584,7 +572,7 @@ def create_title_page(canvas, company_name, logo_path=None):
             logo_width = logo_height * aspect
             
             x = (PAGE_WIDTH - logo_width) / 2
-            y = PAGE_HEIGHT / 2 + 0.3 * inch
+            y = PAGE_HEIGHT / 2 - 0.7 * inch
             
             canvas.drawImage(
                 logo_path, x, y,
@@ -881,9 +869,9 @@ def json_to_pdf(json_input, pdf_filename, company_name, logo_path=None, watermar
 if __name__ == "__main__":
     # Example usage
     json_to_pdf(
-        "/Users/gkg/PycharmProjects/Fintel/scripts/test.json",
-        "/Users/gkg/PycharmProjects/Fintel/scripts/output.pdf",
+        "./scripts/test.json",
+        "./scripts/output.pdf",
         "Erebus Observatory Network",
-        logo_path="/Users/gkg/PycharmProjects/Fintel/logo.png",
-        watermark_path="/Users/gkg/PycharmProjects/Fintel/watermark.png",
+        logo_path="./logo.png",
+        watermark_path="./watermark.png",
     )
