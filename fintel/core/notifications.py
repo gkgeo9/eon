@@ -135,7 +135,8 @@ class NotificationService:
         batch_id: str,
         completed: int,
         failed: int,
-        duration_hours: Optional[float] = None
+        duration_hours: Optional[float] = None,
+        batch_name: Optional[str] = None,
     ) -> bool:
         """
         Send notification when batch completes.
@@ -145,26 +146,30 @@ class NotificationService:
             completed: Number of completed items
             failed: Number of failed items
             duration_hours: How long the batch took
+            batch_name: Human-readable batch name
 
         Returns:
             True if sent successfully
         """
         duration_str = f" in {duration_hours:.1f} hours" if duration_hours else ""
+        display_name = batch_name or batch_id[:8]
+
+        fields = [
+            {"name": "Batch", "value": display_name, "inline": True},
+            {"name": "Completed", "value": str(completed), "inline": True},
+            {"name": "Failed", "value": str(failed), "inline": True},
+        ]
 
         embed = {
-            "title": "✅ Batch Completed",
+            "title": f"✅ Batch Completed — {display_name}",
             "color": 0x00FF00,  # Green
-            "fields": [
-                {"name": "Batch ID", "value": batch_id[:8], "inline": True},
-                {"name": "Completed", "value": str(completed), "inline": True},
-                {"name": "Failed", "value": str(failed), "inline": True},
-            ],
+            "fields": fields,
             "footer": {"text": f"Fintel{duration_str}"},
             "timestamp": datetime.utcnow().isoformat()
         }
 
         return self._send_discord(
-            content=f"Batch `{batch_id[:8]}` completed: {completed} success, {failed} failed",
+            content=f"Batch **{display_name}** completed: {completed} success, {failed} failed",
             embeds=[embed]
         )
 
@@ -176,6 +181,7 @@ class NotificationService:
         failed: int,
         skipped: int = 0,
         estimated_completion: Optional[str] = None,
+        batch_name: Optional[str] = None,
     ) -> bool:
         """
         Send notification for batch progress milestone.
@@ -187,12 +193,14 @@ class NotificationService:
             failed: Failed items
             skipped: Skipped items
             estimated_completion: ISO timestamp of estimated completion
+            batch_name: Human-readable batch name
 
         Returns:
             True if sent successfully
         """
         pct = round((completed / total) * 100, 1) if total > 0 else 0
         remaining = total - completed - failed - skipped
+        display_name = batch_name or batch_id[:8]
 
         # Build a text progress bar
         bar_length = 20
@@ -208,6 +216,7 @@ class NotificationService:
                 eta_str = "N/A"
 
         fields = [
+            {"name": "Batch", "value": display_name, "inline": False},
             {"name": "Progress", "value": f"`{bar}` {pct}%", "inline": False},
             {"name": "Completed", "value": str(completed), "inline": True},
             {"name": "Remaining", "value": str(remaining), "inline": True},
@@ -217,7 +226,7 @@ class NotificationService:
             fields.append({"name": "ETA", "value": eta_str, "inline": True})
 
         embed = {
-            "title": f"\U0001F4CA Batch Progress — {pct}%",
+            "title": f"\U0001F4CA {display_name} — {pct}%",
             "color": 0x3498DB,  # Blue
             "fields": fields,
             "footer": {"text": f"Fintel | Batch {batch_id[:8]}"},
@@ -225,29 +234,36 @@ class NotificationService:
         }
 
         return self._send_discord(
-            content=f"Batch `{batch_id[:8]}` progress: {completed}/{total} ({pct}%)",
+            content=f"Batch **{display_name}** progress: {completed}/{total} ({pct}%)",
             embeds=[embed],
         )
 
-    def send_batch_failed(self, batch_id: str, error: str) -> bool:
+    def send_batch_failed(
+        self,
+        batch_id: str,
+        error: str,
+        batch_name: Optional[str] = None,
+    ) -> bool:
         """
         Send notification when batch fails.
 
         Args:
             batch_id: Batch ID
             error: Error message
+            batch_name: Human-readable batch name
 
         Returns:
             True if sent successfully
         """
         # Truncate error for display
         error_display = error[:200] + "..." if len(error) > 200 else error
+        display_name = batch_name or batch_id[:8]
 
         embed = {
-            "title": "❌ Batch Failed",
+            "title": f"❌ Batch Failed — {display_name}",
             "color": 0xFF0000,  # Red
             "fields": [
-                {"name": "Batch ID", "value": batch_id[:8], "inline": True},
+                {"name": "Batch", "value": display_name, "inline": True},
                 {"name": "Error", "value": error_display, "inline": False},
             ],
             "footer": {"text": "Fintel - Manual intervention may be required"},
@@ -255,7 +271,7 @@ class NotificationService:
         }
 
         return self._send_discord(
-            content=f"⚠️ Batch `{batch_id[:8]}` failed!",
+            content=f"⚠️ Batch **{display_name}** failed!",
             embeds=[embed]
         )
 
@@ -342,13 +358,15 @@ def notify(message: str) -> bool:
     return service.send_info(message)
 
 
-def notify_batch_completed(batch_id: str, completed: int, failed: int) -> bool:
+def notify_batch_completed(
+    batch_id: str, completed: int, failed: int, batch_name: Optional[str] = None
+) -> bool:
     """Send batch completed notification."""
     service = NotificationService()
-    return service.send_batch_completed(batch_id, completed, failed)
+    return service.send_batch_completed(batch_id, completed, failed, batch_name=batch_name)
 
 
-def notify_batch_failed(batch_id: str, error: str) -> bool:
+def notify_batch_failed(batch_id: str, error: str, batch_name: Optional[str] = None) -> bool:
     """Send batch failed notification."""
     service = NotificationService()
-    return service.send_batch_failed(batch_id, error)
+    return service.send_batch_failed(batch_id, error, batch_name=batch_name)

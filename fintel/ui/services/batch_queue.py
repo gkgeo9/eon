@@ -1545,6 +1545,7 @@ class BatchQueueService:
                 failed=failed,
                 skipped=skipped,
                 estimated_completion=estimated_completion,
+                batch_name=batch.get('name'),
             )
             self.logger.info(
                 f"Sent progress notification for batch {batch_id[:8]}: "
@@ -1928,7 +1929,8 @@ class BatchQueueService:
                 self._notifier.send_batch_completed(
                     batch_id,
                     batch['completed_tickers'],
-                    batch['failed_tickers']
+                    batch['failed_tickers'],
+                    batch_name=batch.get('name'),
                 )
         except Exception as e:
             self.logger.warning(f"Failed to send completion notification: {e}")
@@ -1946,7 +1948,9 @@ class BatchQueueService:
 
         # Send notification
         try:
-            self._notifier.send_batch_failed(batch_id, error)
+            batch = self.get_batch_status(batch_id)
+            batch_name = batch.get('name') if batch else None
+            self._notifier.send_batch_failed(batch_id, error, batch_name=batch_name)
         except Exception as e:
             self.logger.warning(f"Failed to send failure notification: {e}")
 

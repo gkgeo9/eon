@@ -6,8 +6,80 @@ Results display components for Streamlit.
 
 import streamlit as st
 import json
-from typing import Dict, Any, List
+from collections import OrderedDict
+from typing import Dict, Any, List, Optional, Tuple
 from fintel.ui.utils.formatting import generate_markdown_report, flatten_for_csv, format_all_years_text
+
+
+def _fetch_market_data(ticker: str) -> Optional[Dict[str, Any]]:
+    """Fetch current price and market cap from yfinance.
+
+    Returns a dict with 'price' and 'market_cap' keys, or None on failure.
+    """
+    try:
+        import yfinance as yf
+
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        price = info.get("currentPrice") or info.get("regularMarketPrice")
+        market_cap = info.get("marketCap")
+
+        if price is None and market_cap is None:
+            return None
+
+        result = {}
+        if price is not None:
+            result["current_price_usd"] = round(price, 2)
+        if market_cap is not None:
+            result["market_cap_usd"] = market_cap
+        return result
+    except Exception:
+        return None
+
+
+def _format_market_cap(value: int) -> str:
+    """Format market cap into a human-readable string."""
+    if value >= 1_000_000_000_000:
+        return f"${value / 1_000_000_000_000:.2f}T"
+    elif value >= 1_000_000_000:
+        return f"${value / 1_000_000_000:.2f}B"
+    elif value >= 1_000_000:
+        return f"${value / 1_000_000:.2f}M"
+    return f"${value:,}"
+
+
+def _build_json_with_market_data(
+    results: list, ticker: str, market_data: Optional[Dict[str, Any]]
+) -> str:
+    """Build the Copy All JSON, optionally prepending market data."""
+    data = OrderedDict()
+    if market_data:
+        data["current_market_data"] = {
+            "ticker": ticker,
+            **market_data,
+        }
+    for r in results:
+        data[r["year"]] = r["data"]
+    return json.dumps(data, indent=2, default=str)
+
+
+def _build_text_with_market_data(
+    results: list, ticker: str, market_data: Optional[Dict[str, Any]]
+) -> str:
+    """Build the Copy All formatted text, optionally prepending market data."""
+    parts = []
+    if market_data:
+        price = market_data.get("current_price_usd")
+        mcap = market_data.get("market_cap_usd")
+        header = f"=== {ticker} — Current Market Data ===\n"
+        if price is not None:
+            header += f"  Current Price: ${price:,.2f}\n"
+        if mcap is not None:
+            header += f"  Market Cap:    {_format_market_cap(mcap)}\n"
+        header += ""
+        parts.append(header)
+    parts.append(format_all_years_text(results, ticker))
+    return "\n".join(parts)
 
 
 def display_results(run_details: Dict[str, Any], results: List[Dict[str, Any]]):
@@ -55,20 +127,27 @@ def display_results(run_details: Dict[str, Any], results: List[Dict[str, Any]]):
     else:
         st.subheader(f"Year: {selected_year}")
 
-    # Copy All Years expander (only show if multiple years)
-    # if len(results) > 1:
-    #     with st.expander("📋 Copy All Years"):
-    # THIS CHANGE WAS MADE FOR EASIER USAGE OF THE UI
+    # Copy All Years section
+    include_market = st.checkbox(
+        "Include current price & market cap",
+        value=False,
+        key="include_market_data_top",
+        help="Fetches live data from Yahoo Finance and adds it to the top of the output",
+    )
+
+    market_data = None
+    if include_market:
+        with st.spinner("Fetching market data..."):
+            market_data = _fetch_market_data(ticker)
+        if market_data is None:
+            st.warning(f"Could not fetch market data for {ticker}")
+
     copy_tab1, copy_tab2 = st.tabs(["JSON", "Formatted Text"])
     with copy_tab2:
-        all_formatted = format_all_years_text(results, ticker)
+        all_formatted = _build_text_with_market_data(results, ticker, market_data)
         st.code(all_formatted, language=None)
     with copy_tab1:
-        all_json = json.dumps(
-            {r['year']: r['data'] for r in results},
-            indent=2,
-            default=str
-        )
+        all_json = _build_json_with_market_data(results, ticker, market_data)
         st.code(all_json, language='json')
 
     result_type = result_data['type']
@@ -550,8 +629,28 @@ def display_export_options(data: Dict[str, Any], result_type: str, ticker: str, 
 
         # Copy All section in Export tab
         with st.expander("📋 Copy All Years"):
+            include_market_export = st.checkbox(
+                "Include current price & market cap",
+                value=False,
+                key="include_market_data_export",
+                help="Fetches live data from Yahoo Finance and adds it to the top of the output",
+            )
+
+            market_data_export = None
+            if include_market_export:
+                with st.spinner("Fetching market data..."):
+                    market_data_export = _fetch_market_data(ticker)
+                if market_data_export is None:
+                    st.warning(f"Could not fetch market data for {ticker}")
+
             copy_tab1, copy_tab2 = st.tabs(["Formatted Text", "JSON"])
             with copy_tab1:
-                st.code(format_all_years_text(all_results, ticker), language=None)
+                st.code(
+                    _build_text_with_market_data(all_results, ticker, market_data_export),
+                    language=None,
+                )
             with copy_tab2:
-                st.code(json.dumps({r['year']: r['data'] for r in all_results}, indent=2, default=str), language='json')
+                st.code(
+                    _build_json_with_market_data(all_results, ticker, market_data_export),
+                    language='json',
+                )
