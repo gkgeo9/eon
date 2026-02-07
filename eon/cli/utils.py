@@ -27,7 +27,7 @@ class AnalysisTypeParam(click.ParamType):
 
     name = "analysis_type"
 
-    def get_metavar(self, param):
+    def get_metavar(self, param, ctx=None):
         choices_str = "|".join(CLI_ANALYSIS_CHOICES)
         return f"[{choices_str}|custom:<id>]"
 
