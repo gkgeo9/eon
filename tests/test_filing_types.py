@@ -4,8 +4,8 @@
 Quick test script for dynamic filing type discovery.
 """
 
-from fintel.data.sources.sec import SECDownloader
-from fintel.ui.database import DatabaseRepository
+from eon.data.sources.sec import SECDownloader
+from eon.ui.database import DatabaseRepository
 
 def test_filing_types():
     """Test the filing type query and caching functionality."""

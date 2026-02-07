@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 def test_converter_filing_date_extraction():
     """Test that converter correctly extracts filing_date from metadata."""
-    from fintel.data.sources.sec.converter import SECConverter
+    from eon.data.sources.sec.converter import SECConverter
 
     # Test metadata matching
     metadata = [
@@ -85,7 +85,7 @@ def test_filename_generation_patterns():
 
 def test_downloader_with_metadata():
     """Test that downloader correctly returns metadata with downloads."""
-    from fintel.data.sources.sec.downloader import SECDownloader
+    from eon.data.sources.sec.downloader import SECDownloader
 
     # Check that the method exists and has correct signature
     downloader = SECDownloader()
@@ -108,7 +108,7 @@ def test_downloader_with_metadata():
 
 def test_cancellation_token_basic():
     """Test basic cancellation token functionality."""
-    from fintel.ui.services.cancellation import CancellationToken, AnalysisCancelledException
+    from eon.ui.services.cancellation import CancellationToken, AnalysisCancelledException
 
     token = CancellationToken("test-run-1")
 
@@ -131,7 +131,7 @@ def test_cancellation_token_basic():
 
 def test_cancellation_token_thread_safety():
     """Test that cancellation token is thread-safe."""
-    from fintel.ui.services.cancellation import CancellationToken
+    from eon.ui.services.cancellation import CancellationToken
 
     token = CancellationToken("test-run-2")
     results = {'cancelled_count': 0, 'not_cancelled_count': 0}
@@ -165,7 +165,7 @@ def test_cancellation_token_thread_safety():
 
 def test_cancellation_registry():
     """Test the cancellation registry singleton."""
-    from fintel.ui.services.cancellation import get_cancellation_registry, CancellationRegistry
+    from eon.ui.services.cancellation import get_cancellation_registry, CancellationRegistry
 
     registry = get_cancellation_registry()
     assert isinstance(registry, CancellationRegistry), "Should return CancellationRegistry instance"
@@ -201,7 +201,7 @@ def test_cancellation_registry():
 
 def test_cancellation_with_thread_tracking():
     """Test that cancellation can track and wait for threads."""
-    from fintel.ui.services.cancellation import get_cancellation_registry
+    from eon.ui.services.cancellation import get_cancellation_registry
 
     registry = get_cancellation_registry()
     token = registry.create_token("run-thread-test")
@@ -242,7 +242,7 @@ def test_cancellation_with_thread_tracking():
 
 def test_batch_job_config():
     """Test BatchJobConfig dataclass."""
-    from fintel.ui.services.batch_queue import BatchJobConfig
+    from eon.ui.services.batch_queue import BatchJobConfig
 
     config = BatchJobConfig(
         name="Test Batch",
@@ -264,7 +264,7 @@ def test_batch_job_config():
 def test_batch_queue_database_schema():
     """Test that batch queue tables are created correctly."""
     # Read and execute migration
-    migration_path = Path(__file__).parent.parent / "fintel/ui/database/migrations/v008_batch_queue.sql"
+    migration_path = Path(__file__).parent.parent / "eon/ui/database/migrations/v008_batch_queue.sql"
 
     with open(migration_path) as f:
         migration_sql = f.read()
@@ -301,7 +301,7 @@ def test_batch_queue_database_schema():
 
 def test_batch_queue_service_creation():
     """Test BatchQueueService initialization."""
-    from fintel.ui.services.batch_queue import BatchQueueService, BatchJobConfig
+    from eon.ui.services.batch_queue import BatchQueueService, BatchJobConfig
 
     # Create mock database
     mock_db = Mock()
@@ -318,7 +318,7 @@ def test_batch_queue_service_creation():
 
 def test_batch_queue_job_creation():
     """Test creating batch jobs by testing the SQL operations directly."""
-    from fintel.ui.services.batch_queue import BatchJobConfig
+    from eon.ui.services.batch_queue import BatchJobConfig
     import uuid
     import json
 
@@ -329,7 +329,7 @@ def test_batch_queue_job_creation():
     try:
         # Initialize database with migration
         conn = sqlite3.connect(db_path)
-        migration_path = Path(__file__).parent.parent / "fintel/ui/database/migrations/v008_batch_queue.sql"
+        migration_path = Path(__file__).parent.parent / "eon/ui/database/migrations/v008_batch_queue.sql"
         with open(migration_path) as f:
             conn.executescript(f.read())
 
@@ -394,7 +394,7 @@ def test_batch_queue_job_creation():
 
 def test_batch_queue_status_tracking():
     """Test batch status and progress tracking by testing SQL directly."""
-    from fintel.ui.services.batch_queue import BatchJobConfig
+    from eon.ui.services.batch_queue import BatchJobConfig
     import uuid
     import json
 
@@ -405,7 +405,7 @@ def test_batch_queue_status_tracking():
         # Initialize database
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
-        migration_path = Path(__file__).parent.parent / "fintel/ui/database/migrations/v008_batch_queue.sql"
+        migration_path = Path(__file__).parent.parent / "eon/ui/database/migrations/v008_batch_queue.sql"
         with open(migration_path) as f:
             conn.executescript(f.read())
 
@@ -493,7 +493,7 @@ def test_batch_queue_status_tracking():
 
 def test_filing_date_cache_migration():
     """Test v007 migration for filing_date column."""
-    migration_path = Path(__file__).parent.parent / "fintel/ui/database/migrations/v007_filing_date_cache.sql"
+    migration_path = Path(__file__).parent.parent / "eon/ui/database/migrations/v007_filing_date_cache.sql"
 
     with open(migration_path) as f:
         migration_sql = f.read()
@@ -534,7 +534,7 @@ def test_filing_date_cache_migration():
 
 def test_services_exports():
     """Test that all new classes are properly exported from services module."""
-    from fintel.ui.services import (
+    from eon.ui.services import (
         AnalysisService,
         CancellationToken,
         CancellationRegistry,

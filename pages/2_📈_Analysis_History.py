@@ -7,10 +7,10 @@ Analysis History Page - View and manage past analyses.
 import streamlit as st
 import time
 from datetime import date, timedelta
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.theme import apply_theme
-from fintel.core.formatting import format_duration, format_status as _fmt_status
-from fintel.core.analysis_types import CLI_ANALYSIS_CHOICES
+from eon.ui.database import DatabaseRepository
+from eon.ui.theme import apply_theme
+from eon.core.formatting import format_duration, format_status as _fmt_status
+from eon.core.analysis_types import CLI_ANALYSIS_CHOICES
 
 # Apply global theme
 apply_theme()
@@ -141,7 +141,7 @@ else:
         st.subheader("📊 Active Analyses")
 
         # Import analysis service for cancellation
-        from fintel.ui.services.analysis_service import AnalysisService
+        from eon.ui.services.analysis_service import AnalysisService
         if 'analysis_service' not in st.session_state:
             st.session_state.analysis_service = AnalysisService(db)
         analysis_svc = st.session_state.analysis_service
@@ -205,7 +205,7 @@ else:
         st.markdown("---")
 
     # Check for interrupted runs
-    from fintel.ui.services.analysis_service import AnalysisService
+    from eon.ui.services.analysis_service import AnalysisService
     import threading
 
     analysis_service = AnalysisService(db)

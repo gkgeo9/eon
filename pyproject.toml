@@ -1,14 +1,14 @@
 [project]
-name = "fintel"
+name = "eon"
 version = "0.1.0"
-description = "AI-powered SEC filing analysis platform for investment research"
+description = "Erebus Observatory Network - AI-powered SEC filing analysis platform for investment research"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "Private"}
 authors = [
-    {name = "Fintel Contributors"}
+    {name = "EON Contributors"}
 ]
-keywords = ["finance", "sec", "analysis", "ai", "investment", "10-K"]
+keywords = ["finance", "sec", "analysis", "ai", "investment", "10-K", "erebus", "observatory"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
@@ -78,21 +78,21 @@ dev = [
 ]
 
 [project.scripts]
-fintel = "fintel.cli.main:cli"
+eon = "eon.cli.main:cli"
 
 [project.urls]
-Documentation = "https://github.com/gkgeo9/fintel#readme"
-Issues = "https://github.com/gkgeo9/fintel/issues"
+Documentation = "https://github.com/gkgeo9/eon#readme"
+Issues = "https://github.com/gkgeo9/eon/issues"
 
 [build-system]
 requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["fintel", "custom_workflows"]
+packages = ["eon", "custom_workflows"]
 
 [tool.setuptools.package-data]
-fintel = ["py.typed"]
+eon = ["py.typed"]
 
 [tool.black]
 line-length = 100
@@ -146,15 +146,15 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=fintel --cov-report=term-missing"
+addopts = "-v --cov=eon --cov-report=term-missing"
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 
 [tool.coverage.run]
-source = ["fintel"]
+source = ["eon"]
 omit = [
-    "fintel/__init__.py",
+    "eon/__init__.py",
     "tests/*",
 ]
 

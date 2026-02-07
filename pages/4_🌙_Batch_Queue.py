@@ -17,10 +17,10 @@ import time
 import io
 from datetime import datetime
 
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.services.batch_queue import BatchQueueService, BatchJobConfig
-from fintel.ui.theme import apply_theme
-from fintel.core.analysis_types import (
+from eon.ui.database import DatabaseRepository
+from eon.ui.services.batch_queue import BatchQueueService, BatchJobConfig
+from eon.ui.theme import apply_theme
+from eon.core.analysis_types import (
     get_analysis_type,
     get_ui_options,
     requires_multi_year,
@@ -229,7 +229,7 @@ with st.expander("New Batch", expanded=False):
 
     # Estimate time
     if tickers:
-        from fintel.core import get_config
+        from eon.core import get_config
         config = get_config()
         keys_count = len(config.google_api_keys)
         requests_per_day = keys_count * 20

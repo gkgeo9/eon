@@ -1,4 +1,4 @@
-# Fintel
+# Erebus Observatory Network (EON)
 
 **AI-Powered SEC Filing Analysis Platform for Investment Research**
 
@@ -11,9 +11,9 @@
 
 ## Overview
 
-Fintel is a production-ready platform that analyzes SEC 10-K filings using Google Gemini AI to extract actionable investment insights. It combines multiple investment philosophies—Warren Buffett's value investing, Nassim Taleb's antifragility framework, and contrarian opportunity detection—into a unified analysis system.
+EON is a production-ready platform that analyzes SEC 10-K filings using Google Gemini AI to extract actionable investment insights. It combines multiple investment philosophies—Warren Buffett's value investing, Nassim Taleb's antifragility framework, and contrarian opportunity detection—into a unified analysis system.
 
-### Why Fintel?
+### Why EON?
 
 - **Multi-Perspective Analysis** - See companies through different investment lenses simultaneously
 - **Structured AI Output** - Type-safe Pydantic models ensure consistent, reliable analysis results
@@ -52,8 +52,8 @@ Fintel is a production-ready platform that analyzes SEC 10-K filings using Googl
 
 ```bash
 # Clone the repository
-git clone https://github.com/gkgeo9/fintel.git
-cd fintel
+git clone https://github.com/gkgeo9/eon.git
+cd eon
 
 # Create and activate virtual environment
 python -m venv .venv
@@ -80,11 +80,11 @@ GOOGLE_API_KEY_2=your_second_key      # Optional: more keys = faster batch proce
 # ... up to GOOGLE_API_KEY_25
 
 # Required: SEC Edgar identification (SEC requires this)
-FINTEL_SEC_USER_EMAIL=your@email.com
-FINTEL_SEC_COMPANY_NAME="Investment Research"
+EON_SEC_USER_EMAIL=your@email.com
+EON_SEC_COMPANY_NAME="Investment Research"
 
 # Optional: Discord notifications for batch processing
-FINTEL_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_TOKEN
+EON_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_TOKEN
 ```
 
 ### 3. Launch
@@ -101,17 +101,17 @@ Opens at `http://localhost:8501`
 
 ```bash
 # Single company analysis
-fintel analyze AAPL --years 5
+eon analyze AAPL --years 5
 
 # Batch processing
-fintel batch tickers.csv --workers 10
+eon batch tickers.csv --workers 10
 ```
 
 ---
 
 ## Discord Notifications Setup
 
-Fintel can send real-time notifications to Discord for batch processing events. This is highly recommended for overnight batch jobs processing 1000+ companies.
+EON can send real-time notifications to Discord for batch processing events. This is highly recommended for overnight batch jobs processing 1000+ companies.
 
 ### What Gets Notified
 
@@ -128,20 +128,20 @@ Fintel can send real-time notifications to Discord for batch processing events. 
    - Open Discord and go to your server
    - Right-click on the channel where you want notifications → **Edit Channel**
    - Go to **Integrations** → **Webhooks** → **New Webhook**
-   - Give it a name (e.g., "Fintel Bot") and copy the webhook URL
+   - Give it a name (e.g., "EON Bot") and copy the webhook URL
 
 2. **Configure Environment Variable:**
    ```bash
    # Add to your .env file
-   FINTEL_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1234567890/abcdefghijklmnop
+   EON_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1234567890/abcdefghijklmnop
    ```
 
 3. **Test the Connection:**
    ```python
-   from fintel.core.notifications import NotificationService
+   from eon.core.notifications import NotificationService
 
    notifier = NotificationService()
-   notifier.send_info("Fintel notifications configured successfully!")
+   notifier.send_info("EON notifications configured successfully!")
    ```
 
 ### Example Notifications
@@ -248,7 +248,7 @@ See [docs/CUSTOM_WORKFLOWS.md](docs/CUSTOM_WORKFLOWS.md) for the complete develo
 
 ## Batch Processing Reliability
 
-Fintel includes enterprise-grade reliability features for processing 1000+ companies over multi-day batch runs.
+EON includes enterprise-grade reliability features for processing 1000+ companies over multi-day batch runs.
 
 ### Reliability Features
 
@@ -276,22 +276,22 @@ For processing 1000+ companies across 10+ years:
 
 ```bash
 # Start in tmux/screen for persistence
-tmux new -s fintel-batch
+tmux new -s eon-batch
 
 # 1000 companies, 10 years each, multi-perspective analysis
-fintel batch companies.csv --years 10 --analysis-type multi
+eon batch companies.csv --years 10 --analysis-type multi
 
 # Detach: Ctrl+B then D
-# Reattach later: tmux attach -t fintel-batch
+# Reattach later: tmux attach -t eon-batch
 
 # If interrupted, resume from where it left off
-fintel batch --resume
+eon batch --resume
 
 # Resume a specific batch
-fintel batch --resume-id <batch_id>
+eon batch --resume-id <batch_id>
 
 # List all incomplete batches
-fintel batch --list-incomplete
+eon batch --list-incomplete
 ```
 
 #### CSV Input Format
@@ -359,11 +359,11 @@ These features are specifically designed for large-scale processing (1000+ compa
 | Feature | Description |
 |---------|-------------|
 | **Per-year resume** | Results saved incrementally after each year. Interrupted companies resume from last completed year, not from scratch. |
-| **Parallel throughput** | Per-key file locks + configurable concurrency (`FINTEL_MAX_CONCURRENT_REQUESTS`, default 25). All 25 keys can process in parallel. |
+| **Parallel throughput** | Per-key file locks + configurable concurrency (`EON_MAX_CONCURRENT_REQUESTS`, default 25). All 25 keys can process in parallel. |
 | **Priority ordering** | `--priority` flag in CLI. Higher-priority tickers are processed first (`ORDER BY priority DESC, id`). |
 | **Partial results** | Each year's result is saved to the database immediately. If analysis fails at year 7/10, years 1-6 are preserved. |
 | **Adaptive rate limiting** | Sleep duration decreases after consecutive successes (down to ~20s). Increases by 50% on 429 errors. Resets on other errors. |
-| **Batch export** | `fintel export --batch-id <id> --format csv` exports all results from a specific batch with optional `--status-filter`. |
+| **Batch export** | `eon export --batch-id <id> --format csv` exports all results from a specific batch with optional `--status-filter`. |
 | **Demand-based Chrome cleanup** | Triggered by memory pressure (>80% usage) instead of a fixed interval. Fallback interval still runs as safety net. |
 | **Ticker deduplication** | Duplicate tickers in batch CSV are automatically removed with logging. |
 
@@ -388,25 +388,25 @@ These features are specifically designed for large-scale processing (1000+ compa
 
 ```bash
 # Analyze a single company
-fintel analyze AAPL --years 5 --type fundamental
+eon analyze AAPL --years 5 --type fundamental
 
 # Analyze with specific years
-fintel analyze MSFT --years 2020 2021 2022 2023
+eon analyze MSFT --years 2020 2021 2022 2023
 
 # Batch process from file
-fintel batch tickers.csv --workers 10 --type buffett
+eon batch tickers.csv --workers 10 --type buffett
 
 # Contrarian scan with minimum score filter
-fintel scan --tickers-file universe.txt --min-score 400
+eon scan --tickers-file universe.txt --min-score 400
 
 # Export results
-fintel export --format csv --output results.csv
+eon export --format csv --output results.csv
 
 # Export from a specific batch run
-fintel export --batch-id abc12345 --output batch_results.csv
+eon export --batch-id abc12345 --output batch_results.csv
 
 # Export only completed items
-fintel export --batch-id abc12345 --status-filter completed --output completed.csv
+eon export --batch-id abc12345 --status-filter completed --output completed.csv
 ```
 
 ### CLI Options
@@ -423,7 +423,7 @@ fintel export --batch-id abc12345 --status-filter completed --output completed.c
 ## Project Structure
 
 ```
-fintel/
+eon/
 ├── analysis/                    # Core analysis engines
 │   ├── fundamental/             # 10-K analysis, success factors
 │   │   ├── analyzer.py          # FundamentalAnalyzer
@@ -518,8 +518,8 @@ All settings are configured via `.env` file or environment variables:
 | Variable                  | Description                                    |
 | ------------------------- | ---------------------------------------------- |
 | `GOOGLE_API_KEY_1`        | Primary Google Gemini API key                  |
-| `FINTEL_SEC_USER_EMAIL`   | Your email for SEC Edgar API (required by SEC) |
-| `FINTEL_SEC_COMPANY_NAME` | Company/script name for SEC compliance         |
+| `EON_SEC_USER_EMAIL`   | Your email for SEC Edgar API (required by SEC) |
+| `EON_SEC_COMPANY_NAME` | Company/script name for SEC compliance         |
 
 #### Optional API Keys
 
@@ -531,48 +531,48 @@ All settings are configured via `.env` file or environment variables:
 
 | Variable                         | Default | Description                   |
 | -------------------------------- | ------- | ----------------------------- |
-| `FINTEL_NUM_WORKERS`             | 25      | Parallel worker count         |
-| `FINTEL_NUM_FILINGS_PER_COMPANY` | 30      | Historical filings to process |
-| `FINTEL_MAX_REQUESTS_PER_DAY`    | 500     | Rate limit per API key        |
-| `FINTEL_SLEEP_AFTER_REQUEST`     | 65      | Seconds between API calls     |
+| `EON_NUM_WORKERS`             | 25      | Parallel worker count         |
+| `EON_NUM_FILINGS_PER_COMPANY` | 30      | Historical filings to process |
+| `EON_MAX_REQUESTS_PER_DAY`    | 500     | Rate limit per API key        |
+| `EON_SLEEP_AFTER_REQUEST`     | 65      | Seconds between API calls     |
 
 #### AI Settings
 
 | Variable                       | Default            | Description                    |
 | ------------------------------ | ------------------ | ------------------------------ |
-| `FINTEL_DEFAULT_MODEL`         | `gemini-2.5-flash` | LLM model to use               |
-| `FINTEL_THINKING_BUDGET`       | 4096               | Thinking tokens for Gemini 2.x |
-| `FINTEL_USE_STRUCTURED_OUTPUT` | true               | Use Pydantic structured output |
+| `EON_DEFAULT_MODEL`         | `gemini-2.5-flash` | LLM model to use               |
+| `EON_THINKING_BUDGET`       | 4096               | Thinking tokens for Gemini 2.x |
+| `EON_USE_STRUCTURED_OUTPUT` | true               | Use Pydantic structured output |
 
 #### Storage Settings
 
 | Variable                 | Default   | Description                    |
 | ------------------------ | --------- | ------------------------------ |
-| `FINTEL_DATA_DIR`        | `./data`  | Data storage directory         |
-| `FINTEL_CACHE_DIR`       | `./cache` | Cache directory                |
-| `FINTEL_LOG_DIR`         | `./logs`  | Log file directory             |
-| `FINTEL_STORAGE_BACKEND` | parquet   | Storage: json, parquet, sqlite |
+| `EON_DATA_DIR`        | `./data`  | Data storage directory         |
+| `EON_CACHE_DIR`       | `./cache` | Cache directory                |
+| `EON_LOG_DIR`         | `./logs`  | Log file directory             |
+| `EON_STORAGE_BACKEND` | parquet   | Storage: json, parquet, sqlite |
 
 #### Logging Settings
 
 | Variable                 | Default | Description                      |
 | ------------------------ | ------- | -------------------------------- |
-| `FINTEL_LOG_FILE`        | -       | Custom log file path             |
-| `FINTEL_LOG_MAX_SIZE_MB` | 10      | Max log size before rotation     |
-| `FINTEL_LOG_BACKUP_COUNT`| 5       | Number of backup logs to keep    |
+| `EON_LOG_FILE`        | -       | Custom log file path             |
+| `EON_LOG_MAX_SIZE_MB` | 10      | Max log size before rotation     |
+| `EON_LOG_BACKUP_COUNT`| 5       | Number of backup logs to keep    |
 
 #### Notification Settings
 
 | Variable                     | Default | Description                        |
 | ---------------------------- | ------- | ---------------------------------- |
-| `FINTEL_DISCORD_WEBHOOK_URL` | -       | Discord webhook URL for alerts     |
+| `EON_DISCORD_WEBHOOK_URL` | -       | Discord webhook URL for alerts     |
 
 #### Feature Flags
 
 | Variable                          | Default | Description              |
 | --------------------------------- | ------- | ------------------------ |
-| `FINTEL_ENABLE_CACHING`           | true    | Cache API responses      |
-| `FINTEL_ENABLE_PROGRESS_TRACKING` | true    | Enable resume capability |
+| `EON_ENABLE_CACHING`           | true    | Cache API responses      |
+| `EON_ENABLE_PROGRESS_TRACKING` | true    | Enable resume capability |
 
 ---
 
@@ -674,7 +674,7 @@ This project demonstrates several advanced engineering solutions:
 
 ## Database Schema
 
-Fintel uses SQLite with WAL mode for concurrent access. Schema is managed through migrations.
+EON uses SQLite with WAL mode for concurrent access. Schema is managed through migrations.
 
 ### Core Tables
 
@@ -691,7 +691,7 @@ Fintel uses SQLite with WAL mode for concurrent access. Schema is managed throug
 
 ### Migrations
 
-Located in `fintel/ui/database/migrations/`:
+Located in `eon/ui/database/migrations/`:
 
 | Version | Description                                              |
 | ------- | -------------------------------------------------------- |
@@ -729,7 +729,7 @@ pre-commit install
 pytest
 
 # Run with coverage
-pytest --cov=fintel --cov-report=html
+pytest --cov=eon --cov-report=html
 
 # Run specific test file
 pytest tests/test_analyzer.py -v
@@ -739,20 +739,20 @@ pytest tests/test_analyzer.py -v
 
 ```bash
 # Format code
-black fintel/ pages/ custom_workflows/
+black eon/ pages/ custom_workflows/
 
 # Lint
-ruff check fintel/ --fix
+ruff check eon/ --fix
 
 # Type checking
-mypy fintel/
+mypy eon/
 ```
 
 ### Adding a New Analysis Type
 
-1. Create models in `fintel/analysis/<type>/models/`
-2. Create prompts in `fintel/analysis/<type>/prompts/`
-3. Implement analyzer in `fintel/analysis/<type>/analyzer.py`
+1. Create models in `eon/analysis/<type>/models/`
+2. Create prompts in `eon/analysis/<type>/prompts/`
+3. Implement analyzer in `eon/analysis/<type>/analyzer.py`
 4. Register in `AnalysisService._run_analysis_by_type()`
 5. Add to UI dropdown in `pages/1_📊_Analysis.py`
 
@@ -781,22 +781,22 @@ grep GOOGLE_API_KEY .env
 
 ```bash
 # Check database integrity
-sqlite3 data/fintel.db "PRAGMA integrity_check;"
+sqlite3 data/eon.db "PRAGMA integrity_check;"
 
 # If needed, close all connections and restart
 ```
 
 **"SEC download failed"**
 
-- Ensure `FINTEL_SEC_USER_EMAIL` is set (SEC requires this)
+- Ensure `EON_SEC_USER_EMAIL` is set (SEC requires this)
 - SEC Edgar may rate limit during peak hours (try again later)
 - Check logs in `logs/` directory for details
 
 **"Rate limit exceeded"**
 
 - Add more API keys (up to 25)
-- Reduce `FINTEL_NUM_WORKERS`
-- Increase `FINTEL_SLEEP_AFTER_REQUEST`
+- Reduce `EON_NUM_WORKERS`
+- Increase `EON_SLEEP_AFTER_REQUEST`
 
 **"Analysis interrupted"**
 
@@ -806,13 +806,13 @@ sqlite3 data/fintel.db "PRAGMA integrity_check;"
 
 **"Low disk space" notifications**
 
-- Fintel monitors disk space during batch processing
+- EON monitors disk space during batch processing
 - Minimum 5GB free required, 10GB recommended
 - Clean up old PDFs in `data/pdfs/` if needed
 
 **"Discord notifications not working"**
 
-- Verify `FINTEL_DISCORD_WEBHOOK_URL` is set correctly
+- Verify `EON_DISCORD_WEBHOOK_URL` is set correctly
 - Test webhook manually: `curl -X POST -H "Content-Type: application/json" -d '{"content":"test"}' YOUR_WEBHOOK_URL`
 - Check logs for "Discord webhook" errors
 
@@ -820,7 +820,7 @@ sqlite3 data/fintel.db "PRAGMA integrity_check;"
 
 Logs are stored in `logs/` directory:
 
-- `fintel.log` - Main application log
+- `eon.log` - Main application log
 - Automatic rotation at 10MB with 5 backup files
 
 ---

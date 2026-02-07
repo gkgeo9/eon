@@ -18,8 +18,8 @@ from datetime import datetime
 # Add project to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.services import AnalysisService
+from eon.ui.database import DatabaseRepository
+from eon.ui.services import AnalysisService
 
 
 def test_last_activity_at_updates():
@@ -309,7 +309,7 @@ def run_all_tests():
     print("\n")
     print("╔" + "="*78 + "╗")
     print("║" + " "*78 + "║")
-    print("║" + "COMPREHENSIVE TEST SUITE FOR FINTEL FIXES".center(78) + "║")
+    print("║" + "COMPREHENSIVE TEST SUITE FOR EON FIXES".center(78) + "║")
     print("║" + " "*78 + "║")
     print("╚" + "="*78 + "╝")
 

@@ -30,15 +30,15 @@ class TestCachedPDFAnalysis:
     @pytest.fixture
     def real_db(self):
         """
-        Connect to the real Fintel database with cached files.
+        Connect to the real EON database with cached files.
 
-        Note: This uses the actual data/fintel.db with real cached PDFs.
+        Note: This uses the actual data/eon.db with real cached PDFs.
         """
-        from fintel.ui.database import DatabaseRepository
-        from fintel.core import get_config
+        from eon.ui.database import DatabaseRepository
+        from eon.core import get_config
 
         config = get_config()
-        db_path = config.get_data_path() / "fintel.db"
+        db_path = config.get_data_path() / "eon.db"
 
         if not db_path.exists():
             pytest.skip("Real database not found - run with actual data directory")
@@ -53,7 +53,7 @@ class TestCachedPDFAnalysis:
 
         Returns the service along with a tracker for download calls.
         """
-        from fintel.ui.services.analysis_service import AnalysisService
+        from eon.ui.services.analysis_service import AnalysisService
 
         service = AnalysisService(real_db)
 
@@ -171,7 +171,7 @@ class TestCachedPDFAnalysis:
     @pytest.mark.integration
     def test_corpus_manager_uses_cache(self, real_db):
         """Test that CorpusManager correctly identifies cached files."""
-        from fintel.data.corpus import CorpusManager
+        from eon.data.corpus import CorpusManager
 
         cached_tickers = real_db.get_tickers_with_cached_files("10-K")
         if not cached_tickers:
@@ -234,7 +234,7 @@ class TestAnalysisServiceCacheIntegration:
     @pytest.fixture
     def analysis_service(self, db_with_cache):
         """Create AnalysisService with test database."""
-        from fintel.ui.services.analysis_service import AnalysisService
+        from eon.ui.services.analysis_service import AnalysisService
 
         test_db, _ = db_with_cache
         return AnalysisService(test_db)

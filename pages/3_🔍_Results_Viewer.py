@@ -6,9 +6,9 @@ Results Viewer Page - View and export analysis results.
 
 import json
 import streamlit as st
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.components.results_display import display_results
-from fintel.ui.theme import apply_theme
+from eon.ui.database import DatabaseRepository
+from eon.ui.components.results_display import display_results
+from eon.ui.theme import apply_theme
 
 # Apply global theme
 apply_theme()
@@ -112,7 +112,7 @@ if run_id:
                 col1, col2 = st.columns([3, 1])
                 with col1:
                     if st.button("Create Multi-Year Synthesis", type="primary", key="create_synthesis"):
-                        from fintel.ui.services.analysis_service import AnalysisService
+                        from eon.ui.services.analysis_service import AnalysisService
                         import time
 
                         with st.spinner("Creating synthesis analysis... This may take a minute."):

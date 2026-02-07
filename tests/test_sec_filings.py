@@ -12,7 +12,7 @@ Tests:
 - S-1: IPO registration
 """
 
-from fintel.data.sources.sec import SECDownloader
+from eon.data.sources.sec import SECDownloader
 from pathlib import Path
 
 def test_filing_types():

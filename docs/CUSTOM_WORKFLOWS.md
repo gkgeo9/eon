@@ -1,6 +1,6 @@
 # Custom Workflows Developer Guide
 
-This guide explains how to create custom analysis workflows for Fintel. Custom workflows allow you to define specialized prompts and structured output schemas to extract specific insights from SEC filings.
+This guide explains how to create custom analysis workflows for EON. Custom workflows allow you to define specialized prompts and structured output schemas to extract specific insights from SEC filings.
 
 ## Table of Contents
 
@@ -33,7 +33,7 @@ SEC Filing (10-K/10-Q) → PDF Extraction → Your Prompt + Filing Text → Gemi
 ```
 
 1. User selects ticker, years, and your workflow in the UI
-2. Fintel downloads and extracts the SEC filing text
+2. EON downloads and extracts the SEC filing text
 3. Your prompt template is filled with `{ticker}` and `{year}`
 4. The filing text is appended to your prompt
 5. Gemini AI generates a response matching your Pydantic schema
@@ -127,13 +127,13 @@ Your workflow will be automatically discovered! You can use it from both the CLI
 **CLI (recommended for quick testing):**
 ```bash
 # List all discovered workflows
-fintel workflows
+eon workflows
 
 # Run your workflow on a single company
-fintel analyze AAPL --analysis-type custom:my_analyzer
+eon analyze AAPL --analysis-type custom:my_analyzer
 
 # Batch process with your workflow
-fintel batch tickers.csv --analysis-type custom:my_analyzer --years 5
+eon batch tickers.csv --analysis-type custom:my_analyzer --years 5
 ```
 
 **Web UI:**
@@ -161,7 +161,7 @@ custom_workflows/
 
 ### Auto-Discovery
 
-Fintel automatically discovers workflows by:
+EON automatically discovers workflows by:
 1. Scanning `custom_workflows/` and `custom_workflows/examples/` for `.py` files
 2. Finding classes that inherit from `CustomWorkflow`
 3. Registering them with the filename as the workflow ID
@@ -538,7 +538,7 @@ def validate_config(self, years: int) -> bool:
 2. Ensure filename doesn't start with `_`
 3. Verify class inherits from `CustomWorkflow`
 4. Check for Python syntax errors
-5. Run `fintel workflows` to verify discovery (CLI) or restart the Streamlit app (UI)
+5. Run `eon workflows` to verify discovery (CLI) or restart the Streamlit app (UI)
 
 ### Schema Validation Errors
 
@@ -788,23 +788,23 @@ Your goal is to assess the SAFETY and SUSTAINABILITY of the dividend.
 
 ```bash
 # List all available custom workflows
-fintel workflows
+eon workflows
 
 # With extra detail (category, etc.)
-fintel workflows --verbose
+eon workflows --verbose
 ```
 
 ### Run a Custom Workflow
 
 ```bash
 # Single company analysis
-fintel analyze AAPL --analysis-type custom:my_analyzer
+eon analyze AAPL --analysis-type custom:my_analyzer
 
 # Batch processing
-fintel batch tickers.csv --analysis-type custom:examples.moonshot_analyzer --years 5
+eon batch tickers.csv --analysis-type custom:examples.moonshot_analyzer --years 5
 ```
 
-The workflow ID is shown in the `fintel workflows` output (e.g. `custom:examples.growth_analyzer`).
+The workflow ID is shown in the `eon workflows` output (e.g. `custom:examples.growth_analyzer`).
 
 ---
 
@@ -813,7 +813,7 @@ The workflow ID is shown in the `fintel workflows` output (e.g. `custom:examples
 - **Example workflows**: See `custom_workflows/examples/`
 - **Base class**: See `custom_workflows/base.py`
 - **Discovery logic**: See `custom_workflows/__init__.py`
-- **Integration**: See `fintel/ui/services/analysis_service.py`
-- **CLI commands**: Run `fintel workflows --help` or `fintel analyze --help`
+- **Integration**: See `eon/ui/services/analysis_service.py`
+- **CLI commands**: Run `eon workflows --help` or `eon analyze --help`
 
 Happy analyzing!

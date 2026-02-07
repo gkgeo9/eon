@@ -9,10 +9,10 @@ import json
 import streamlit as st
 import pandas as pd
 from pathlib import Path
-from fintel.ui.database import DatabaseRepository
-from fintel.ui.utils.validators import validate_prompt_template, validate_prompt_name
-from fintel.ui.theme import apply_theme
-from fintel.core.analysis_types import CLI_ANALYSIS_CHOICES
+from eon.ui.database import DatabaseRepository
+from eon.ui.utils.validators import validate_prompt_template, validate_prompt_name
+from eon.ui.theme import apply_theme
+from eon.core.analysis_types import CLI_ANALYSIS_CHOICES
 
 # Apply global theme
 apply_theme()
@@ -587,9 +587,9 @@ with tab5:
         st.markdown("---")
 
         st.markdown("#### Database Size")
-        from fintel.core import get_config
+        from eon.core import get_config
         config = get_config()
-        db_path = config.get_data_path("fintel.db")
+        db_path = config.get_data_path("eon.db")
         if db_path.exists():
             db_size_mb = os.path.getsize(db_path) / (1024 * 1024)
             st.metric("Database File Size", f"{db_size_mb:.2f} MB")
@@ -613,8 +613,8 @@ with tab6:
     st.markdown("Monitor API usage across all configured keys (persistent JSON-based tracking)")
 
     # Import the new API usage tracking system
-    from fintel.core import get_config
-    from fintel.ai import get_api_limits, get_usage_tracker, APIKeyManager
+    from eon.core import get_config
+    from eon.ai import get_api_limits, get_usage_tracker, APIKeyManager
 
     config = get_config()
     limits = get_api_limits()
@@ -632,7 +632,7 @@ with tab6:
     with col4:
         st.metric("Total API Keys", len(config.google_api_keys))
 
-    st.caption(f"*Edit limits in: `fintel/ai/api_config.py`*")
+    st.caption(f"*Edit limits in: `eon/ai/api_config.py`*")
     st.markdown("---")
 
     # Get usage for all configured keys
@@ -786,7 +786,7 @@ GOOGLE_API_KEY_3=your_third_key
         - Each API key has its own JSON file for usage data
         - Usage is tracked per key per day with timestamps
         - File locking ensures safe parallel access
-        - Daily limits are enforced (configurable in `fintel/ai/api_config.py`)
+        - Daily limits are enforced (configurable in `eon/ai/api_config.py`)
         - Least-used key is automatically selected for each request
         """)
 

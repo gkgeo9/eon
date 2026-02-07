@@ -22,7 +22,7 @@ def export_multi_analysis_to_csv():
     """Extract all multi-perspective analyses from a batch and save to CSV."""
     # Paths
     project_root = Path(__file__).parent.parent
-    db_path = project_root / "data" / "fintel.db"
+    db_path = project_root / "data" / "eon.db"
     output_path = project_root / "data" / "multi_analysis_export.csv"
 
     # Connect to database
