@@ -15,7 +15,7 @@ import sqlite3
 from pathlib import Path
 
 # Batch to export
-BATCH_NAME = "IV40to80_2"
+BATCH_NAME = "high_put_call_ratio"
 
 
 def export_multi_analysis_to_csv():

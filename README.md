@@ -1,3 +1,10 @@
+<picture>
+        <img src="https://raw.githubusercontent.com/gkgeo9/eon/main/docs/assets/logo.png" alt="" width="500">
+</picture>
+<picture>
+        <img src="https://raw.githubusercontent.com/gkgeo9/eon/main/docs/assets/watermark.png" alt="" width="900">
+</picture>
+
 # Erebus Observatory Network (EON)
 
 **AI-Powered SEC Filing Analysis Platform for Investment Research**
@@ -28,21 +35,21 @@
 
 ## Key Features
 
-| Feature                         | Description                                            |
-| ------------------------------- | ------------------------------------------------------ |
-| **Multi-Perspective Analysis**  | Buffett, Taleb, and Contrarian investment lenses       |
-| **Custom Workflows**            | Auto-discovered Python-based analysis workflows        |
-| **Batch Processing**            | Analyze 1-1000+ companies with automatic recovery      |
-| **Contrarian Scanner**          | 6-dimension hidden gem scoring (0-600 scale)           |
-| **Compounder DNA**              | Compare against top 50 proven performers               |
-| **Resume Support**              | Continue interrupted analyses automatically            |
-| **API Key Rotation**            | Distribute load across 25+ Gemini API keys             |
-| **Web + CLI**                   | Both Streamlit UI and command-line interface           |
-| **Batch Queue**                 | Multi-day batch processing with progress tracking      |
-| **Discord Notifications**       | Real-time alerts for batch events                      |
-| **System Monitoring**           | Disk space, memory, and Chrome process monitoring      |
-| **Database Backups**            | Automatic daily backups during batch processing        |
-| **Cross-Process Rate Limiting** | File-based locking prevents API quota errors           |
+| Feature                         | Description                                       |
+| ------------------------------- | ------------------------------------------------- |
+| **Multi-Perspective Analysis**  | Buffett, Taleb, and Contrarian investment lenses  |
+| **Custom Workflows**            | Auto-discovered Python-based analysis workflows   |
+| **Batch Processing**            | Analyze 1-1000+ companies with automatic recovery |
+| **Contrarian Scanner**          | 6-dimension hidden gem scoring (0-600 scale)      |
+| **Compounder DNA**              | Compare against top 50 proven performers          |
+| **Resume Support**              | Continue interrupted analyses automatically       |
+| **API Key Rotation**            | Distribute load across 25+ Gemini API keys        |
+| **Web + CLI**                   | Both Streamlit UI and command-line interface      |
+| **Batch Queue**                 | Multi-day batch processing with progress tracking |
+| **Discord Notifications**       | Real-time alerts for batch events                 |
+| **System Monitoring**           | Disk space, memory, and Chrome process monitoring |
+| **Database Backups**            | Automatic daily backups during batch processing   |
+| **Cross-Process Rate Limiting** | File-based locking prevents API quota errors      |
 
 ---
 
@@ -115,12 +122,12 @@ EON can send real-time notifications to Discord for batch processing events. Thi
 
 ### What Gets Notified
 
-| Event | Description | Color |
-|-------|-------------|-------|
-| **Batch Completed** | Summary of completed/failed items | Green |
-| **Batch Failed** | Error details when batch fails | Red |
+| Event                  | Description                                 | Color  |
+| ---------------------- | ------------------------------------------- | ------ |
+| **Batch Completed**    | Summary of completed/failed items           | Green  |
+| **Batch Failed**       | Error details when batch fails              | Red    |
 | **API Keys Exhausted** | All keys hit daily limit, waiting for reset | Orange |
-| **Warnings** | Low disk space, high memory, etc. | Yellow |
+| **Warnings**           | Low disk space, high memory, etc.           | Yellow |
 
 ### Setup Instructions
 
@@ -131,12 +138,14 @@ EON can send real-time notifications to Discord for batch processing events. Thi
    - Give it a name (e.g., "EON Bot") and copy the webhook URL
 
 2. **Configure Environment Variable:**
+
    ```bash
    # Add to your .env file
    EON_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/1234567890/abcdefghijklmnop
    ```
 
 3. **Test the Connection:**
+
    ```python
    from eon.core.notifications import NotificationService
 
@@ -147,6 +156,7 @@ EON can send real-time notifications to Discord for batch processing events. Thi
 ### Example Notifications
 
 **Batch Completed:**
+
 ```
 ✅ Batch Completed
 Batch ID: abc12345
@@ -156,6 +166,7 @@ Duration: 24.5 hours
 ```
 
 **Batch Failed:**
+
 ```
 ❌ Batch Failed
 Batch ID: abc12345
@@ -252,16 +263,16 @@ EON includes enterprise-grade reliability features for processing 1000+ companie
 
 ### Reliability Features
 
-| Feature | Description |
-|---------|-------------|
-| **Disk Space Monitoring** | Preflight checks and periodic monitoring during processing |
+| Feature                    | Description                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| **Disk Space Monitoring**  | Preflight checks and periodic monitoring during processing                    |
 | **Chrome Process Cleanup** | Demand-based cleanup triggered by memory pressure (>80%) or fallback interval |
-| **Database Backups** | Daily automatic backups with 7-day retention |
-| **Thread-Safe Progress** | File-based locking prevents race conditions |
-| **Exponential Backoff** | Up to 10 retries with jitter for database operations |
-| **Discord Alerts** | Real-time notifications for completion, failures, and warnings |
-| **Log Rotation** | 10MB max file size with 5 backup files |
-| **SEC Rate Limiting** | Global cross-process rate limiter for SEC Edgar API |
+| **Database Backups**       | Daily automatic backups with 7-day retention                                  |
+| **Thread-Safe Progress**   | File-based locking prevents race conditions                                   |
+| **Exponential Backoff**    | Up to 10 retries with jitter for database operations                          |
+| **Discord Alerts**         | Real-time notifications for completion, failures, and warnings                |
+| **Log Rotation**           | 10MB max file size with 5 backup files                                        |
+| **SEC Rate Limiting**      | Global cross-process rate limiter for SEC Edgar API                           |
 
 ### Running Large Batches (1000+ Companies)
 
@@ -315,12 +326,12 @@ MSFT,Microsoft Corporation
 #### Capacity Planning
 
 | Companies | Years | API Requests | Estimated Duration (25 keys) |
-|-----------|-------|-------------|------------------------------|
-| 10        | 7     | 70          | < 1 day                      |
-| 100       | 7     | 700         | ~1.5 days                    |
-| 500       | 10    | 5,000       | ~10 days                     |
-| 1,000     | 7     | 7,000       | ~14 days                     |
-| 1,000     | 10    | 10,000      | ~20 days                     |
+| --------- | ----- | ------------ | ---------------------------- |
+| 10        | 7     | 70           | < 1 day                      |
+| 100       | 7     | 700          | ~1.5 days                    |
+| 500       | 10    | 5,000        | ~10 days                     |
+| 1,000     | 7     | 7,000        | ~14 days                     |
+| 1,000     | 10    | 10,000       | ~20 days                     |
 
 **Throughput formula:** 25 API keys x 20 requests/key/day = **500 requests/day**
 
@@ -343,12 +354,12 @@ MSFT,Microsoft Corporation
 
 #### Error Handling at Scale
 
-| Error Type | Behavior |
-|-----------|----------|
-| **Context length exceeded** | Company marked as SKIPPED (not retried) |
-| **API quota exhausted** | Waits for midnight PST reset, then resumes |
-| **Network/transient error** | Retried up to max_retries (default 2) |
-| **Process crash** | Resume picks up from last completed *year* (not company) |
+| Error Type                  | Behavior                                                 |
+| --------------------------- | -------------------------------------------------------- |
+| **Context length exceeded** | Company marked as SKIPPED (not retried)                  |
+| **API quota exhausted**     | Waits for midnight PST reset, then resumes               |
+| **Network/transient error** | Retried up to max_retries (default 2)                    |
+| **Process crash**           | Resume picks up from last completed _year_ (not company) |
 
 ---
 
@@ -356,16 +367,16 @@ MSFT,Microsoft Corporation
 
 These features are specifically designed for large-scale processing (1000+ companies, 10+ years):
 
-| Feature | Description |
-|---------|-------------|
-| **Per-year resume** | Results saved incrementally after each year. Interrupted companies resume from last completed year, not from scratch. |
-| **Parallel throughput** | Per-key file locks + configurable concurrency (`EON_MAX_CONCURRENT_REQUESTS`, default 25). All 25 keys can process in parallel. |
-| **Priority ordering** | `--priority` flag in CLI. Higher-priority tickers are processed first (`ORDER BY priority DESC, id`). |
-| **Partial results** | Each year's result is saved to the database immediately. If analysis fails at year 7/10, years 1-6 are preserved. |
-| **Adaptive rate limiting** | Sleep duration decreases after consecutive successes (down to ~20s). Increases by 50% on 429 errors. Resets on other errors. |
-| **Batch export** | `eon export --batch-id <id> --format csv` exports all results from a specific batch with optional `--status-filter`. |
-| **Demand-based Chrome cleanup** | Triggered by memory pressure (>80% usage) instead of a fixed interval. Fallback interval still runs as safety net. |
-| **Ticker deduplication** | Duplicate tickers in batch CSV are automatically removed with logging. |
+| Feature                         | Description                                                                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Per-year resume**             | Results saved incrementally after each year. Interrupted companies resume from last completed year, not from scratch.           |
+| **Parallel throughput**         | Per-key file locks + configurable concurrency (`EON_MAX_CONCURRENT_REQUESTS`, default 25). All 25 keys can process in parallel. |
+| **Priority ordering**           | `--priority` flag in CLI. Higher-priority tickers are processed first (`ORDER BY priority DESC, id`).                           |
+| **Partial results**             | Each year's result is saved to the database immediately. If analysis fails at year 7/10, years 1-6 are preserved.               |
+| **Adaptive rate limiting**      | Sleep duration decreases after consecutive successes (down to ~20s). Increases by 50% on 429 errors. Resets on other errors.    |
+| **Batch export**                | `eon export --batch-id <id> --format csv` exports all results from a specific batch with optional `--status-filter`.            |
+| **Demand-based Chrome cleanup** | Triggered by memory pressure (>80% usage) instead of a fixed interval. Fallback interval still runs as safety net.              |
+| **Ticker deduplication**        | Duplicate tickers in batch CSV are automatically removed with logging.                                                          |
 
 ---
 
@@ -411,12 +422,12 @@ eon export --batch-id abc12345 --status-filter completed --output completed.csv
 
 ### CLI Options
 
-| Command   | Options                                     | Description                       |
-| --------- | ------------------------------------------- | --------------------------------- |
-| `analyze` | `--years`, `--type`, `--filing`              | Single company analysis           |
-| `batch`   | `--years`, `--type`, `--priority`, `--resume`| Multi-day batch processing        |
-| `scan`    | `--min-score`, `--tickers-file`              | Contrarian opportunity scanning   |
-| `export`  | `--format`, `--output`, `--batch-id`         | Export results to file            |
+| Command   | Options                                       | Description                     |
+| --------- | --------------------------------------------- | ------------------------------- |
+| `analyze` | `--years`, `--type`, `--filing`               | Single company analysis         |
+| `batch`   | `--years`, `--type`, `--priority`, `--resume` | Multi-day batch processing      |
+| `scan`    | `--min-score`, `--tickers-file`               | Contrarian opportunity scanning |
+| `export`  | `--format`, `--output`, `--batch-id`          | Export results to file          |
 
 ---
 
@@ -515,9 +526,9 @@ All settings are configured via `.env` file or environment variables:
 
 #### Required Settings
 
-| Variable                  | Description                                    |
-| ------------------------- | ---------------------------------------------- |
-| `GOOGLE_API_KEY_1`        | Primary Google Gemini API key                  |
+| Variable               | Description                                    |
+| ---------------------- | ---------------------------------------------- |
+| `GOOGLE_API_KEY_1`     | Primary Google Gemini API key                  |
 | `EON_SEC_USER_EMAIL`   | Your email for SEC Edgar API (required by SEC) |
 | `EON_SEC_COMPANY_NAME` | Company/script name for SEC compliance         |
 
@@ -529,8 +540,8 @@ All settings are configured via `.env` file or environment variables:
 
 #### Processing Settings
 
-| Variable                         | Default | Description                   |
-| -------------------------------- | ------- | ----------------------------- |
+| Variable                      | Default | Description                   |
+| ----------------------------- | ------- | ----------------------------- |
 | `EON_NUM_WORKERS`             | 25      | Parallel worker count         |
 | `EON_NUM_FILINGS_PER_COMPANY` | 30      | Historical filings to process |
 | `EON_MAX_REQUESTS_PER_DAY`    | 500     | Rate limit per API key        |
@@ -538,16 +549,16 @@ All settings are configured via `.env` file or environment variables:
 
 #### AI Settings
 
-| Variable                       | Default            | Description                    |
-| ------------------------------ | ------------------ | ------------------------------ |
+| Variable                    | Default            | Description                    |
+| --------------------------- | ------------------ | ------------------------------ |
 | `EON_DEFAULT_MODEL`         | `gemini-2.5-flash` | LLM model to use               |
 | `EON_THINKING_BUDGET`       | 4096               | Thinking tokens for Gemini 2.x |
 | `EON_USE_STRUCTURED_OUTPUT` | true               | Use Pydantic structured output |
 
 #### Storage Settings
 
-| Variable                 | Default   | Description                    |
-| ------------------------ | --------- | ------------------------------ |
+| Variable              | Default   | Description                    |
+| --------------------- | --------- | ------------------------------ |
 | `EON_DATA_DIR`        | `./data`  | Data storage directory         |
 | `EON_CACHE_DIR`       | `./cache` | Cache directory                |
 | `EON_LOG_DIR`         | `./logs`  | Log file directory             |
@@ -555,22 +566,22 @@ All settings are configured via `.env` file or environment variables:
 
 #### Logging Settings
 
-| Variable                 | Default | Description                      |
-| ------------------------ | ------- | -------------------------------- |
-| `EON_LOG_FILE`        | -       | Custom log file path             |
-| `EON_LOG_MAX_SIZE_MB` | 10      | Max log size before rotation     |
-| `EON_LOG_BACKUP_COUNT`| 5       | Number of backup logs to keep    |
+| Variable               | Default | Description                   |
+| ---------------------- | ------- | ----------------------------- |
+| `EON_LOG_FILE`         | -       | Custom log file path          |
+| `EON_LOG_MAX_SIZE_MB`  | 10      | Max log size before rotation  |
+| `EON_LOG_BACKUP_COUNT` | 5       | Number of backup logs to keep |
 
 #### Notification Settings
 
-| Variable                     | Default | Description                        |
-| ---------------------------- | ------- | ---------------------------------- |
-| `EON_DISCORD_WEBHOOK_URL` | -       | Discord webhook URL for alerts     |
+| Variable                  | Default | Description                    |
+| ------------------------- | ------- | ------------------------------ |
+| `EON_DISCORD_WEBHOOK_URL` | -       | Discord webhook URL for alerts |
 
 #### Feature Flags
 
-| Variable                          | Default | Description              |
-| --------------------------------- | ------- | ------------------------ |
+| Variable                       | Default | Description              |
+| ------------------------------ | ------- | ------------------------ |
 | `EON_ENABLE_CACHING`           | true    | Cache API responses      |
 | `EON_ENABLE_PROGRESS_TRACKING` | true    | Enable resume capability |
 
@@ -609,22 +620,22 @@ All settings are configured via `.env` file or environment variables:
 
 ### Key Components
 
-| Component             | Purpose                                                     |
-| --------------------- | ----------------------------------------------------------- |
-| `AnalysisService`     | Main orchestrator - coordinates all analysis operations     |
-| `DatabaseRepository`  | Data access layer with retry logic and automatic backups    |
-| `APIKeyManager`       | Rotates across 25+ API keys with usage tracking             |
-| `GeminiProvider`      | LLM integration with structured output support              |
-| `SECDownloader`       | Downloads filings from SEC Edgar with caching               |
-| `SECRateLimiter`      | Cross-process rate limiting for SEC API compliance          |
-| `CustomWorkflow`      | Base class for user-defined analysis workflows              |
-| `RequestQueue`        | Cross-process API request serialization with file locking   |
-| `BatchQueueService`   | Multi-day batch job management with health monitoring       |
-| `NotificationService` | Discord webhook notifications for batch events              |
-| `DiskMonitor`         | Monitors disk space and pauses when low                     |
-| `ProcessMonitor`      | Cleans up orphaned Chrome processes                         |
-| `HealthChecker`       | Comprehensive system health checks                          |
-| `CancellationToken`   | Graceful analysis cancellation system                       |
+| Component             | Purpose                                                   |
+| --------------------- | --------------------------------------------------------- |
+| `AnalysisService`     | Main orchestrator - coordinates all analysis operations   |
+| `DatabaseRepository`  | Data access layer with retry logic and automatic backups  |
+| `APIKeyManager`       | Rotates across 25+ API keys with usage tracking           |
+| `GeminiProvider`      | LLM integration with structured output support            |
+| `SECDownloader`       | Downloads filings from SEC Edgar with caching             |
+| `SECRateLimiter`      | Cross-process rate limiting for SEC API compliance        |
+| `CustomWorkflow`      | Base class for user-defined analysis workflows            |
+| `RequestQueue`        | Cross-process API request serialization with file locking |
+| `BatchQueueService`   | Multi-day batch job management with health monitoring     |
+| `NotificationService` | Discord webhook notifications for batch events            |
+| `DiskMonitor`         | Monitors disk space and pauses when low                   |
+| `ProcessMonitor`      | Cleans up orphaned Chrome processes                       |
+| `HealthChecker`       | Comprehensive system health checks                        |
+| `CancellationToken`   | Graceful analysis cancellation system                     |
 
 ---
 
@@ -678,16 +689,16 @@ EON uses SQLite with WAL mode for concurrent access. Schema is managed through m
 
 ### Core Tables
 
-| Table                        | Purpose                                             |
-| ---------------------------- | --------------------------------------------------- |
-| `analysis_runs`              | Tracks each analysis job (status, progress, config) |
-| `analysis_results`           | Stores Pydantic model outputs as JSON               |
-| `file_cache`                 | Caches downloaded SEC filings                       |
-| `custom_prompts`             | User-created analysis prompts                       |
-| `user_settings`              | User preferences (key-value)                        |
-| `batch_jobs`                 | Batch queue job definitions                         |
-| `batch_items`                | Individual items within batch jobs                  |
-| `batch_item_year_checkpoints`| Per-year progress for resume capability             |
+| Table                         | Purpose                                             |
+| ----------------------------- | --------------------------------------------------- |
+| `analysis_runs`               | Tracks each analysis job (status, progress, config) |
+| `analysis_results`            | Stores Pydantic model outputs as JSON               |
+| `file_cache`                  | Caches downloaded SEC filings                       |
+| `custom_prompts`              | User-created analysis prompts                       |
+| `user_settings`               | User preferences (key-value)                        |
+| `batch_jobs`                  | Batch queue job definitions                         |
+| `batch_items`                 | Individual items within batch jobs                  |
+| `batch_item_year_checkpoints` | Per-year progress for resume capability             |
 
 ### Migrations
 
