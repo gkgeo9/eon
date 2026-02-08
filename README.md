@@ -104,7 +104,14 @@ EON_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_TO
 **Web Interface (Recommended):**
 
 ```bash
-streamlit run streamlit_app.py
+# Default (localhost:8501)
+eon web
+
+# Custom port
+eon web --port 8080
+
+# Allow external connections
+eon web --host 0.0.0.0
 ```
 
 Opens at `http://localhost:8501`

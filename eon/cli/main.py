@@ -164,6 +164,9 @@ def cli(verbose: bool):
 
     Examples:
 
+      # Launch the web UI
+      eon web
+
       # Analyze single company
       eon analyze AAPL --years 5
 
@@ -184,6 +187,63 @@ def cli(verbose: bool):
     # Display banner on first run
     config = get_config()
     logger.debug(f"Loaded configuration from {config.data_dir}")
+
+
+@cli.command()
+@click.option("--port", "-p", type=int, default=8501, show_default=True, help="Port to run on")
+@click.option(
+    "--host",
+    "-h",
+    default="localhost",
+    show_default=True,
+    help="Host to bind to (use 0.0.0.0 for external access)",
+)
+def web(port: int, host: str):
+    """
+    Launch the Streamlit web UI.
+
+    Starts the EON web interface for interactive analysis.
+
+    Examples:
+
+      # Start on default port
+      eon web
+
+      # Start on custom port
+      eon web --port 8080
+
+      # Allow external connections
+      eon web --host 0.0.0.0
+    """
+    import subprocess
+    import sys
+
+    app_path = Path(__file__).resolve().parents[2] / "streamlit_app.py"
+
+    if not app_path.exists():
+        console.print(f"[red]Streamlit app not found at {app_path}[/red]")
+        raise SystemExit(1)
+
+    console.print(Panel.fit(
+        f"[bold cyan]Starting EON Web UI[/bold cyan]\n"
+        f"URL: http://{host}:{port}",
+        title="EON Web",
+    ))
+
+    cmd = [
+        sys.executable, "-m", "streamlit", "run",
+        str(app_path),
+        "--server.port", str(port),
+        "--server.address", host,
+    ]
+
+    try:
+        subprocess.run(cmd, check=True)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Shutting down...[/yellow]")
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]Streamlit exited with code {e.returncode}[/red]")
+        raise SystemExit(e.returncode)
 
 
 # Register commands
