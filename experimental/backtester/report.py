@@ -127,26 +127,31 @@ def _print_alpha_verdict(
         if metrics.n_trades == 0:
             continue
 
-        print(f"\n{group_label}:")
+        print(f"\n{group_label} (n={metrics.n_trades}):")
 
         for period in holding_periods:
             pm = metrics.period_metrics.get(period)
             if not pm or pm.n_trades < 3:
+                plabel = _period_label(period)
+                n = pm.n_trades if pm else 0
+                if n > 0:
+                    print(f"  {plabel:>4s}: Insufficient data (n={n}, need >= 3)")
                 continue
 
             plabel = _period_label(period)
             excess = pm.mean_excess_return
             sig = "SIGNIFICANT" if pm.p_value < 0.05 else "not significant"
             beat = pm.beat_benchmark_rate
+            n = pm.n_trades
 
             if pm.p_value < 0.05 and excess > 0:
-                verdict = f"TRUE ALPHA ({excess:+.1%} excess, p={pm.p_value:.3f})"
+                verdict = f"TRUE ALPHA ({excess:+.1%} excess, p={pm.p_value:.3f}, n={n})"
             elif excess > 0 and beat > 0.5:
-                verdict = f"Positive but {sig} ({excess:+.1%} excess, p={pm.p_value:.3f})"
+                verdict = f"Positive but {sig} ({excess:+.1%} excess, p={pm.p_value:.3f}, n={n})"
             elif excess > 0:
-                verdict = f"Weak positive ({excess:+.1%} excess, beat rate {beat:.0%})"
+                verdict = f"Weak positive ({excess:+.1%} excess, beat rate {beat:.0%}, n={n})"
             else:
-                verdict = f"NO ALPHA ({excess:+.1%} excess, beat rate {beat:.0%})"
+                verdict = f"NO ALPHA ({excess:+.1%} excess, beat rate {beat:.0%}, n={n})"
 
             print(f"  {plabel:>4s}: {verdict}")
 
