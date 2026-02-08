@@ -12,8 +12,8 @@ Examples:
     # Backtest a specific batch
     python -m experimental.backtester.run_backtest --batch high_put_call_ratio
 
-    # Custom fiscal year cutoff and output
-    python -m experimental.backtester.run_backtest --max-year 2023 --output data/bt_2023
+    # Custom fiscal year range and output
+    python -m experimental.backtester.run_backtest --min-year 2015 --max-year 2023 --output data/bt
 
     # With AlphaVantage fallback
     python -m experimental.backtester.run_backtest --av-key YOUR_KEY
@@ -37,7 +37,7 @@ Signal Strength Groups:
   NO_SIGNAL         No perspectives signal PRIORITY (control group)
 
 Holding Periods (trading days):
-  1W = 5 days, 1M = 21 days, 3M = 63 days, 6M = 126 days, 12M = 252 days
+  1M = 21 days, 3M = 63 days, 6M = 126 days, 1Y = 252 days, 2Y = 504 days, 5Y = 1260 days
 
 The backtester compares forward stock returns against SPY (S&P 500) to
 determine whether STRONG signals generate true alpha.
@@ -55,6 +55,12 @@ determine whether STRONG signals generate true alpha.
         type=str,
         default=None,
         help="Only backtest signals from this batch name",
+    )
+    parser.add_argument(
+        "--min-year",
+        type=int,
+        default=0,
+        help="Min fiscal year to include (default: 0 = no lower bound)",
     )
     parser.add_argument(
         "--max-year",
@@ -83,8 +89,8 @@ determine whether STRONG signals generate true alpha.
     parser.add_argument(
         "--periods",
         type=str,
-        default="5,21,63,126,252",
-        help="Comma-separated holding periods in trading days (default: 5,21,63,126,252)",
+        default="21,63,126,252,504,1260",
+        help="Comma-separated holding periods in trading days (default: 21,63,126,252,504,1260)",
     )
     parser.add_argument(
         "--no-export",
@@ -116,7 +122,8 @@ determine whether STRONG signals generate true alpha.
     print("=" * 70)
     print(f"  Database:        {args.db or 'data/eon.db'}")
     print(f"  Batch filter:    {args.batch or 'all batches'}")
-    print(f"  Max fiscal year: {args.max_year}")
+    min_yr_display = str(args.min_year) if args.min_year else "earliest"
+    print(f"  Fiscal years:    {min_yr_display} - {args.max_year}")
     print(f"  Holding periods: {', '.join(str(p) + 'd' for p in holding_periods)}")
     print(f"  Output:          {args.output}")
     print(f"  AlphaVantage:    {'configured' if args.av_key else 'not configured'}")
@@ -129,6 +136,7 @@ determine whether STRONG signals generate true alpha.
         cache_dir=args.cache_dir,
         alphavantage_key=args.av_key,
         max_fiscal_year=args.max_year,
+        min_fiscal_year=args.min_year,
         holding_periods=holding_periods,
         batch_name=args.batch,
     )

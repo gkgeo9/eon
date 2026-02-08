@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def _period_label(days: int) -> str:
     """Human-readable label for a holding period in trading days."""
-    mapping = {5: "1W", 21: "1M", 63: "3M", 126: "6M", 252: "12M"}
+    mapping = {21: "1M", 63: "3M", 126: "6M", 252: "1Y", 504: "2Y", 1260: "5Y"}
     return mapping.get(days, f"{days}d")
 
 

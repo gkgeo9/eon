@@ -37,7 +37,7 @@ from .signals import (
 logger = logging.getLogger(__name__)
 
 # Standard holding periods in trading days
-DEFAULT_HOLDING_PERIODS = [5, 21, 63, 126, 252]  # 1W, 1M, 3M, 6M, 12M
+DEFAULT_HOLDING_PERIODS = [21, 63, 126, 252, 504, 1260]  # 1M, 3M, 6M, 1Y, 2Y, 5Y
 
 
 class Backtester:
@@ -59,6 +59,7 @@ class Backtester:
         cache_dir: Optional[Path] = None,
         alphavantage_key: Optional[str] = None,
         max_fiscal_year: int = 2024,
+        min_fiscal_year: int = 0,
         holding_periods: Optional[List[int]] = None,
         batch_name: Optional[str] = None,
     ):
@@ -68,11 +69,13 @@ class Backtester:
             cache_dir: Directory for price data cache.
             alphavantage_key: AlphaVantage API key (optional).
             max_fiscal_year: Max fiscal year to include (avoids look-ahead bias).
+            min_fiscal_year: Min fiscal year to include (0 = no lower bound).
             holding_periods: Holding periods in trading days.
             batch_name: If set, only backtest signals from this batch.
         """
         self.db_path = db_path
         self.max_fiscal_year = max_fiscal_year
+        self.min_fiscal_year = min_fiscal_year
         self.holding_periods = holding_periods or DEFAULT_HOLDING_PERIODS
         self.batch_name = batch_name
 
@@ -98,6 +101,7 @@ class Backtester:
         self.signals = load_all_multi_analysis_signals(
             db_path=self.db_path,
             max_fiscal_year=self.max_fiscal_year,
+            min_fiscal_year=self.min_fiscal_year,
             batch_name=self.batch_name,
         )
 
@@ -162,8 +166,8 @@ class Backtester:
         # Latest: max_fiscal_year+1 April + max holding period
         min_year = min(s.fiscal_year for s in self.signals)
         earliest_start = f"{min_year}-01-01"
-        # Need data through max_fiscal_year + 2 to cover 12-month holding
-        latest_end = f"{self.max_fiscal_year + 3}-01-01"
+        # Need data through max_fiscal_year + 6 to cover 5-year holding
+        latest_end = f"{self.max_fiscal_year + 7}-01-01"
 
         # Fetch all tickers including SPY
         all_symbols = list(set(tickers + ["SPY"]))

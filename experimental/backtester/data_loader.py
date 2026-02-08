@@ -19,17 +19,19 @@ DEFAULT_DB_PATH = Path("data/eon.db")
 def load_all_multi_analysis_signals(
     db_path: Optional[Path] = None,
     max_fiscal_year: int = 2024,
+    min_fiscal_year: int = 0,
     batch_name: Optional[str] = None,
 ) -> List[CompositeSignal]:
     """
     Load all SimplifiedAnalysis results from the database and extract signals.
 
-    Only loads results for fiscal years <= max_fiscal_year so we can measure
-    forward returns without look-ahead bias.
+    Only loads results for fiscal years between min_fiscal_year and max_fiscal_year
+    (inclusive) so we can measure forward returns without look-ahead bias.
 
     Args:
         db_path: Path to eon.db. Defaults to data/eon.db.
         max_fiscal_year: Maximum fiscal year to include (exclusive of 2025+).
+        min_fiscal_year: Minimum fiscal year to include (0 = no lower bound).
         batch_name: If provided, only load from this specific batch.
 
     Returns:
@@ -46,14 +48,15 @@ def load_all_multi_analysis_signals(
 
     try:
         if batch_name:
-            signals = _load_from_batch(conn, batch_name, max_fiscal_year)
+            signals = _load_from_batch(conn, batch_name, max_fiscal_year, min_fiscal_year)
         else:
-            signals = _load_all(conn, max_fiscal_year)
+            signals = _load_all(conn, max_fiscal_year, min_fiscal_year)
     finally:
         conn.close()
 
+    year_range = f"{min_fiscal_year}-{max_fiscal_year}" if min_fiscal_year else f"<= {max_fiscal_year}"
     logger.info(
-        f"Loaded {len(signals)} signals (fiscal years <= {max_fiscal_year})"
+        f"Loaded {len(signals)} signals (fiscal years {year_range})"
     )
     return signals
 
@@ -62,6 +65,7 @@ def _load_from_batch(
     conn: sqlite3.Connection,
     batch_name: str,
     max_fiscal_year: int,
+    min_fiscal_year: int = 0,
 ) -> List[CompositeSignal]:
     """Load signals from a specific batch."""
     cursor = conn.cursor()
@@ -86,9 +90,10 @@ def _load_from_batch(
         WHERE bi.batch_id = ?
           AND ar.result_type = 'SimplifiedAnalysis'
           AND ar.fiscal_year <= ?
+          AND ar.fiscal_year >= ?
         ORDER BY ar.ticker, ar.fiscal_year
         """,
-        (batch_id, max_fiscal_year),
+        (batch_id, max_fiscal_year, min_fiscal_year),
     )
 
     return _rows_to_signals(cursor.fetchall())
@@ -97,6 +102,7 @@ def _load_from_batch(
 def _load_all(
     conn: sqlite3.Connection,
     max_fiscal_year: int,
+    min_fiscal_year: int = 0,
 ) -> List[CompositeSignal]:
     """Load all SimplifiedAnalysis signals from the database."""
     cursor = conn.cursor()
@@ -108,10 +114,11 @@ def _load_all(
         JOIN analysis_runs runs ON ar.run_id = runs.run_id
         WHERE ar.result_type = 'SimplifiedAnalysis'
           AND ar.fiscal_year <= ?
+          AND ar.fiscal_year >= ?
           AND runs.status = 'completed'
         ORDER BY ar.ticker, ar.fiscal_year
         """,
-        (max_fiscal_year,),
+        (max_fiscal_year, min_fiscal_year),
     )
 
     return _rows_to_signals(cursor.fetchall())
