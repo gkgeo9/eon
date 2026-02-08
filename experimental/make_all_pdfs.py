@@ -3,7 +3,7 @@
 Export Multi-Perspective Analyses from database to individual PDF reports per company.
 
 Usage:
-    python scripts/export_analyses_to_pdf.py
+    python experimental/make_all_pdfs.py
 
 Output:
     Individual PDFs in data/reports/ directory, one per ticker
