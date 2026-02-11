@@ -70,7 +70,6 @@ analyses_df = db.search_analyses(
     status=status_filter,
     date_from=date_from,
     date_to=date_to,
-    limit=100
 )
 
 st.markdown("---")
