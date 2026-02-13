@@ -31,7 +31,7 @@ run_id = st.session_state.get('view_run_id', None)
 # If no run_id, show selector
 if not run_id:
     # Get all completed analyses
-    completed_analyses = db.search_analyses(status='completed', limit=100)
+    completed_analyses = db.search_analyses(status='completed')
 
     if completed_analyses.empty:
         st.info("No completed analyses found. Run an analysis first!")

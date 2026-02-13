@@ -170,7 +170,7 @@ class AnalysisRunsMixin:
         status: Optional[str] = None,
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
-        limit: int = 100
+        limit: Optional[int] = None
     ) -> pd.DataFrame:
         """
         Search analyses with filters.
@@ -211,14 +211,16 @@ class AnalysisRunsMixin:
 
         where_clause = " AND ".join(conditions) if conditions else "1=1"
 
+        limit_clause = "LIMIT ?" if limit is not None else ""
         query = f"""
             SELECT *
             FROM analysis_runs
             WHERE {where_clause}
             ORDER BY created_at DESC
-            LIMIT ?
+            {limit_clause}
         """
-        params.append(limit)
+        if limit is not None:
+            params.append(limit)
 
         return self._read_dataframe_with_retry(query, params=tuple(params))
 

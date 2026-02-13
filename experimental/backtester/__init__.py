@@ -1,8 +1,11 @@
 """
 EON Backtester - Signal-based alpha measurement for multi-perspective analysis.
 
-Tests whether STRONG outcomes (PRIORITY signals, BUY/EMBRACE/STRONG BUY verdicts)
-from EON's multi-perspective analysis generate true alpha vs S&P 500.
+Two backtesters:
+  run_backtest.py        — Original: groups by perspective PRIORITY agreement
+  run_spread_backtest.py — Spread: long BUY / short SELL, conviction filters, vintage analysis
+
+See BACKTEST_REPORT.md for full results.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
