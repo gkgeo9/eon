@@ -20,7 +20,7 @@ Usage:
     eon batch companies.csv --years 7
 
     # Resume an interrupted batch
-    eon batch --resume
+    eon batch -r
 
     # List incomplete batches
     eon batch --list-incomplete
@@ -299,10 +299,8 @@ def _display_batch_progress(batch_service: BatchQueueService, batch_id: str, num
               help="Type of analysis to run (use 'custom:<id>' for custom workflows; run 'eon workflows' to list them)")
 @click.option("--filing-type", "-f", default="10-K", show_default=True,
               help="SEC filing type to analyze (10-K, 20-F, 10-Q, 8-K, 4, DEF 14A, etc.)")
-@click.option("--resume", "-r", is_flag=True,
-              help="Resume the most recent incomplete batch")
-@click.option("--resume-id", default=None,
-              help="Resume a specific batch by its ID (use --list-incomplete to find IDs)")
+@click.option("--resume", "-r", default=None,
+              help="Resume a batch by ID, or 'latest' for most recent (e.g. -r latest)")
 @click.option("--list-incomplete", "-l", is_flag=True,
               help="List all incomplete/paused batches that can be resumed")
 @click.option("--cleanup-chrome", is_flag=True,
@@ -319,8 +317,7 @@ def batch(
     name: Optional[str],
     analysis_type: str,
     filing_type: str,
-    resume: bool,
-    resume_id: Optional[str],
+    resume: Optional[str],
     list_incomplete: bool,
     cleanup_chrome: bool,
     priority: int,
@@ -350,7 +347,7 @@ def batch(
 
     \b
     3. If interrupted, resume later:
-       eon batch --resume
+       eon batch -r
 
     \b
     ═══════════════════════════════════════════════════════════════════════════
@@ -407,11 +404,11 @@ def batch(
 
     \b
     # Resume most recent batch
-    eon batch --resume
+    eon batch -r
 
     \b
     # Resume specific batch by ID
-    eon batch --resume-id abc12345-1234-5678-abcd-123456789abc
+    eon batch -r abc12345-1234-5678-abcd-123456789abc
     """
     global _batch_service, _current_batch_id
 
@@ -422,6 +419,12 @@ def batch(
     config = get_config()
     db = DatabaseRepository()
     _batch_service = BatchQueueService(db)
+
+    # Detect and clean up stale running batches (from crashed processes)
+    stale_batches = _batch_service.get_stale_running_batches(stale_minutes=5)
+    for stale in stale_batches:
+        _batch_service.mark_batch_as_crashed(stale['batch_id'])
+        console.print(f"[yellow]Detected crashed batch '{stale['name']}' - marked for resume[/yellow]")
 
     # Setup signal handlers
     _setup_signal_handlers()
@@ -457,13 +460,13 @@ def batch(
             )
 
         console.print(table)
-        console.print("\n[dim]Use --resume-id <batch_id> to resume a specific batch[/dim]")
+        console.print("\n[dim]Use -r <batch_id> to resume a specific batch, or -r for the most recent[/dim]")
         return
 
     # Handle resume
-    if resume or resume_id:
-        if resume_id:
-            batch_id = resume_id
+    if resume:
+        if resume != "latest":
+            batch_id = resume
         else:
             # Find most recent incomplete batch
             incomplete = _batch_service.get_incomplete_batches()
@@ -503,7 +506,7 @@ def batch(
     # New batch - require ticker file
     if not ticker_file:
         console.print("[red]Error: ticker-file is required for new batches[/red]")
-        console.print("[dim]Use --resume to resume an existing batch[/dim]")
+        console.print("[dim]Use -r to resume an existing batch[/dim]")
         return
 
     # Read tickers
@@ -588,7 +591,7 @@ def batch(
                     f"Completed: {final_status['completed_tickers']}\n"
                     f"Failed: {final_status['failed_tickers']}\n"
                     f"Skipped: {final_status.get('skipped_tickers', 0)}\n\n"
-                    f"Run 'eon batch --resume' to continue",
+                    f"Run 'eon batch -r' to continue",
                     title="Paused"
                 ))
             else:
