@@ -103,6 +103,7 @@ excellent_company_factors/
 random_company_factors/
 contrarian_scans/
 *.csv
+*.xlsx
 
 # Streamlit
 .streamlit/secrets.toml
