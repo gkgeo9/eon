@@ -1380,6 +1380,32 @@ class BatchQueueService:
             f"until midnight PST reset."
         )
 
+        # Send Discord notification
+        try:
+            batch = self.get_batch_status(batch_id)
+            batch_name = batch.get('name') if batch else None
+            keys_count = self.api_key_manager.total_keys
+
+            # Format resume time in PST for the notification
+            try:
+                import pytz
+                pst = pytz.timezone("America/Los_Angeles")
+                resume_pst = datetime.utcnow().replace(
+                    tzinfo=pytz.utc
+                ) + timedelta(seconds=wait_seconds)
+                next_reset_str = resume_pst.astimezone(pst).strftime("%I:%M %p PST")
+            except ImportError:
+                next_reset_str = resume_time.strftime("%H:%M UTC")
+
+            self._notifier.send_keys_exhausted(
+                keys_count=keys_count,
+                next_reset=next_reset_str,
+                batch_name=batch_name,
+                batch_id=batch_id,
+            )
+        except Exception as e:
+            self.logger.warning(f"Failed to send keys-exhausted notification: {e}")
+
         # Update queue state
         query = """
             UPDATE queue_state
