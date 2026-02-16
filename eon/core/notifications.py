@@ -275,31 +275,50 @@ class NotificationService:
             embeds=[embed]
         )
 
-    def send_keys_exhausted(self, keys_count: int, next_reset: str) -> bool:
+    def send_keys_exhausted(
+        self,
+        keys_count: int,
+        next_reset: str,
+        batch_name: Optional[str] = None,
+        batch_id: Optional[str] = None,
+    ) -> bool:
         """
         Send notification when all API keys are exhausted.
 
         Args:
             keys_count: Number of API keys
             next_reset: Expected reset time
+            batch_name: Human-readable batch name
+            batch_id: Batch ID (used as fallback display name)
 
         Returns:
             True if sent successfully
         """
+        display_name = batch_name or (batch_id[:8] if batch_id else None)
+
+        fields = [
+            {"name": "Keys", "value": str(keys_count), "inline": True},
+            {"name": "Next Reset", "value": next_reset, "inline": True},
+        ]
+        if display_name:
+            fields.insert(0, {"name": "Batch", "value": display_name, "inline": True})
+
+        title = "⏸️ API Keys Exhausted"
+        if display_name:
+            title = f"⏸️ API Keys Exhausted — {display_name}"
+
         embed = {
-            "title": "⏸️ API Keys Exhausted",
+            "title": title,
             "color": 0xFFA500,  # Orange
             "description": "All API keys have reached their daily limit. Processing will resume after midnight PST.",
-            "fields": [
-                {"name": "Keys", "value": str(keys_count), "inline": True},
-                {"name": "Next Reset", "value": next_reset, "inline": True},
-            ],
+            "fields": fields,
             "footer": {"text": "EON"},
             "timestamp": datetime.utcnow().isoformat()
         }
 
+        batch_label = f" for batch **{display_name}**" if display_name else ""
         return self._send_discord(
-            content="All API keys exhausted - waiting for midnight reset",
+            content=f"All API keys exhausted{batch_label} - waiting for midnight reset",
             embeds=[embed]
         )
 
