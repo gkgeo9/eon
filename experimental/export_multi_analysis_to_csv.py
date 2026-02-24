@@ -19,6 +19,7 @@ from pathlib import Path
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 BATCH_NAME = "all_comp_08022026"
+FULL_EXPORT = "no"  # "yes" for all columns, "no" for key columns only
 
 
 def export_multi_analysis_to_csv():
@@ -81,8 +82,10 @@ def export_multi_analysis_to_csv():
     print(f"  Duplicates removed: {duplicates_removed}")
     print(f"  Unique analyses: {len(deduped_rows)}")
 
-    # Define CSV columns — every field from every perspective, no truncation
-    fieldnames = [
+    # Define CSV columns based on FULL_EXPORT setting
+    if FULL_EXPORT.lower() == "yes":
+        # Full export — every field from every perspective, no truncation
+        fieldnames = [
         # Meta
         "ticker",
         "fiscal_year",
@@ -129,6 +132,22 @@ def export_multi_analysis_to_csv():
         "synthesis",
         "final_verdict",
     ]
+    else:
+        # Key columns only
+        fieldnames = [
+            "ticker",
+            "fiscal_year",
+            "buffett_action_signal",
+            "taleb_action_signal",
+            "contrarian_action_signal",
+            "buffett_verdict",
+            "buffett_moat_rating",
+            "taleb_verdict",
+            "taleb_antifragile_rating",
+            "contrarian_verdict",
+            "synthesis",
+            "final_verdict",
+        ]
 
     # Process rows
     csv_rows = []
@@ -143,53 +162,71 @@ def export_multi_analysis_to_csv():
         taleb = data.get("taleb", {})
         contrarian = data.get("contrarian", {})
 
-        csv_row = {
-            # Meta
-            "ticker": ticker,
-            "fiscal_year": fiscal_year,
-            "filing_type": filing_type,
-            "created_at": created_at,
-            # Action Signals
-            "buffett_action_signal": buffett.get("action_signal", ""),
-            "taleb_action_signal": taleb.get("action_signal", ""),
-            "contrarian_action_signal": contrarian.get("action_signal", ""),
-            # Buffett — all fields
-            "buffett_verdict": buffett.get("buffett_verdict", ""),
-            "buffett_moat_rating": buffett.get("moat_rating", ""),
-            "buffett_management_quality": buffett.get("management_quality", ""),
-            "buffett_business_understanding": buffett.get("business_understanding", ""),
-            "buffett_economic_moat": buffett.get("economic_moat", ""),
-            "buffett_pricing_power": buffett.get("pricing_power", ""),
-            "buffett_return_on_invested_capital": buffett.get("return_on_invested_capital", ""),
-            "buffett_free_cash_flow_quality": buffett.get("free_cash_flow_quality", ""),
-            "buffett_intrinsic_value_estimate": buffett.get("intrinsic_value_estimate", ""),
-            "buffett_tailwinds": "; ".join(buffett.get("business_tailwinds", [])),
-            # Taleb — all fields
-            "taleb_verdict": taleb.get("taleb_verdict", ""),
-            "taleb_antifragile_rating": taleb.get("antifragile_rating", ""),
-            "taleb_fragility_assessment": taleb.get("fragility_assessment", ""),
-            "taleb_skin_in_the_game": taleb.get("skin_in_the_game", ""),
-            "taleb_optionality": taleb.get("optionality_and_asymmetry", ""),
-            "taleb_lindy_effect": taleb.get("lindy_effect", ""),
-            "taleb_dependency_chains": taleb.get("dependency_chains", ""),
-            "taleb_tail_risks": "; ".join(taleb.get("tail_risk_exposure", [])),
-            "taleb_hidden_risks": "; ".join(taleb.get("hidden_risks", [])),
-            "taleb_via_negativa": "; ".join(taleb.get("via_negativa", [])),
-            # Contrarian — all fields
-            "contrarian_verdict": contrarian.get("contrarian_verdict", ""),
-            "contrarian_conviction_level": contrarian.get("conviction_level", ""),
-            "contrarian_consensus_view": contrarian.get("consensus_view", ""),
-            "contrarian_variant_perception": contrarian.get("variant_perception", ""),
-            "contrarian_market_pricing": contrarian.get("market_pricing", ""),
-            "contrarian_positioning": contrarian.get("positioning", ""),
-            "contrarian_consensus_wrong": "; ".join(contrarian.get("consensus_wrong_because", [])),
-            "contrarian_hidden_strengths": "; ".join(contrarian.get("hidden_strengths", [])),
-            "contrarian_hidden_weaknesses": "; ".join(contrarian.get("hidden_weaknesses", [])),
-            "contrarian_catalysts": "; ".join(contrarian.get("catalyst_timeline", [])),
-            # Overall
-            "synthesis": data.get("synthesis", ""),
-            "final_verdict": data.get("final_verdict", ""),
-        }
+        if FULL_EXPORT.lower() == "yes":
+            # Full export with all fields
+            csv_row = {
+                # Meta
+                "ticker": ticker,
+                "fiscal_year": fiscal_year,
+                "filing_type": filing_type,
+                "created_at": created_at,
+                # Action Signals
+                "buffett_action_signal": buffett.get("action_signal", ""),
+                "taleb_action_signal": taleb.get("action_signal", ""),
+                "contrarian_action_signal": contrarian.get("action_signal", ""),
+                # Buffett — all fields
+                "buffett_verdict": buffett.get("buffett_verdict", ""),
+                "buffett_moat_rating": buffett.get("moat_rating", ""),
+                "buffett_management_quality": buffett.get("management_quality", ""),
+                "buffett_business_understanding": buffett.get("business_understanding", ""),
+                "buffett_economic_moat": buffett.get("economic_moat", ""),
+                "buffett_pricing_power": buffett.get("pricing_power", ""),
+                "buffett_return_on_invested_capital": buffett.get("return_on_invested_capital", ""),
+                "buffett_free_cash_flow_quality": buffett.get("free_cash_flow_quality", ""),
+                "buffett_intrinsic_value_estimate": buffett.get("intrinsic_value_estimate", ""),
+                "buffett_tailwinds": "; ".join(buffett.get("business_tailwinds", [])),
+                # Taleb — all fields
+                "taleb_verdict": taleb.get("taleb_verdict", ""),
+                "taleb_antifragile_rating": taleb.get("antifragile_rating", ""),
+                "taleb_fragility_assessment": taleb.get("fragility_assessment", ""),
+                "taleb_skin_in_the_game": taleb.get("skin_in_the_game", ""),
+                "taleb_optionality": taleb.get("optionality_and_asymmetry", ""),
+                "taleb_lindy_effect": taleb.get("lindy_effect", ""),
+                "taleb_dependency_chains": taleb.get("dependency_chains", ""),
+                "taleb_tail_risks": "; ".join(taleb.get("tail_risk_exposure", [])),
+                "taleb_hidden_risks": "; ".join(taleb.get("hidden_risks", [])),
+                "taleb_via_negativa": "; ".join(taleb.get("via_negativa", [])),
+                # Contrarian — all fields
+                "contrarian_verdict": contrarian.get("contrarian_verdict", ""),
+                "contrarian_conviction_level": contrarian.get("conviction_level", ""),
+                "contrarian_consensus_view": contrarian.get("consensus_view", ""),
+                "contrarian_variant_perception": contrarian.get("variant_perception", ""),
+                "contrarian_market_pricing": contrarian.get("market_pricing", ""),
+                "contrarian_positioning": contrarian.get("positioning", ""),
+                "contrarian_consensus_wrong": "; ".join(contrarian.get("consensus_wrong_because", [])),
+                "contrarian_hidden_strengths": "; ".join(contrarian.get("hidden_strengths", [])),
+                "contrarian_hidden_weaknesses": "; ".join(contrarian.get("hidden_weaknesses", [])),
+                "contrarian_catalysts": "; ".join(contrarian.get("catalyst_timeline", [])),
+                # Overall
+                "synthesis": data.get("synthesis", ""),
+                "final_verdict": data.get("final_verdict", ""),
+            }
+        else:
+            # Key columns only
+            csv_row = {
+                "ticker": ticker,
+                "fiscal_year": fiscal_year,
+                "buffett_action_signal": buffett.get("action_signal", ""),
+                "taleb_action_signal": taleb.get("action_signal", ""),
+                "contrarian_action_signal": contrarian.get("action_signal", ""),
+                "buffett_verdict": buffett.get("buffett_verdict", ""),
+                "buffett_moat_rating": buffett.get("moat_rating", ""),
+                "taleb_verdict": taleb.get("taleb_verdict", ""),
+                "taleb_antifragile_rating": taleb.get("antifragile_rating", ""),
+                "contrarian_verdict": contrarian.get("contrarian_verdict", ""),
+                "synthesis": data.get("synthesis", ""),
+                "final_verdict": data.get("final_verdict", ""),
+            }
         csv_rows.append(csv_row)
 
     # Write CSV
@@ -199,6 +236,7 @@ def export_multi_analysis_to_csv():
         writer.writerows(csv_rows)
 
     print(f"\nExported {len(csv_rows)} analyses to: {output_path}")
+    print(f"  Export mode: {'FULL' if FULL_EXPORT.lower() == 'yes' else 'KEY COLUMNS'}")
     print(f"  Columns: {len(fieldnames)}")
 
     # Action signal summary
