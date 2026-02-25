@@ -18,8 +18,9 @@ import sqlite3
 from pathlib import Path
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-BATCH_NAME = "all_comp_08022026"
-FULL_EXPORT = "no"  # "yes" for all columns, "no" for key columns only
+# BATCH_NAME = "all_comp_08022026"
+BATCH_NAME = "testing_asymttry"
+FULL_EXPORT = "yes"  # "yes" for all columns, "no" for key columns only
 
 
 def export_multi_analysis_to_csv():
