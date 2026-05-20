@@ -251,5 +251,37 @@ class CustomWorkflow(ABC):
         """
         return self.prompt_template.format(ticker=ticker, year=year)
 
+    def analyze(self, ticker: str, year: int, text: str, provider) -> BaseModel:
+        """
+        Run the actual analysis for one (ticker, year, filing-text) tuple.
+
+        Default behavior: format the workflow's prompt_template, append the
+        filing text, and make a single Gemini call against self.schema.
+        Identical to the legacy inline behavior in analysis_service.
+
+        Subclasses MAY override this to implement multi-call orchestration
+        (e.g. split a large analysis into several smaller Gemini calls and
+        merge the results before returning). Overrides MUST return an
+        instance of self.schema so downstream storage/UI continue to work.
+
+        Args:
+            ticker: Company ticker symbol.
+            year: Fiscal year.
+            text: Already-extracted filing text (full 10-K body).
+            provider: A GeminiProvider instance the analysis service
+                created with the appropriate api_key / rate_limiter.
+
+        Returns:
+            A validated Pydantic model instance matching self.schema.
+        """
+        prompt = self.format_prompt(ticker, year)
+        full_prompt = f"{prompt}\n\nHere's the filing content:\n\n{text}"
+        return provider.generate_with_retry(
+            prompt=full_prompt,
+            schema=self.schema,
+            max_retries=3,
+            retry_delay=10,
+        )
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name='{self.name}', min_years={self.min_years})"

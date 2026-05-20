@@ -1,216 +1,211 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-CSPP v2.6 — Causal Substrate Propagation Protocol Analyzer.
+CSPP v2.6 -- Causal Substrate Propagation Protocol Analyzer.
 
 ============================================================================
-WHAT THIS WORKFLOW DOES
+WHY THIS FILE LOOKS THE WAY IT DOES
 ============================================================================
 
-Applies the full Causal Substrate Propagation Protocol v2.6 framework
-to a single fiscal year of a 10-K filing and produces a structured,
-auditable master score (0-100) with allocation tier and capital bucket.
+The CSPP v2.6 framework defines 17 scored components across 5 domains plus
+a dozen unscored diagnostic modules, a 10-gap audit, scenario projection,
+and several required output tables. The previous version of this workflow
+tried to express the entire framework as a single ~106 KB Pydantic schema
+sent to Gemini in one call. That was 28x larger than the working
+Buffett / Taleb / Contrarian schemas (~3.8 KB each) and failed often:
+when any one of ~200 required fields drifted, Pydantic validation failed
+and the whole analysis was lost (analysis_service silently logs and moves
+on -- no partial recovery).
 
-The framework is a first-principles causal inference protocol designed for
-real-time analysis under uncertainty. It is explicitly NOT a hindsight
-narrative generator. Every output is required to be probabilistic and
-falsifiable.
+This file therefore splits the analysis into FOUR sequential Gemini calls,
+each with a small Buffett-shaped sub-schema. After all four succeed, an
+internal merge step assembles the partial results into the original
+CSPPv26AnalysisResult shape, so DB storage and UI rendering require no
+change. If any single call fails, the merge produces a degraded result
+with _partial=True and _failed_call set, instead of losing the entire
+analysis.
 
-Single year only (min_years = max_years = 1) — analysis runs on the most
-recent 10-K, since the framework's stage-positioning and reflexivity
-analysis is keyed to a point-in-time disclosure.
+The four calls:
 
-============================================================================
-FRAMEWORK MODULE COVERAGE MAP
-============================================================================
+    Call 1: ORIENT     -- identification, doc completeness, thesis
+                          classification, module diagnostics, three clocks
+    Call 2: MAP        -- latent pressure table, capital actor table
+    Call 3: SCORE      -- all 17 component scores (flat list) plus
+                          supporting numerical context
+    Call 4: SYNTHESIZE -- anti-hindsight checklist, 8-category pre-mortem,
+                          decision rule, kill check, master score,
+                          scenarios, falsifiers, gap audit, signal ranking,
+                          executive summary
 
-This map tells an auditor where each module of the framework is implemented
-in this file. Modules marked "scored" produce a 0-10 raw score that
-contributes to the 100-pt master score. Modules marked "diagnostic" do not
-score directly but inform one or more scored components per the framework's
-"Scoring note" annotations.
-
-DOMAIN I — Five Truth Layers (40 weighted pts)
-  1A Substrate Truth ............... DomainI.substrate_truth_1A          [scored, w=1.0, KILL]
-  1B Economic Capture Truth ........ DomainI.economic_capture_truth_1B   [scored, w=1.0]
-  1C Financial Survival Truth ...... DomainI.financial_survival_truth_1C [scored, w=1.0, KILL]
-                                     DomainI.financial_survival_ratios   [supporting numbers]
-  1D Valuation Entry Truth ......... DomainI.valuation_entry_truth_1D    [scored, w=0.5, KILL]
-                                     DomainI.valuation_context           [supporting numbers]
-  1E Reflexive System Truth ........ DomainI.reflexive_system_truth_1E   [scored, w=0.5]
-
-DOMAIN II — Epistemic Integrity (20 weighted pts)
-  2A Latent Pressure Stage ......... DomainII.latent_pressure_stage_2A   [scored, w=0.5]
-  2B Evidence Observability ........ DomainII.evidence_observability_2B  [scored, w=0.5]
-  2C Anti-Hindsight Integrity ...... DomainII.anti_hindsight_integrity_2C[scored, w=0.5, INTEG FLAG]
-                                     DomainII.anti_hindsight_checklist   [7 mandatory questions]
-  2D Pre-Mortem Discipline ......... DomainII.pre_mortem_discipline_2D   [scored, w=0.5]
-                                     DomainII.pre_mortem_scenarios       [8 required categories]
-                                     DomainII.decision_rule              [7 required fields]
-
-DOMAIN III — Physical Reality Anchor (15 weighted pts)
-  3A Physicalization Constraint .... DomainIII.physicalization_constraint_3A [scored, w=0.5]
-  3B Power and Energy Position ..... DomainIII.power_and_energy_position_3B  [scored, w=0.5]
-  3C Strategic Scarcity Quality .... DomainIII.strategic_scarcity_3C         [scored, w=0.5]
-
-DOMAIN IV — Capital Topology (10 weighted pts)
-  4A Capital Concentration ......... DomainIV.capital_concentration_alignment_4A    [scored, w=0.5]
-  4B Institutional Capture ......... DomainIV.institutional_capture_favorability_4B [scored, w=0.5]
-
-DOMAIN V — Fragility Profile (15 weighted pts)
-  5A Liquidity Independence ........ DomainV.liquidity_independence_5A          [scored, w=0.5]
-  5B Sovereign + Trust Stability ... DomainV.sovereign_and_trust_stability_5B   [scored, w=0.5]
-  5C Commoditization Resistance .... DomainV.commoditization_resistance_5C      [scored, w=0.5]
-
-UNSCORED MODULES (informational, drive scoring quality)
-  Three Clocks Module .............. ModuleDiagnostics.three_clocks
-  Bottleneck Inflation ............. ModuleDiagnostics.bottleneck_inflation_note
-  Continuity Infrastructure ........ ModuleDiagnostics.continuity_infrastructure_note
-  Capex Arms Race .................. ModuleDiagnostics.capex_arms_race_note
-  Asset Holder Policy Bias ......... ModuleDiagnostics.asset_holder_policy_bias_note
-  Private Market Opacity ........... ModuleDiagnostics.private_market_opacity_note
-  Sovereign Industrial Compute ..... ModuleDiagnostics.sovereign_industrial_compute_note
-  Jurisdictional Arbitrage ......... ModuleDiagnostics.jurisdictional_arbitrage_note
-  Trust Asset Failure .............. ModuleDiagnostics.trust_asset_failure_note
-  Energy Security .................. ModuleDiagnostics.energy_security_note
-  Latent Civilization Pressures .... CSPPv26AnalysisResult.latent_pressure_table  (8-question test)
-  Capital Topology actors .......... CSPPv26AnalysisResult.capital_actor_table
-  Market Visibility Lag (stage) .... DomainII.estimated_stage
-  False Positive Library ........... AntiHindsightChecklist.historical_false_positives
-  Alternative Futures Module ....... AntiHindsightChecklist.alternative_futures
-  Probabilistic Inference Module ... CSPPv26AnalysisResult.probabilistic_scenarios
-  Barbell Allocation ............... CSPPv26AnalysisResult.capital_bucket
-  Gap Safeguards (10 layers) ....... CSPPv26AnalysisResult.gap_safeguards_audit
-  Signal Ranking Module ............ CSPPv26AnalysisResult.signal_ranking
-  Dual Track / Thesis Typology ..... CSPPv26AnalysisResult.thesis_classification
-  Humility Principle ............... enforced via prompt + key_thesis_statement guard
-
-KILL CONDITIONS (applied AFTER raw scoring, override master score)
-  1A raw <= 2  -> master capped at 40
-  1C raw <= 2  -> master capped at 50
-  1D raw <= 1  -> master capped at 60
-  2C raw <= 1  -> INTEGRITY FLAG (no cap, but analysis marked unreliable)
+The schema property of CSPPv26Analyzer still returns the merged
+CSPPv26AnalysisResult so anything that introspects workflows by their
+declared schema sees the original shape.
 
 ============================================================================
-GEMINI STRUCTURED-OUTPUT COMPATIBILITY NOTES (as of 2026)
+DESIGN RULES OBSERVED
 ============================================================================
 
-The schema in this file is designed to round-trip cleanly through the
-google-genai SDK's response_schema path. Specifically:
-
-  - Field(ge=, le=) on int is supported (existing example workflows in
-    this repo rely on the same pattern).
-  - Literal with multiple string values is supported. Literal with a
-    SINGLE value triggers a known schema-validation bug
-    (googleapis/python-genai issue #264) and is avoided.
-  - Field default values are NOT used anywhere — the Gemini API rejects
-    response schemas that carry Pydantic defaults
-    (googleapis/python-genai issue #699).
-  - Optional / Union (anyOf) is avoided where possible. Where a value may
-    not exist, the model is instructed to emit "n/a" or
-    "unknown — outside 10-K" instead of null.
-  - Nested BaseModel and List[BaseModel] are fully supported.
-  - Numeric range constraints (min_length / max_length / min_items /
-    max_items) are unreliable, so cardinality requirements are enforced
-    in the prompt rather than the schema.
-  - Gemini 2.5+ preserves field declaration order in the output, so the
-    field order in CSPPv26AnalysisResult below is meaningful — it drives
-    the analytic flow (orient -> diagnose -> score -> conclude).
+  - Every sub-schema mirrors the proven Buffett shape: mostly flat,
+    all-required, no Optional, no Field defaults, no single-value Literal,
+    minimal nesting.
+  - The file is 100% ASCII -- no emoji, no em-dash. (Per user direction;
+    Buffett/Taleb keep their emoji because they work, but this workflow
+    is intentionally stripped down.)
+  - Domain totals and master_score are recomputed in Python from the
+    model's component scores rather than trusting the model's arithmetic.
+  - Kill conditions are determined by Python from the raw scores so the
+    audit cannot drift from the actual values.
 """
 
-from typing import List, Literal
+from typing import List, Literal, Optional, Any, Dict
 from pydantic import BaseModel, Field
 
 from custom_workflows.base import CustomWorkflow
+from eon.core import get_logger
+from eon.core.exceptions import AIProviderError
+
+
+logger = get_logger(__name__)
 
 
 # ===========================================================================
-# SECTION 1 — Document completeness self-report
+# CONSTANTS
 # ---------------------------------------------------------------------------
-# Surfaced at the top of the result so downstream code can quickly decide
-# whether to trust the analysis. If the model could not read the entire
-# 10-K (truncation, garbled PDF extraction, missing exhibits) the master
-# score should be treated as preliminary.
+# Component metadata in ONE place. Used by:
+#   - the SCORE call's prompt (lists which codes to score)
+#   - the merge step (groups scores into the right domain object,
+#     applies the right weight, computes weighted_contribution)
+#   - the kill-condition check (knows which codes carry caps)
+# ===========================================================================
+
+COMPONENT_CODES = [
+    "1A", "1B", "1C", "1D", "1E",
+    "2A", "2B", "2C", "2D",
+    "3A", "3B", "3C",
+    "4A", "4B",
+    "5A", "5B", "5C",
+]
+
+COMPONENT_NAMES = {
+    "1A": "Substrate Truth",
+    "1B": "Economic Capture Truth",
+    "1C": "Financial Survival Truth",
+    "1D": "Valuation Entry Truth",
+    "1E": "Reflexive System Truth",
+    "2A": "Latent Pressure Stage Positioning",
+    "2B": "Evidence Observability",
+    "2C": "Anti-Hindsight Integrity",
+    "2D": "Pre-Mortem Discipline",
+    "3A": "Physicalization Constraint Depth",
+    "3B": "Power and Energy Position",
+    "3C": "Strategic Scarcity Quality",
+    "4A": "Capital Concentration Alignment",
+    "4B": "Institutional Capture Favorability",
+    "5A": "Liquidity Independence",
+    "5B": "Sovereign and Trust Stability",
+    "5C": "Commoditization Resistance",
+}
+
+# 1.0 for the three full-weight Truth Layers; 0.5 for everything else.
+COMPONENT_WEIGHTS = {code: (1.0 if code in ("1A", "1B", "1C") else 0.5)
+                     for code in COMPONENT_CODES}
+
+# Which domain object each component belongs to in the final merged result.
+COMPONENT_DOMAIN = {
+    "1A": "i", "1B": "i", "1C": "i", "1D": "i", "1E": "i",
+    "2A": "ii", "2B": "ii", "2C": "ii", "2D": "ii",
+    "3A": "iii", "3B": "iii", "3C": "iii",
+    "4A": "iv", "4B": "iv",
+    "5A": "v", "5B": "v", "5C": "v",
+}
+
+# Field name inside each Domain object that holds the ComponentScore.
+COMPONENT_FIELD = {
+    "1A": "substrate_truth_1A",
+    "1B": "economic_capture_truth_1B",
+    "1C": "financial_survival_truth_1C",
+    "1D": "valuation_entry_truth_1D",
+    "1E": "reflexive_system_truth_1E",
+    "2A": "latent_pressure_stage_2A",
+    "2B": "evidence_observability_2B",
+    "2C": "anti_hindsight_integrity_2C",
+    "2D": "pre_mortem_discipline_2D",
+    "3A": "physicalization_constraint_3A",
+    "3B": "power_and_energy_position_3B",
+    "3C": "strategic_scarcity_3C",
+    "4A": "capital_concentration_alignment_4A",
+    "4B": "institutional_capture_favorability_4B",
+    "5A": "liquidity_independence_5A",
+    "5B": "sovereign_and_trust_stability_5B",
+    "5C": "commoditization_resistance_5C",
+}
+
+# Domain max totals (used to clamp arithmetic to the framework's caps).
+DOMAIN_MAX = {"i": 40, "ii": 20, "iii": 15, "iv": 10, "v": 15}
+
+
+# ===========================================================================
+# SUB-SCHEMA 1 of 4: ORIENT
+# ---------------------------------------------------------------------------
+# Flat fields only. Mirrors Buffett's shape. ~25 top-level fields.
 # ===========================================================================
 
 
-class DocumentCompleteness(BaseModel):
-    """Model's self-assessment of whether it analyzed the complete 10-K.
+class OrientResult(BaseModel):
+    """Call 1 output: identification + completeness + classification + diagnostics."""
 
-    NOTE: This is metadata for the consumer of the analysis, not a CSPP
-    framework module. It exists because PDF extraction can truncate or
-    corrupt sections of a 10-K, and the framework's evidentiary standard
-    becomes unreliable when the source document is incomplete.
-    """
+    # Identification
+    company_name: str = Field(
+        description="Full legal company name from the 10-K cover page."
+    )
+    fiscal_year: int = Field(
+        description="Fiscal year of the 10-K being analyzed."
+    )
+    primary_exchange: str = Field(
+        description="Primary listing exchange (e.g. NASDAQ, NYSE). 'n/a' if unclear."
+    )
+    primary_thesis: str = Field(
+        description=(
+            "One short paragraph stating the core CSPP thesis you will be "
+            "scoring. Probabilistic language, no inevitability claims."
+        )
+    )
 
+    # Document completeness self-report
     full_doc: bool = Field(
         description=(
-            "TRUE if you (the model) were able to read and analyze the ENTIRE "
-            "10-K filing provided in the prompt. FALSE if any portion of the "
-            "filing appeared truncated, missing, unreadable, or had to be "
-            "skipped due to length. Be honest — a FALSE here is critical "
-            "metadata that tells downstream systems the analysis may be "
-            "incomplete."
+            "TRUE if you were able to read and use the ENTIRE 10-K provided. "
+            "FALSE if any section appeared truncated, missing, or garbled."
         )
     )
     sections_visible: List[str] = Field(
         description=(
-            "List the major 10-K sections you could clearly see and use "
-            "(e.g. 'Item 1 Business', 'Item 1A Risk Factors', "
-            "'Item 7 MD&A', 'Item 7A Quantitative and Qualitative "
-            "Disclosures', 'Item 8 Financial Statements', "
-            "'Item 9A Controls', 'Exhibits / Subsidiaries'). Use the actual "
-            "item numbers from the filing."
+            "List the 10-K sections you could clearly read "
+            "(e.g. 'Item 1 Business', 'Item 1A Risk Factors', 'Item 7 MD&A')."
         )
     )
     sections_missing_or_partial: List[str] = Field(
         description=(
-            "List any 10-K sections that appeared missing, truncated, "
-            "garbled, or only partially extractable. Empty list if "
-            "everything was clean."
+            "List any 10-K sections that appeared missing, truncated, or "
+            "garbled. Empty list if the document was clean."
         )
     )
     completeness_note: str = Field(
         description=(
-            "Short note (1-3 sentences) explaining your completeness "
-            "assessment. If full_doc is FALSE, explain specifically what "
-            "was missing and how that limits the analysis (which scores "
-            "are most affected)."
+            "1-3 sentences explaining your completeness assessment. If "
+            "full_doc is FALSE, explain what was missing and which scores "
+            "are most affected."
         )
     )
 
-
-# ===========================================================================
-# SECTION 2 — Thesis classification (Dual Track / typology)
-# ---------------------------------------------------------------------------
-# Framework ref: "The framework now attempts to distinguish..." table near
-# the top of the CSPP v2.6 spec, listing 8 thesis types. Capturing this
-# upfront prevents the model from confusing a "Real structural
-# transformation" thesis with a "Liquidity amplified narrative" thesis.
-# Multi-select via List because real cases often blend types.
-# ===========================================================================
-
-
-class ThesisClassification(BaseModel):
-    """Which CSPP v2.6 thesis archetype(s) does this case represent?
-
-    Framework ref: top-of-spec typology table. A clear classification
-    anchors how the model should weight evidence (e.g. an "AI
-    infrastructure effect" thesis must score 3A/3B harder; a "Liquidity
-    amplified narrative" thesis must score 5A/1D harder).
-    """
-
-    primary_track: Literal[
-        "Market Visible",
-        "Latent Civilization Pressure",
-        "Both — mixed",
+    # Thesis classification (Dual Track + 8-type typology)
+    thesis_primary_track: Literal[
+        "Market Visible", "Latent Civilization Pressure", "Both",
     ] = Field(
         description=(
-            "Which of the two CSPP tracks dominates this thesis? "
-            "Market Visible = the thesis is already expressed in current "
-            "earnings / multiples. Latent = the thesis depends on slow "
-            "variables that markets have not yet priced in. Both = a real "
-            "mix of both."
+            "Which CSPP track dominates? Market Visible = already in "
+            "earnings/multiples. Latent = depends on slow variables "
+            "markets have not priced. Both = genuine mix."
         )
     )
     thesis_types: List[
@@ -226,328 +221,211 @@ class ThesisClassification(BaseModel):
         ]
     ] = Field(
         description=(
-            "Which thesis archetype(s) from the CSPP v2.6 typology table "
-            "does this case represent? Pick all that genuinely apply, "
-            "usually 1-3. Don't reach — if only one fits, list only one."
+            "Which thesis archetype(s) from the CSPP typology apply? Pick "
+            "all that genuinely fit, usually 1-3. Don't reach."
         )
     )
     classification_rationale: str = Field(
+        description="2-4 sentences explaining the archetype choice, citing disclosures."
+    )
+
+    # Three Clocks Module
+    three_clocks_physical: str = Field(
         description=(
-            "2-4 sentences explaining why these archetypes were chosen, "
-            "citing specific disclosures from the 10-K."
+            "Physical clock: what real-world adaptation, capex, capacity, "
+            "or deployment is actually happening per the 10-K. The "
+            "physical clock leads."
+        )
+    )
+    three_clocks_financial: str = Field(
+        description=(
+            "Financial clock: how the physical change is expressed in "
+            "earnings, margins, segment results, cash flow. Lags physical."
+        )
+    )
+    three_clocks_narrative: str = Field(
+        description=(
+            "Narrative clock: how the market frames the thesis. Use "
+            "'unknown - outside 10-K' if you cannot infer this."
+        )
+    )
+    three_clocks_divergence: str = Field(
+        description=(
+            "Where the three clocks diverge and what that implies for "
+            "stage positioning (large physical-leading-narrative gap = "
+            "early stage = high 2A; narrative overshoot = crowded = low "
+            "2A and low 1D)."
         )
     )
 
-
-# ===========================================================================
-# SECTION 3 — Diagnostic modules (unscored, but inform multiple scores)
-# ---------------------------------------------------------------------------
-# Every module in this section is referenced in the framework as
-# "[ Scoring note: This module informs Score X... ]". They do not have
-# their own rubric, but the framework requires the analyst to think
-# through them. By forcing the model to write them out BEFORE scoring,
-# we avoid the failure mode where the model scores domains in isolation
-# and misses cross-cutting causality.
-# ===========================================================================
-
-
-class ThreeClocks(BaseModel):
-    """Three Clocks Module — physical / financial / narrative clock divergence.
-
-    Framework ref: "Three Clocks Module" + scoring note that the gap
-    between the physical clock (observable in 10-K operations) and the
-    narrative clock (visible in current market multiples) defines the
-    Stage Positioning score (2A).
-    """
-
-    physical_clock_state: str = Field(
+    # Module diagnostics (10 short text notes, each informing scored components)
+    diagnostic_bottleneck_inflation: str = Field(
         description=(
-            "Where the company is on the PHYSICAL clock — what real-world "
-            "adaptation, capex, capacity, deployment, or operational change "
-            "is actually happening per the 10-K. The physical clock always "
-            "leads."
+            "Bottleneck Inflation Module (informs 1A/3A). Is the company "
+            "SITTING AT a bottleneck (pricing power) or SUFFERING input-"
+            "cost inflation from one (margin compression)? Cite disclosures."
         )
     )
-    financial_clock_state: str = Field(
+    diagnostic_continuity_infrastructure: str = Field(
         description=(
-            "Where the company is on the FINANCIAL clock — how the physical "
-            "change has begun to express in earnings, margins, segment "
-            "results, and cash flow. The financial clock lags the physical."
+            "Continuity Infrastructure Module (informs 1A/1B). Is the "
+            "company essential infrastructure under stress (recurring, "
+            "mission-critical, regulated) or discretionary?"
         )
     )
-    narrative_clock_state: str = Field(
+    diagnostic_capex_arms_race: str = Field(
         description=(
-            "Where the company is on the NARRATIVE clock — how the market, "
-            "analysts, and media currently frame the thesis. The narrative "
-            "clock can overshoot or undershoot. Use 'unknown — outside "
-            "10-K' if you cannot infer this without market data."
+            "Capex Arms Race Module (informs 5C). Is capex OFFENSIVE "
+            "(creating durable separation) or DEFENSIVE (keeping up, "
+            "eroding ROIC)?"
         )
     )
-    clock_divergence_assessment: str = Field(
+    diagnostic_asset_holder_policy: str = Field(
         description=(
-            "2-4 sentences on where the three clocks DIVERGE and what that "
-            "divergence implies for entry timing. A large physical-leading-"
-            "narrative gap implies early-stage opportunity (high 2A). A "
-            "narrative-overshooting-physical gap implies crowded / "
-            "speculative (low 2A and low 1D)."
-        )
-    )
-
-
-class ModuleDiagnostics(BaseModel):
-    """Unscored diagnostic modules required by the framework.
-
-    Each `*_note` field is a short structured assessment of an unscored
-    CSPP module that the framework's "Scoring note" annotations require
-    the analyst to consider before assigning specific component scores.
-
-    The model is instructed to write these BEFORE the domain scores so
-    that the diagnostic thinking actually informs the rubric-based scores
-    (rather than being post-hoc rationalization).
-    """
-
-    three_clocks: ThreeClocks = Field(
-        description=(
-            "Three Clocks Module output. Informs Score 2A. The gap between "
-            "physical and narrative clocks IS the stage positioning."
-        )
-    )
-    bottleneck_inflation_note: str = Field(
-        description=(
-            "Bottleneck Inflation Module. Informs 1A and 3A. Is the "
-            "company SITTING AT a bottleneck (pricing power), or SUFFERING "
-            "input-cost inflation from a bottleneck (margin compression)? "
-            "Cite specific disclosures from MD&A / cost of revenue."
-        )
-    )
-    continuity_infrastructure_note: str = Field(
-        description=(
-            "Continuity Infrastructure Module. Informs 1A and 1B. Does the "
-            "company's revenue/customer base show that it is essential "
-            "infrastructure under stress (recurring, mission-critical, "
-            "regulated)? Or is it discretionary? Cite contract structures, "
-            "customer concentration, recurring-revenue %."
-        )
-    )
-    capex_arms_race_note: str = Field(
-        description=(
-            "Capex Arms Race Module. Informs 5C. Is the company's capex "
-            "OFFENSIVE (creating durable separation, expanding moat) or "
-            "DEFENSIVE (just keeping up, eroding ROIC)? Cite disclosed "
-            "capex trajectory, ROIC trend, and competitor commentary."
-        )
-    )
-    asset_holder_policy_bias_note: str = Field(
-        description=(
-            "Asset Holder Policy Bias Module. Informs 4B. Is this company "
+            "Asset Holder Policy Bias Module (informs 4B). Is the company "
             "an explicit beneficiary of asset-price-stabilizing policy "
-            "(housing finance, central bank backstops, GSE-like structures, "
-            "REIT tax treatment, buyback-friendly regimes)? Or is it "
-            "neutral / disadvantaged? 'Not applicable' if neither."
+            "(housing finance, REIT tax, buyback-friendly regimes)?"
         )
     )
-    private_market_opacity_note: str = Field(
+    diagnostic_private_market_opacity: str = Field(
         description=(
-            "Private Market Opacity Module. Informs 4B and 5B. Does the "
+            "Private Market Opacity Module (informs 4B/5B). Does the "
             "company rely on private credit, mark-to-model assets, or "
-            "illiquid funding that could delay (not prevent) price "
-            "discovery in stress? Cite specific funding disclosures. "
-            "'Not applicable' if funding is fully public/transparent."
+            "illiquid funding that could delay price discovery in stress?"
         )
     )
-    sovereign_industrial_compute_note: str = Field(
+    diagnostic_sovereign_industrial_compute: str = Field(
         description=(
-            "Sovereign Industrial Compute Module. Informs 3B and 4A. Is "
-            "the company exposed to export controls, sovereign compute "
-            "buildout programs (e.g. CHIPS Act, EU sovereign cloud, "
-            "national AI plans), or geographic manufacturing dependencies "
-            "in chips/fabs/AI infra? 'Not applicable' for non-tech "
-            "companies with no compute exposure."
+            "Sovereign Industrial Compute Module (informs 3B/4A). "
+            "Exposure to export controls, sovereign compute buildout "
+            "programs, or geographic manufacturing dependencies?"
         )
     )
-    jurisdictional_arbitrage_note: str = Field(
+    diagnostic_jurisdictional_arbitrage: str = Field(
         description=(
-            "Jurisdictional Arbitrage Module. Informs 4A. Is the company "
-            "benefiting from (or threatened by) capital, labor, tax, or "
-            "regulatory arbitrage between jurisdictions? Cite geographic "
-            "concentration, tax-rate disclosures, redomiciliation events."
+            "Jurisdictional Arbitrage Module (informs 4A). Is the company "
+            "benefiting from or threatened by capital, labor, tax, or "
+            "regulatory arbitrage between jurisdictions?"
         )
     )
-    trust_asset_failure_note: str = Field(
+    diagnostic_trust_asset_failure: str = Field(
         description=(
-            "Trust Asset Failure Module. Informs 5B. Is any portion of "
-            "this company's value dependent on trust rather than productive "
-            "cash flow (sovereign credit, GSE wrap, deposit insurance, "
-            "regulatory licensure, network-effect lock-in)? 'Not "
-            "applicable' if the value is fully cash-flow-anchored."
+            "Trust Asset Failure Module (informs 5B). Is any portion of "
+            "value dependent on trust rather than productive cash flow "
+            "(sovereign credit, GSE wrap, deposit insurance, licensure)?"
         )
     )
-    energy_security_note: str = Field(
+    diagnostic_energy_security: str = Field(
         description=(
-            "Energy Security Module. Informs 3B. Is the company's energy "
-            "supply physically secure, dispatchable, geopolitically "
-            "insulated, and backed up? Or exposed to import dependence, "
-            "grid saturation, and political acceptability risk?"
+            "Energy Security Module (informs 3B). Is energy supply "
+            "physically secure, dispatchable, geopolitically insulated, "
+            "and backed up?"
         )
     )
 
 
 # ===========================================================================
-# SECTION 4 — Latent Pressure Table (8-question test)
+# SUB-SCHEMA 2 of 4: MAP
 # ---------------------------------------------------------------------------
-# Framework ref: "Latent Pressure Test" requires 8 questions per
-# pressure: observable, inductable, flows_affected, activation_threshold,
-# sectors_benefit, sectors_suffer, falsifier, false_positive.
-# Previous version of this file covered only 5 of 8.
+# Two lists of flat objects. moat_analyzer-shaped.
 # ===========================================================================
 
 
 class LatentPressureRow(BaseModel):
-    """One pressure from the Latent Civilization Pressure Registry.
-
-    Framework ref: "Latent Pressure Test" — every pressure relevant to
-    the company must answer all 8 questions. The Pressure Registry lists
-    physical, supply-chain, technology, human, financial-institutional
-    pressures. The model should pull from multiple registry categories.
-    """
+    """One row of the required Latent Pressure Table."""
 
     pressure: str = Field(
-        description=(
-            "The latent pressure (e.g. 'grid saturation', 'aging "
-            "demographics', 'advanced packaging bottleneck', 'sovereign "
-            "debt refinancing stress', 'JIT supply chain fragility'). "
-            "Should come from the Latent Civilization Pressure Registry."
-        )
+        description="The latent pressure (e.g. 'grid saturation', 'aging demographics')."
     )
     registry_category: Literal[
         "Physical", "Supply chain", "Technology", "Human",
         "Financial / institutional",
-    ] = Field(
-        description="Which Pressure Registry category this pressure belongs to."
-    )
-    observable: bool = Field(
-        description="Is the pressure directly observable today?"
-    )
-    inductable: bool = Field(
-        description="Is it reasonably inferable from current data?"
-    )
+    ] = Field(description="Which Pressure Registry category this belongs to.")
+    observable: bool = Field(description="Is the pressure directly observable today?")
+    inductable: bool = Field(description="Is it reasonably inferable from current data?")
     flows_affected: str = Field(
         description=(
-            "Which of the framework's flow systems (energy, material, "
-            "human, capital, trust, liquidity, information, political, "
-            "security, currency, passive capital, collateral, regulatory, "
-            "jurisdictional, compute, power) does this pressure propagate "
-            "through?"
+            "Which flow systems does this pressure propagate through "
+            "(energy, material, human, capital, trust, liquidity, etc.)?"
         )
     )
     activation_threshold: str = Field(
         description=(
-            "What level / event would activate this pressure financially? "
-            "(e.g. 'insurance withdrawal from coastal markets', 'PJM "
-            "interconnect queue exceeds 5 years', 'sovereign refinancing "
-            "rate >7%')."
+            "What level or event would activate it financially (e.g. "
+            "'PJM interconnect queue exceeds 5 years')?"
         )
     )
     sectors_benefit: str = Field(
-        description="Which sectors / company types BENEFIT when this pressure activates?"
+        description="Which sectors / company types BENEFIT when this activates?"
     )
     sectors_suffer: str = Field(
-        description="Which sectors / company types SUFFER when this pressure activates?"
+        description="Which sectors / company types SUFFER when this activates?"
     )
     falsifier: str = Field(
-        description=(
-            "What specific observation would FALSIFY this pressure's "
-            "relevance? (Required to prevent narrative capture.)"
-        )
+        description="What specific observation would FALSIFY this pressure's relevance?"
     )
     false_positive_risk: str = Field(
         description=(
             "Closest historical analogue from the False Positive Library "
             "(clean tech 2007, 3D printing, SPACs, metaverse, commodity "
-            "supercycle, etc.) and a one-sentence note on why this case "
-            "is or is not different."
+            "supercycle) and one sentence on why this case differs or "
+            "does not."
         )
     )
     financial_expression: str = Field(
-        description=(
-            "How would this pressure first show up in THIS company's "
-            "financial results (which line item, which segment, which "
-            "ratio)?"
-        )
+        description="How would this first show up in THIS company's results?"
     )
-
-
-# ===========================================================================
-# SECTION 5 — Capital Actor Table
-# ---------------------------------------------------------------------------
-# Framework ref: "CAPITAL ACTOR TABLE" required output. Forces the model
-# to think about WHO is moving capital into/out of this company and what
-# fragility that creates.
-# ===========================================================================
 
 
 class CapitalActorRow(BaseModel):
-    """One capital actor from the required Capital Actor Table.
-
-    Framework ref: required output table "Capital actor | Incentive |
-    Flow direction | Assets affected | Political influence | Fragility
-    created".
-    """
+    """One row of the required Capital Actor Table."""
 
     actor: str = Field(
-        description=(
-            "Capital actor (e.g. 'passive index funds', 'sovereign wealth "
-            "funds', 'private credit funds', 'retail option flow', "
-            "'corporate buyback', 'foreign central bank reserve managers')."
-        )
+        description="Capital actor (e.g. 'passive index funds', 'sovereign wealth funds')."
     )
-    incentive: str = Field(
-        description="What motivates this actor's allocation decision."
-    )
+    incentive: str = Field(description="What motivates this actor's allocation.")
     flow_direction: Literal["Inflow", "Outflow", "Neutral", "Mixed"] = Field(
-        description=(
-            "Net direction of this actor's flow into the company / sector "
-            "currently."
-        )
+        description="Net direction of this actor's flow into the company / sector."
     )
-    assets_affected: str = Field(
-        description="Which assets / instruments the flow most affects."
-    )
-    political_influence: str = Field(
-        description=(
-            "The actor's political or regulatory leverage relative to this "
-            "company / sector."
-        )
-    )
+    assets_affected: str = Field(description="Which assets / instruments the flow most affects.")
+    political_influence: str = Field(description="The actor's political or regulatory leverage.")
     fragility_created: str = Field(
+        description="What fragility (if any) this actor's flow introduces."
+    )
+
+
+class MapResult(BaseModel):
+    """Call 2 output: latent pressure table + capital actor table."""
+
+    latent_pressure_table: List[LatentPressureRow] = Field(
         description=(
-            "What fragility (if any) this actor's flow introduces — e.g. "
-            "reflexive forced selling, concentration risk, governance "
-            "passivity, momentum dependence."
+            "At least 3 latent pressures relevant to this company, drawing "
+            "from at least 2 different Pressure Registry categories. Each "
+            "row must answer all of its 10 fields."
+        )
+    )
+    capital_actor_table: List[CapitalActorRow] = Field(
+        description=(
+            "At least 2 capital actors most influential to this company / "
+            "sector. Each row must answer all 6 fields."
         )
     )
 
 
 # ===========================================================================
-# SECTION 6 — Generic score block reused for all 17 scored components
+# SUB-SCHEMA 3 of 4: SCORE
 # ---------------------------------------------------------------------------
-# Framework ref: every component rubric requires "Raw score / Weighted /
-# Reasoning". The "evidence_classification" field implements the
-# "Real Time Evidence Standard" classification mandated for every major
-# claim. The "kill_condition_triggered" field implements the kill check
-# for the 4 components that have one.
+# 17 component scores in a single flat list + supporting numerical context.
+# This is the heaviest call. ComponentScoreFlat is one shape, repeated 17
+# times -- much friendlier to the model than the previous 25 distinct nested
+# classes.
 # ===========================================================================
 
 
-class ComponentScore(BaseModel):
-    """A single scored CSPP component.
-
-    The framework defines 17 such components across the 5 domains:
-    Domain I has 5, II has 4, III has 3, IV has 2, V has 3.
-
-    (The framework prose says "15 components" but the score sheet
-    actually enumerates 17. This is a known typo in the source spec.)
-    """
+class ComponentScoreFlat(BaseModel):
+    """One scored CSPP component. Flat shape; the merge step adds the
+    weight and weighted_contribution from COMPONENT_WEIGHTS so the model
+    cannot drift on arithmetic."""
 
     code: Literal[
         "1A", "1B", "1C", "1D", "1E",
@@ -555,411 +433,157 @@ class ComponentScore(BaseModel):
         "3A", "3B", "3C",
         "4A", "4B",
         "5A", "5B", "5C",
-    ] = Field(description="CSPP component code from the framework.")
-    name: str = Field(
-        description="Component name (e.g. 'Substrate Truth')."
-    )
+    ] = Field(description="CSPP component code.")
     raw_score: int = Field(
         ge=0, le=10,
         description=(
-            "Raw score 0-10 per the component rubric in the framework. "
-            "Score conservatively when evidence is thin — the framework "
-            "rewards calibrated uncertainty over false precision."
+            "Raw score 0-10 per the component rubric. Score conservatively "
+            "when evidence is thin -- the framework rewards calibrated "
+            "uncertainty over false precision."
         )
-    )
-    weight: float = Field(
-        description=(
-            "Weight applied to the raw score per the framework "
-            "(1.0 for 1A/1B/1C; 0.5 for all other components)."
-        )
-    )
-    weighted_contribution: float = Field(
-        description="raw_score * weight. Contributes to the master score."
     )
     evidence_classification: Literal[
         "Observable", "Inductable", "Weakly inferable", "Hindsight only", "Unknown",
-    ] = Field(
-        description=(
-            "Real Time Evidence Standard classification of the evidence "
-            "underlying this score. Per the framework, this classification "
-            "is MANDATORY for every major claim."
-        )
-    )
+    ] = Field(description="Real Time Evidence Standard classification of the evidence.")
     reasoning: str = Field(
         description=(
-            "Explicit reasoning for the score, citing specific disclosures "
-            "from the 10-K (item, section, or page-level reference where "
-            "possible). 2-6 sentences. Must be written probabilistically, "
-            "never as inevitability."
+            "2-6 sentences of explicit reasoning citing specific 10-K "
+            "disclosures. Probabilistic tone, never 'obviously' or 'clearly'."
         )
     )
     supporting_evidence: List[str] = Field(
         description=(
-            "List of specific, verifiable evidence items from the 10-K "
-            "that anchor this score (financial figures, contract "
-            "disclosures, risk factor language, segment data, etc.). Each "
-            "bullet should distinguish observable facts from inferences."
-        )
-    )
-    kill_condition_triggered: bool = Field(
-        description=(
-            "TRUE only for components 1A (raw<=2), 1C (raw<=2), "
-            "1D (raw<=1), or 2C (raw<=1) when the threshold is crossed. "
-            "FALSE otherwise, including for components that have no kill "
-            "condition (1B, 1E, 2A, 2B, 2D, 3A-3C, 4A-4B, 5A-5C)."
+            "List of specific verifiable evidence items from the 10-K "
+            "(financial figures, contract disclosures, risk factor "
+            "language, segment data). Distinguish facts from inferences."
         )
     )
 
 
-# ===========================================================================
-# SECTION 7 — Domain I: Five Truth Layers (40 weighted pts)
-# ---------------------------------------------------------------------------
-# The framework's primary causal filter. Three components carry full
-# weight (1.0); two carry half weight (0.5) because they require market
-# context beyond a single 10-K. Three of the five also carry kill
-# conditions that cap the master score.
-# ===========================================================================
+class ScoreResult(BaseModel):
+    """Call 3 output: 17 component scores + supporting numerical context.
 
-
-class FinancialSurvivalRatios(BaseModel):
-    """Concrete balance-sheet ratios that drive the 1C rubric.
-
-    Framework ref: 1C rubric requires "Key ratios" section — Net debt /
-    EBITDA, Interest coverage, FCF yield. Added: nearest debt maturity
-    and liquidity buffer for full stress-test context.
+    The 17 scores are returned as ONE flat list (component_scores) rather
+    than nested into 5 domain objects. The merge step re-nests them. This
+    is the single biggest reliability improvement over the previous
+    schema -- Gemini handles flat repeating shapes far better than deeply
+    nested heterogeneous structures.
     """
 
+    component_scores: List[ComponentScoreFlat] = Field(
+        description=(
+            "Exactly 17 entries, one per CSPP component code: "
+            "1A, 1B, 1C, 1D, 1E, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 4A, 4B, "
+            "5A, 5B, 5C. Score every code -- do not skip any."
+        )
+    )
+
+    # Domain I supporting numbers
     net_debt_to_ebitda: str = Field(
-        description="Net debt / EBITDA. Use 'n/a' if not disclosed / derivable."
+        description="Net debt / EBITDA. 'n/a' if not derivable. Justifies 1C."
     )
     interest_coverage: str = Field(
-        description="EBIT / interest expense. Use 'n/a' if not derivable."
+        description="EBIT / interest expense. 'n/a' if not derivable. Justifies 1C."
     )
     fcf_yield: str = Field(
         description=(
-            "Free cash flow yield (FCF / market cap or FCF / enterprise "
-            "value — say which). Use 'unknown — outside 10-K' if market "
-            "cap is unknown."
+            "Free cash flow yield (FCF / market cap or FCF / EV; say "
+            "which). 'unknown - outside 10-K' if market cap is unknown."
         )
     )
     nearest_debt_maturity: str = Field(
-        description=(
-            "Year and approximate size of the nearest major debt maturity "
-            "from the long-term debt note."
-        )
+        description="Year and approximate size of nearest major debt maturity."
     )
     liquidity_buffer: str = Field(
-        description=(
-            "Cash + marketable securities + undrawn revolver as disclosed."
-        )
+        description="Cash + marketable securities + undrawn revolver."
     )
-
-
-class ValuationContext(BaseModel):
-    """Market context used to score 1D (Valuation Entry Truth).
-
-    Framework ref: 1D rubric requires the analyst to assess whether the
-    thesis is already capitalized. This requires data OUTSIDE the 10-K
-    (current multiples, peer set, analyst coverage). If unavailable, the
-    model must say so and score conservatively.
-    """
-
     current_multiple: str = Field(
         description=(
-            "Best single valuation multiple "
-            "(e.g. 'EV/EBITDA 14x', 'P/E 28x', 'P/S 6x'). "
-            "Use 'unknown — outside 10-K' if market data is unavailable."
+            "Best single multiple ('EV/EBITDA 14x', 'P/E 28x'). "
+            "'unknown - outside 10-K' if market data unavailable."
         )
     )
     peer_multiple_range: str = Field(
-        description=(
-            "Peer multiple range. 'unknown — outside 10-K' if no reliable "
-            "peer set is available without additional data."
-        )
+        description="Peer multiple range or 'unknown - outside 10-K'."
     )
     analyst_coverage_skew: str = Field(
+        description="Coverage skew ('mostly bullish' etc) or 'unknown - outside 10-K'."
+    )
+    valuation_stage_implication: str = Field(
+        description="1-2 sentences tying the multiple vs peers vs narrative clock to 1D."
+    )
+
+    # Domain III supporting context
+    primary_physical_constraint: str = Field(
         description=(
-            "Qualitative skew of analyst coverage "
-            "(e.g. 'mostly bullish', 'split', 'hostile'). "
-            "Use 'unknown — outside 10-K' if not inferable."
+            "Dominant physical bottleneck the company sits at or depends "
+            "on, or 'None - purely digital'."
         )
     )
-    stage_implication: str = Field(
+    capex_to_revenue_pct: str = Field(
+        description="Capex as % of revenue for the latest fiscal year, or 'n/a'."
+    )
+    disclosed_energy_agreements: List[str] = Field(
         description=(
-            "1-2 sentences: given the multiple vs. peer range vs. "
-            "narrative clock state, what stage (0-5) does the valuation "
-            "imply, and how does that constrain the 1D score?"
+            "Specific PPAs, captive generation, or grid agreements "
+            "disclosed in the filing. Empty list if none."
         )
     )
-
-
-class DomainI_FiveTruthLayers(BaseModel):
-    """Domain I — Five Truth Layers (max 40 weighted pts).
-
-    Components:
-      1A Substrate Truth        weight 1.0   KILL: raw<=2 caps master at 40
-      1B Economic Capture       weight 1.0
-      1C Financial Survival     weight 1.0   KILL: raw<=2 caps master at 50
-      1D Valuation Entry        weight 0.5   KILL: raw<=1 caps master at 60
-      1E Reflexive System       weight 0.5
-
-    Maximum domain total: 1.0*10 + 1.0*10 + 1.0*10 + 0.5*10 + 0.5*10 = 40.
-    """
-
-    substrate_truth_1A: ComponentScore = Field(
+    scarcity_type: str = Field(
         description=(
-            "1A — Substrate Truth (weight 1.0). KILL: raw<=2 caps master "
-            "at 40. Is the physical or social transformation this company "
-            "operates within actually real and measurable from disclosed "
-            "data?"
+            "Scarcity type (geopolitical / regulatory / physical / "
+            "technological) or 'No structural scarcity'."
         )
     )
-    economic_capture_truth_1B: ComponentScore = Field(
+    substitution_risks: List[str] = Field(
+        description="Disclosed or evident substitution threats to the scarcity."
+    )
+
+    # Domain IV supporting context
+    largest_disclosed_holders: List[str] = Field(
         description=(
-            "1B — Economic Capture Truth (weight 1.0). Can this company "
-            "durably capture value from the transformation?"
+            "Largest beneficial owners as disclosed in the 10-K (cover "
+            "page lists >5% holders and named officer ownership). 13F-level "
+            "detail is NOT in 10-K; if missing, list what is in-filing."
         )
     )
-    financial_survival_truth_1C: ComponentScore = Field(
+    insider_ownership_pct: str = Field(
+        description="Aggregate insider/officer/director ownership %, or 'n/a'."
+    )
+    institutional_ownership_signal: str = Field(
         description=(
-            "1C — Financial Survival Truth (weight 1.0). KILL: raw<=2 "
-            "caps master at 50. Can the company survive a severe adverse "
-            "financing environment?"
+            "Qualitative signal from filing references; otherwise "
+            "'unknown - outside 10-K'."
         )
     )
-    financial_survival_ratios: FinancialSurvivalRatios = Field(
+    key_regulatory_disclosures: List[str] = Field(
+        description="Specific regulatory items from Item 1 and Item 1A that drive 4B."
+    )
+    government_revenue_pct: str = Field(
+        description="% of revenue from government counterparties, or 'n/a'."
+    )
+
+    # Domain V supporting context
+    geographic_revenue_concentration: str = Field(
         description=(
-            "The actual disclosed numbers that justify the 1C score. "
-            "Required for auditability."
+            "Concentration by jurisdiction (e.g. 'US 78%, EMEA 14%, "
+            "APAC 8%'). Note primary jurisdiction sovereign rating if "
+            "discernible."
         )
     )
-    valuation_entry_truth_1D: ComponentScore = Field(
-        description=(
-            "1D — Valuation Entry Truth (weight 0.5). KILL: raw<=1 caps "
-            "master at 60. High score = thesis undercapitalized "
-            "(favorable entry); low score = crowded."
-        )
+    gross_margin_trend_3yr: str = Field(
+        description="3-year gross margin trajectory, or 'insufficient history'."
     )
-    valuation_context: ValuationContext = Field(
-        description="Market context that justifies the 1D score."
+    roic_trend_3yr: str = Field(
+        description="3-year ROIC trajectory, or 'insufficient history'."
     )
-    reflexive_system_truth_1E: ComponentScore = Field(
-        description=(
-            "1E — Reflexive System Truth (weight 0.5). Will capital flows "
-            "into this sector reshape reality FOR or AGAINST the thesis?"
-        )
-    )
-    domain_total: float = Field(
-        ge=0, le=40,
-        description=(
-            "Sum of weighted_contribution across 1A-1E (max 40). "
-            "Compute exactly — this feeds the master score."
-        )
+    primary_commoditization_risk: str = Field(
+        description="The single most credible commoditization or substitution risk."
     )
 
-
-# ===========================================================================
-# SECTION 8 — Domain II: Epistemic Integrity (20 weighted pts)
-# ---------------------------------------------------------------------------
-# The framework's quality-of-analysis filter. All 4 components carry
-# weight 0.5. 2C carries an integrity flag (not a cap) — raw<=1 marks
-# the entire analysis structurally unreliable but does NOT cap the
-# master score.
-# ===========================================================================
-
-
-class AntiHindsightChecklist(BaseModel):
-    """The 7 mandatory anti-hindsight discipline questions.
-
-    Framework ref: "ANTI-HINDSIGHT DISCIPLINE MODULE" — every analysis
-    must answer these 7 questions. Scoring 2C above 6 requires all 7
-    answered; above 7 requires the false positive library to be
-    consulted (captured here in historical_false_positives).
-    """
-
-    what_was_observable_then: str = Field(
-        description="What was directly observable at the time of this 10-K?"
-    )
-    what_was_inferable_then: str = Field(
-        description=(
-            "What was reasonably inferable but not directly observable at "
-            "the time of this 10-K?"
-        )
-    )
-    what_was_unknowable: str = Field(
-        description="What was fundamentally unknowable at the time of this 10-K?"
-    )
-    alternative_futures: List[str] = Field(
-        description=(
-            "At least 2 plausible alternative futures (not just the base "
-            "thesis). Implements the Alternative Futures Module."
-        )
-    )
-    contradicting_signals: List[str] = Field(
-        description=(
-            "Specific disclosures or data points in this 10-K that "
-            "CONTRADICT the thesis. Be honest — every real thesis has "
-            "some."
-        )
-    )
-    likely_blind_spots: List[str] = Field(
-        description=(
-            "What this protocol applied to this filing is likely to miss "
-            "(model limitations, framework limitations, evidence gaps)."
-        )
-    )
-    historical_false_positives: List[str] = Field(
-        description=(
-            "Historical analogues from the False Positive Library — clean "
-            "tech 2007, 3D printing, SPACs, metaverse, commodity "
-            "supercycle, etc. — that resemble this thesis. For each, a "
-            "short note on why this case is or is not different."
-        )
-    )
-
-
-# Implementation note: previous versions used a List[PreMortemScenario]
-# with a free-form category enum. That allowed the model to skip
-# categories. The framework REQUIRES all 8. We now expose 8 separate
-# required fields so the schema itself guarantees coverage. The trade-off
-# is verbosity, but the framework explicitly says "Full pre-mortem across
-# all eight categories" is required for the highest scores.
-class PreMortemScenario(BaseModel):
-    """One failure-category scenario within the Pre-Mortem Module."""
-
-    failure_mode: str = Field(
-        description=(
-            "How the thesis fails in this category, given the 10-K "
-            "disclosures. If this category genuinely doesn't apply, write "
-            "'Not applicable — ' followed by why, and set probability to "
-            "the residual (typically 1-5%)."
-        )
-    )
-    probability_pct: int = Field(
-        ge=0, le=100,
-        description=(
-            "Estimated probability (0-100) of this failure mode "
-            "materializing within a 5-year horizon."
-        )
-    )
-    early_warning_signals: List[str] = Field(
-        description="Concrete signals that would indicate this failure is unfolding."
-    )
-    kill_condition: str = Field(
-        description=(
-            "Specific, measurable kill condition tied to this failure "
-            "mode (e.g. 'gross margin falls below 35% for two consecutive "
-            "quarters', 'net debt/EBITDA exceeds 4.0x'). Required for 2D "
-            "scores above 6."
-        )
-    )
-
-
-class PreMortemScenarios(BaseModel):
-    """All 8 mandated Pre-Mortem failure categories as separate required fields.
-
-    Framework ref: "PRE-MORTEM MODULE" enumerates exactly 8 failure
-    categories. To score 2D >= 8 ("Exemplary"), all 8 must be modeled
-    with probabilities. Separate required fields prevent the model from
-    skipping any.
-    """
-
-    technology: PreMortemScenario = Field(
-        description="Technology failure: substrate obsolescence, breakthrough by competitor, technical risk."
-    )
-    financing: PreMortemScenario = Field(
-        description="Financing failure: refinancing wall, credit downgrade, capital market closure."
-    )
-    economic_capture: PreMortemScenario = Field(
-        description="Economic capture failure: moat erosion, margin compression, customer concentration loss."
-    )
-    valuation: PreMortemScenario = Field(
-        description="Valuation failure: multiple compression, rerating, consensus reversal."
-    )
-    policy: PreMortemScenario = Field(
-        description="Policy failure: subsidy removal, tariff imposition, sanctions, monetary regime shift."
-    )
-    substitution: PreMortemScenario = Field(
-        description="Substitution failure: cheaper / better alternative, demand shifts to substitute."
-    )
-    timing: PreMortemScenario = Field(
-        description="Timing failure: thesis correct but multi-year delay; capital exhausted before payoff."
-    )
-    regulatory: PreMortemScenario = Field(
-        description="Regulatory failure: breakup, profit cap, forced divestiture, licensure loss."
-    )
-
-
-class DecisionRule(BaseModel):
-    """Decision Rule Module — 7 mandated fields.
-
-    Framework ref: "DECISION RULE MODULE" requires every thesis to
-    specify Entry conditions, Evidence thresholds, Position sizing,
-    Kill conditions, Valuation discipline, Survivability assumptions,
-    Monitoring signals. Required for 2D score above 7.
-    """
-
-    entry_conditions: str = Field(
-        description="What specific price level / evidence event would trigger initial entry?"
-    )
-    evidence_thresholds: str = Field(
-        description=(
-            "What further evidence (e.g. specific KPI thresholds, "
-            "disclosed contract wins, margin trajectory) would justify "
-            "scaling the position?"
-        )
-    )
-    position_sizing_guidance: str = Field(
-        description=(
-            "How large should this position be relative to the "
-            "portfolio's survivability assumptions and the company's own "
-            "fragility profile (Domain V)?"
-        )
-    )
-    kill_conditions: str = Field(
-        description=(
-            "Specific, measurable conditions that would trigger a full "
-            "exit of the position. Distinct from the framework's score-"
-            "level kill conditions — these are POSITION-level."
-        )
-    )
-    valuation_discipline: str = Field(
-        description=(
-            "Maximum multiple or absolute valuation level at which to "
-            "start trimming, regardless of thesis confirmation."
-        )
-    )
-    survivability_assumptions: str = Field(
-        description="What the position assumes about the company surviving stress."
-    )
-    monitoring_signals: List[str] = Field(
-        description=(
-            "Measurable signals to track on an ongoing basis (quarterly "
-            "KPIs, macro variables, sector flow data)."
-        )
-    )
-
-
-class DomainII_EpistemicIntegrity(BaseModel):
-    """Domain II — Epistemic Integrity (max 20 weighted pts).
-
-    All 4 components carry weight 0.5. 2C carries an INTEGRITY FLAG
-    (not a master-score cap): raw<=1 marks the entire analysis
-    structurally unreliable.
-
-    Maximum domain total: 0.5*10 * 4 = 20.
-    """
-
-    latent_pressure_stage_2A: ComponentScore = Field(
-        description=(
-            "2A — Latent Pressure Stage Positioning (weight 0.5). Where "
-            "in the recognition cycle is the primary latent pressure? "
-            "High score = early stage (Stage 0-1); low score = crowded "
-            "(Stage 4-5)."
-        )
-    )
+    # Domain II supporting (the stage classification)
     primary_latent_pressure: str = Field(
-        description="The single most important latent civilization pressure for this thesis."
+        description="The single most important latent pressure for this thesis."
     )
     estimated_stage: Literal[
         "Stage 0 - Ignored",
@@ -969,1002 +593,1401 @@ class DomainII_EpistemicIntegrity(BaseModel):
         "Stage 4 - Consensus",
         "Stage 5 - Crowded",
     ] = Field(description="Current recognition stage of the primary latent pressure.")
-    evidence_observability_2B: ComponentScore = Field(
-        description=(
-            "2B — Evidence Observability (weight 0.5). What proportion of "
-            "your claims about this company are directly observable in "
-            "this 10-K vs. inferred?"
-        )
-    )
-    anti_hindsight_integrity_2C: ComponentScore = Field(
-        description=(
-            "2C — Anti-Hindsight Integrity (weight 0.5). INTEGRITY FLAG: "
-            "raw<=1 marks the analysis structurally unreliable but does "
-            "NOT cap the master score."
-        )
-    )
-    anti_hindsight_checklist: AntiHindsightChecklist = Field(
-        description=(
-            "All 7 anti-hindsight questions answered. Required for 2C > 6. "
-            "Required for 2C > 7 that the false positive library bucket "
-            "(historical_false_positives) contains real analogues."
-        )
-    )
-    pre_mortem_discipline_2D: ComponentScore = Field(
-        description=(
-            "2D — Pre-Mortem Discipline (weight 0.5). To score above 6, "
-            "kill conditions and monitoring signals must be specific. To "
-            "score above 7, decision_rule must be complete. To score 8+, "
-            "all 8 pre_mortem_scenarios categories must have meaningful "
-            "content."
-        )
-    )
-    pre_mortem_scenarios: PreMortemScenarios = Field(
-        description=(
-            "Pre-mortem across all 8 mandated failure categories. Separate "
-            "required fields prevent skipping."
-        )
-    )
-    decision_rule: DecisionRule = Field(
-        description="Decision Rule Module — all 7 fields required for 2D > 7."
-    )
-    domain_total: float = Field(
-        ge=0, le=20,
-        description="Sum of weighted_contribution across 2A-2D (max 20)."
-    )
 
 
 # ===========================================================================
-# SECTION 9 — Domain III: Physical Reality Anchor (15 weighted pts)
+# SUB-SCHEMA 4 of 4: SYNTHESIZE
 # ---------------------------------------------------------------------------
-# The framework's anchor against pure software / pure narrative theses.
-# All 3 components carry weight 0.5. No kill conditions.
-# Particularly important for AI infrastructure, energy, and materials
-# theses where the thesis depends on real-world bottlenecks.
+# Anti-hindsight + pre-mortem + decision rule + master synthesis.
+# This is intentionally the last call so the model has the 17 scores
+# from Call 3 to anchor its synthesis.
 # ===========================================================================
 
 
-class DomainIII_PhysicalRealityAnchor(BaseModel):
-    """Domain III — Physical Reality Anchor (max 15 weighted pts).
+class PreMortemScenarioFlat(BaseModel):
+    """One failure-category pre-mortem scenario."""
 
-    Maximum domain total: 0.5*10 * 3 = 15.
-
-    For purely software / services companies with no physical collision,
-    3A and 3B may legitimately score 0-2. That is correct — the
-    framework does not penalize digital companies, it just doesn't
-    award them physicalization credit they haven't earned.
-    """
-
-    physicalization_constraint_3A: ComponentScore = Field(
+    failure_mode: str = Field(
         description=(
-            "3A — Physicalization Constraint Depth (weight 0.5). How "
-            "tightly is the company's capability constrained by physical "
-            "bottlenecks? 0 = purely digital with no physical collision; "
-            "10 = hard physical ceiling owned by the company."
+            "How the thesis fails in this category given the 10-K. If the "
+            "category genuinely doesn't apply, say 'Not applicable - ' "
+            "followed by why."
         )
     )
-    primary_physical_constraint: str = Field(
-        description=(
-            "The dominant physical bottleneck the company sits at or "
-            "depends on (e.g. 'leading-edge HBM packaging capacity', "
-            "'grid interconnect queue in PJM', 'lithium hydroxide "
-            "supply'). Use 'None — purely digital' if no binding "
-            "constraint exists."
-        )
-    )
-    capex_to_revenue_pct: str = Field(
-        description="Capex as % of revenue (latest fiscal year), or 'n/a'."
-    )
-    power_and_energy_position_3B: ComponentScore = Field(
-        description=(
-            "3B — Power and Energy Position (weight 0.5). Does the "
-            "company control or uniquely benefit from critical power / "
-            "energy constraints?"
-        )
-    )
-    disclosed_energy_agreements: List[str] = Field(
-        description=(
-            "Specific PPAs, captive generation, hydro / nuclear / grid "
-            "agreements disclosed in the filing. Empty list if none "
-            "disclosed."
-        )
-    )
-    strategic_scarcity_3C: ComponentScore = Field(
-        description=(
-            "3C — Strategic Scarcity Quality (weight 0.5). How durable "
-            "and monetizable is the scarcity the company controls or "
-            "benefits from?"
-        )
-    )
-    scarcity_type: str = Field(
-        description=(
-            "Type of scarcity (geopolitical, regulatory, physical, "
-            "technological), or 'No structural scarcity' if none exists."
-        )
-    )
-    substitution_risks: List[str] = Field(
-        description="Disclosed or evident substitution threats to that scarcity."
-    )
-    domain_total: float = Field(
-        ge=0, le=15,
-        description="Sum of weighted_contribution across 3A-3C (max 15)."
-    )
-
-
-# ===========================================================================
-# SECTION 10 — Domain IV: Capital Topology (10 weighted pts)
-# ---------------------------------------------------------------------------
-# Captures the modern reality that concentrated, mobile, politically
-# influential capital shapes outcomes — not just productive capacity.
-# 2 components, weight 0.5 each.
-#
-# NOTE: 10-Ks contain limited capital topology data. Detailed beneficial
-# ownership is in DEF 14A (proxy), not 10-K. The 10-K cover sheet does
-# disclose >5% holders and Section 16 officers/directors. 13F data is
-# external. The model is instructed to be honest when data is unavailable.
-# ===========================================================================
-
-
-class DomainIV_CapitalTopology(BaseModel):
-    """Domain IV — Capital Topology (max 10 weighted pts).
-
-    Maximum domain total: 0.5*10 * 2 = 10.
-    """
-
-    capital_concentration_alignment_4A: ComponentScore = Field(
-        description=(
-            "4A — Capital Concentration Alignment (weight 0.5). Is large, "
-            "concentrated, politically influential capital aligned with "
-            "the thesis?"
-        )
-    )
-    largest_disclosed_holders: List[str] = Field(
-        description=(
-            "Largest beneficial owners disclosed in the 10-K itself "
-            "(typically the cover page lists >5% beneficial holders and "
-            "named executive officer ownership). The 10-K does NOT "
-            "include the full institutional holder list — that comes from "
-            "DEF 14A and 13F filings. If the 10-K cover lacks this, say "
-            "so and list only what is in-filing."
-        )
-    )
-    insider_ownership_pct: str = Field(
-        description="Aggregate insider/officer/director ownership %, or 'n/a'."
-    )
-    institutional_ownership_signal: str = Field(
-        description=(
-            "Qualitative signal of institutional positioning if disclosed "
-            "or reasonably inferable from the filing's references to "
-            "shareholder communications; otherwise 'unknown — outside "
-            "10-K'."
-        )
-    )
-    institutional_capture_favorability_4B: ComponentScore = Field(
-        description=(
-            "4B — Institutional Capture Favorability (weight 0.5). Does "
-            "the regulatory and political environment PROTECT this "
-            "company's thesis?"
-        )
-    )
-    key_regulatory_disclosures: List[str] = Field(
-        description=(
-            "Specific regulatory items from Item 1 (Business — Regulation) "
-            "and Item 1A (Risk Factors — Regulatory) that drive the 4B "
-            "score."
-        )
-    )
-    government_revenue_pct: str = Field(
-        description="% of revenue from government counterparties, or 'n/a'."
-    )
-    domain_total: float = Field(
-        ge=0, le=10,
-        description="Sum of weighted_contribution across 4A-4B (max 10)."
-    )
-
-
-# ===========================================================================
-# SECTION 11 — Domain V: Fragility Profile (15 weighted pts)
-# ---------------------------------------------------------------------------
-# Tests survivability across multiple stress dimensions: rates / liquidity
-# (5A), sovereign and trust breakdown (5B), and competitive
-# commoditization (5C). 3 components, weight 0.5 each.
-# ===========================================================================
-
-
-class DomainV_FragilityProfile(BaseModel):
-    """Domain V — Fragility Profile (max 15 weighted pts).
-
-    Maximum domain total: 0.5*10 * 3 = 15.
-    """
-
-    liquidity_independence_5A: ComponentScore = Field(
-        description=(
-            "5A — Liquidity Independence (weight 0.5). How independent is "
-            "the business model from easy money? Consolidates Liquidity "
-            "Fantasy Module and Cost of Capital Reappearance Module."
-        )
-    )
-    sovereign_and_trust_stability_5B: ComponentScore = Field(
-        description=(
-            "5B — Sovereign and Trust Stability (weight 0.5). How exposed "
-            "is the company to sovereign debt fragility or trust "
-            "breakdown? Consolidates Sovereign Debt Fragility Module and "
-            "Trust Asset Failure Module."
-        )
-    )
-    geographic_revenue_concentration: str = Field(
-        description=(
-            "Concentration of revenue by jurisdiction "
-            "(e.g. 'US 78%, EMEA 14%, APAC 8%'). Note the primary "
-            "operating jurisdiction's sovereign rating if discernible."
-        )
-    )
-    commoditization_resistance_5C: ComponentScore = Field(
-        description=(
-            "5C — Commoditization Resistance (weight 0.5). How resistant "
-            "is the company to value destruction from competitive capex "
-            "or technological commoditization? Consolidates Model "
-            "Commoditization Module and Capex Arms Race Module."
-        )
-    )
-    gross_margin_trend_3yr: str = Field(
-        description=(
-            "Gross margin trajectory over the last 3 disclosed fiscal "
-            "years. Use 'insufficient history' if the company is new."
-        )
-    )
-    roic_trend_3yr: str = Field(
-        description=(
-            "Return on invested capital trajectory over the last 3 "
-            "disclosed fiscal years. Use 'insufficient history' if new."
-        )
-    )
-    primary_commoditization_risk: str = Field(
-        description="The single most credible commoditization or substitution risk."
-    )
-    domain_total: float = Field(
-        ge=0, le=15,
-        description="Sum of weighted_contribution across 5A-5C (max 15)."
-    )
-
-
-# ===========================================================================
-# SECTION 12 — Kill condition check, scenarios, tables, audit, ranking
-# ---------------------------------------------------------------------------
-# Final synthesis structures. Kill conditions audit the four caps before
-# computing the master score. Scenarios implement Probabilistic Inference.
-# Gap Safeguards Audit implements the framework's 10 mandatory audit
-# layers. Signal Ranking implements the Signal Ranking Module.
-# ===========================================================================
-
-
-class KillConditionCheck(BaseModel):
-    """Explicit audit of all four kill / integrity conditions.
-
-    Framework ref: Three master-score caps (1A, 1C, 1D) and one
-    integrity flag (2C). Audit values here must be consistent with the
-    raw scores in the domain blocks. Inconsistency is an analyst error.
-    """
-
-    cap_1A_substrate_triggered: bool = Field(
-        description="TRUE if Score 1A raw <= 2 (master capped at 40)."
-    )
-    cap_1C_survival_triggered: bool = Field(
-        description="TRUE if Score 1C raw <= 2 (master capped at 50)."
-    )
-    cap_1D_valuation_triggered: bool = Field(
-        description="TRUE if Score 1D raw <= 1 (master capped at 60)."
-    )
-    integrity_flag_2C_triggered: bool = Field(
-        description=(
-            "TRUE if Score 2C raw <= 1. Does NOT cap the master score, "
-            "but marks the entire analysis as structurally unreliable."
-        )
-    )
-    applicable_cap: int = Field(
-        ge=0, le=100,
-        description=(
-            "Lowest cap triggered (40 / 50 / 60), or 100 if no cap "
-            "applies. This is the value used in the master_score "
-            "calculation."
-        )
-    )
-
-
-class ProbabilisticScenario(BaseModel):
-    """One leg of the Bull / Base / Bear scenario set.
-
-    Framework ref: "PROBABILISTIC INFERENCE MODULE" — every thesis
-    requires three scenarios with probabilities. The three probabilities
-    should sum to ~100.
-    """
-
-    name: Literal["Bull", "Base", "Bear"] = Field(description="Scenario label.")
-    narrative: str = Field(description="What has to be true for this scenario to play out.")
     probability_pct: int = Field(
         ge=0, le=100,
-        description="Estimated probability for this scenario (the three must sum to ~100)."
+        description="Estimated probability (0-100) within a 5-year horizon."
+    )
+    early_warning_signals: List[str] = Field(
+        description="Concrete signals that this failure is unfolding."
+    )
+    kill_condition: str = Field(
+        description=(
+            "Specific measurable kill condition (e.g. 'gross margin below "
+            "35% for two consecutive quarters')."
+        )
+    )
+
+
+class ProbabilisticScenarioFlat(BaseModel):
+    """One of Bull / Base / Bear."""
+
+    name: Literal["Bull", "Base", "Bear"] = Field(description="Scenario label.")
+    narrative: str = Field(description="What has to be true for this scenario.")
+    probability_pct: int = Field(
+        ge=0, le=100,
+        description="Probability for this scenario. The three should sum to ~100."
     )
     price_target_or_outcome: str = Field(
-        description=(
-            "Qualitative or quantitative outcome "
-            "(e.g. 'fair value $145, +30%', or 'multiple compresses to 12x')."
-        )
+        description="Qualitative or quantitative outcome (e.g. 'fair value +30%')."
     )
     key_drivers: List[str] = Field(
-        description="2-4 specific drivers that distinguish this scenario from the others."
+        description="2-4 drivers that distinguish this scenario."
     )
 
 
-class GapSafeguardsAudit(BaseModel):
-    """The 10 mandatory Gap Safeguard audit layers.
+class SynthesizeResult(BaseModel):
+    """Call 4 output: epistemic discipline + final synthesis."""
 
-    Framework ref: "GAP SAFEGUARDS" section — "All ten gaps are mandatory
-    audit layers for every CSPP analysis." Each field is a short note
-    (1-3 sentences) on how the gap was considered, or "Not applicable"
-    with reasoning.
-    """
-
-    gap_1_quantification: str = Field(
-        description=(
-            "Quantification: Were the major claims quantified with actual "
-            "disclosed numbers rather than qualitative assertions?"
-        )
+    # Anti-hindsight checklist (all 7 mandatory)
+    ah_what_was_observable_then: str = Field(
+        description="What was directly observable at the time of this 10-K?"
     )
-    gap_2_branch_control: str = Field(
-        description=(
-            "Branch control: Were alternative causal branches explicitly "
-            "considered, rather than collapsing to a single forward path?"
-        )
+    ah_what_was_inferable_then: str = Field(
+        description="What was reasonably inferable but not directly observable?"
     )
-    gap_3_narrative_psychology: str = Field(
-        description=(
-            "Narrative psychology: Did the analysis guard against "
-            "narrative intoxication, momentum bias, and inevitability "
-            "framing?"
-        )
+    ah_what_was_unknowable: str = Field(
+        description="What was fundamentally unknowable?"
     )
-    gap_4_reflexivity: str = Field(
-        description=(
-            "Reflexivity: Were reflexive dynamics (capital flows "
-            "reshaping reality) modeled explicitly per Layer 5?"
-        )
+    ah_alternative_futures: List[str] = Field(
+        description="At least 2 plausible alternative futures, not just the base."
     )
-    gap_5_institutional_power: str = Field(
-        description=(
-            "Institutional power: Were lobbying, regulatory capture, and "
-            "sovereign influence modeled per Domain IV?"
-        )
+    ah_contradicting_signals: List[str] = Field(
+        description="Specific disclosures in the 10-K that CONTRADICT the thesis."
     )
-    gap_6_substitution_systems: str = Field(
-        description=(
-            "Substitution systems: Was technological / business-model "
-            "substitution modeled across multiple time horizons?"
-        )
+    ah_likely_blind_spots: List[str] = Field(
+        description="What this analysis is likely to miss."
     )
-    gap_7_topology_analysis: str = Field(
+    ah_historical_false_positives: List[str] = Field(
         description=(
-            "Topology analysis: Was the capital topology (who owns, who "
-            "trades, who controls) mapped, not just the company itself?"
-        )
-    )
-    gap_8_temporal_dynamics: str = Field(
-        description=(
-            "Temporal dynamics: Were the three clocks (physical, "
-            "financial, narrative) distinguished and their divergence "
-            "analyzed?"
-        )
-    )
-    gap_9_market_structure: str = Field(
-        description=(
-            "Market structure: Were passive flows, ETF concentration, "
-            "options gamma, and structural buyers/sellers considered?"
-        )
-    )
-    gap_10_civilization_hierarchy: str = Field(
-        description=(
-            "Civilization hierarchy: Were the slow latent pressures "
-            "(energy, demographics, geopolitics, climate) placed above "
-            "fast variables in the causal chain?"
+            "Historical analogues from the False Positive Library that "
+            "resemble this thesis, with a note on why each is or isn't different."
         )
     )
 
+    # Pre-mortem: 8 named required categories
+    pre_mortem_technology: PreMortemScenarioFlat = Field(description="Technology failure mode.")
+    pre_mortem_financing: PreMortemScenarioFlat = Field(description="Financing failure mode.")
+    pre_mortem_economic_capture: PreMortemScenarioFlat = Field(description="Economic capture failure mode.")
+    pre_mortem_valuation: PreMortemScenarioFlat = Field(description="Valuation failure mode.")
+    pre_mortem_policy: PreMortemScenarioFlat = Field(description="Policy failure mode.")
+    pre_mortem_substitution: PreMortemScenarioFlat = Field(description="Substitution failure mode.")
+    pre_mortem_timing: PreMortemScenarioFlat = Field(description="Timing failure mode.")
+    pre_mortem_regulatory: PreMortemScenarioFlat = Field(description="Regulatory failure mode.")
 
-class SignalRanking(BaseModel):
-    """Signal Ranking Module — top causal signals for this thesis.
-
-    Framework ref: "SIGNAL RANKING MODULE" lists 24 highest-priority
-    causal signals. For each thesis the analyst must identify which
-    handful of those signals are most determinative.
-    """
-
-    top_signals: List[str] = Field(
-        description=(
-            "The 3-5 most causally important signals for this specific "
-            "thesis, drawn from the framework's 24-signal priority list "
-            "(leverage dependency, liquidity dependency, concentration, "
-            "policy dependency, supply discipline, globalization stress, "
-            "latent pressure activation, infrastructure bottlenecks, "
-            "continuity infrastructure importance, substitution flow "
-            "emergence, inflation persistence, issuance quality "
-            "deterioration, cost of capital sensitivity, energy security "
-            "exposure, strategic scarcity, sovereign debt fragility, "
-            "capital concentration, institutional capture, power "
-            "bottlenecks, compute concentration, AI physicalization, "
-            "capex intensity, model commoditization risk)."
-        )
+    # Decision rule (all 7 mandatory)
+    dr_entry_conditions: str = Field(
+        description="Specific price level or evidence event to trigger initial entry."
     )
-    ranking_rationale: str = Field(
-        description=(
-            "2-4 sentences on why these signals dominate for this "
-            "particular company and what to watch for early warning."
-        )
+    dr_evidence_thresholds: str = Field(
+        description="Further evidence that would justify scaling the position."
     )
-
-
-# ===========================================================================
-# SECTION 13 — Top-level result
-# ---------------------------------------------------------------------------
-# Field ORDER below is meaningful. Gemini 2.5+ preserves field order in
-# output, and the order is designed to walk the model through the
-# framework's analytic flow:
-#
-#   1.  Identify the subject
-#   2.  Verify document completeness
-#   3.  Classify the thesis type (Dual Track + 8-type typology)
-#   4.  Think diagnostically (unscored modules) BEFORE scoring
-#   5.  Orient on latent pressures and capital actors
-#   6.  Score the five domains
-#   7.  Audit kill conditions
-#   8.  Compute totals, tier, capital bucket
-#   9.  Project Bull / Base / Bear scenarios
-#  10.  State thesis statement + falsifiers
-#  11.  Audit method (10 gaps) and rank signals
-#  12.  Executive summary
-# ===========================================================================
-
-
-class CSPPv26AnalysisResult(BaseModel):
-    """Top-level CSPP v2.6 analysis result for a single fiscal year 10-K.
-
-    Maximum master_score = 100 (sum of domain maxima: 40 + 20 + 15 + 10 + 15).
-    Master score may be capped by kill conditions (40 / 50 / 60).
-    Integrity flag (2C raw <= 1) does NOT cap but flags the analysis as
-    structurally unreliable.
-    """
-
-    # -------------------------------------------------------------------
-    # 1. Identification
-    # -------------------------------------------------------------------
-    company_name: str = Field(description="Full legal company name from the 10-K cover.")
-    ticker: str = Field(description="Ticker symbol passed into the workflow.")
-    fiscal_year: int = Field(description="Fiscal year of the 10-K analyzed.")
-    primary_exchange: str = Field(
-        description="Primary listing exchange (e.g. 'NASDAQ', 'NYSE')."
+    dr_position_sizing_guidance: str = Field(
+        description="Position size relative to portfolio survivability and Domain V fragility."
     )
-    primary_thesis: str = Field(
-        description=(
-            "One-paragraph statement of the core CSPP thesis being "
-            "scored. Must be written probabilistically, not as certainty."
-        )
+    dr_kill_conditions: str = Field(
+        description="Position-level kill conditions distinct from score-level kills."
+    )
+    dr_valuation_discipline: str = Field(
+        description="Maximum multiple at which to start trimming, regardless of thesis confirmation."
+    )
+    dr_survivability_assumptions: str = Field(
+        description="What the position assumes about the company surviving stress."
+    )
+    dr_monitoring_signals: List[str] = Field(
+        description="Measurable signals to track ongoing."
     )
 
-    # -------------------------------------------------------------------
-    # 2. Document completeness self-report (transparency before analysis)
-    # -------------------------------------------------------------------
-    document_completeness: DocumentCompleteness = Field(
-        description="Model's self-report on whether it read the full 10-K."
+    # Scenarios. (allocation_tier and capital_bucket are computed from the
+    # final master_score in Python during the merge step, so we don't ask
+    # the model for them -- removes ~1 KB of Literal enums from the schema
+    # and prevents the model's tier choice from disagreeing with the
+    # recomputed master score.)
+    probabilistic_scenarios: List[ProbabilisticScenarioFlat] = Field(
+        description="Exactly 3 scenarios: Bull, Base, Bear. Probabilities sum ~100."
     )
 
-    # -------------------------------------------------------------------
-    # 3. Thesis classification (frames how scores should be weighted)
-    # -------------------------------------------------------------------
-    thesis_classification: ThesisClassification = Field(
-        description="Dual Track and 8-type typology classification of the thesis."
-    )
-
-    # -------------------------------------------------------------------
-    # 4. Diagnostic modules (think first, score second)
-    # -------------------------------------------------------------------
-    module_diagnostics: ModuleDiagnostics = Field(
-        description=(
-            "Unscored diagnostic modules required by the framework. "
-            "These MUST be completed before scoring the domains so the "
-            "diagnostic thinking actually informs the rubric-based scores."
-        )
-    )
-
-    # -------------------------------------------------------------------
-    # 5. Required orientation tables
-    # -------------------------------------------------------------------
-    latent_pressure_table: List[LatentPressureRow] = Field(
-        description=(
-            "Mandatory Latent Pressure Table — at least 3 rows, drawing "
-            "from at least 2 different Pressure Registry categories. "
-            "Each row must answer all 8 questions of the Latent Pressure "
-            "Test."
-        )
-    )
-    capital_actor_table: List[CapitalActorRow] = Field(
-        description=(
-            "Mandatory Capital Actor Table — at least 2 rows, covering "
-            "the most influential capital actors for this company / sector."
-        )
-    )
-
-    # -------------------------------------------------------------------
-    # 6. The five scoring domains (40 + 20 + 15 + 10 + 15 = 100 pts max)
-    # -------------------------------------------------------------------
-    domain_i_five_truth_layers: DomainI_FiveTruthLayers = Field(
-        description="Domain I — Five Truth Layers (40 pts)."
-    )
-    domain_ii_epistemic_integrity: DomainII_EpistemicIntegrity = Field(
-        description="Domain II — Epistemic Integrity (20 pts)."
-    )
-    domain_iii_physical_reality_anchor: DomainIII_PhysicalRealityAnchor = Field(
-        description="Domain III — Physical Reality Anchor (15 pts)."
-    )
-    domain_iv_capital_topology: DomainIV_CapitalTopology = Field(
-        description="Domain IV — Capital Topology (10 pts)."
-    )
-    domain_v_fragility_profile: DomainV_FragilityProfile = Field(
-        description="Domain V — Fragility Profile (15 pts)."
-    )
-
-    # -------------------------------------------------------------------
-    # 7. Kill condition audit (apply caps BEFORE computing master score)
-    # -------------------------------------------------------------------
-    kill_condition_check: KillConditionCheck = Field(
-        description="Audit of all four kill / integrity conditions."
-    )
-
-    # -------------------------------------------------------------------
-    # 8. Master score, tier, capital bucket
-    # -------------------------------------------------------------------
-    raw_total: float = Field(
-        ge=0, le=100,
-        description="Uncapped sum of all five domain totals (max 100)."
-    )
-    master_score: int = Field(
-        ge=0, le=100,
-        description=(
-            "Final master score = round(min(raw_total, applicable_cap)). "
-            "Apply kill condition caps FIRST."
-        )
-    )
-    allocation_tier: Literal[
-        "Exceptional (85-100)",
-        "High conviction (70-84)",
-        "Moderate conviction (55-69)",
-        "Low conviction (40-54)",
-        "Speculative (25-39)",
-        "Reject (0-24)",
-    ] = Field(description="Allocation tier mapped from the master score.")
-    capital_bucket: Literal[
-        "Core capital",
-        "Defensive growth",
-        "Real asset ballast",
-        "Transition capital",
-        "Optionality capital",
-        "Watchlist capital",
-        "Avoid capital",
-    ] = Field(description="Recommended Barbell Allocation bucket per the framework.")
-
-    # -------------------------------------------------------------------
-    # 9. Probabilistic scenarios
-    # -------------------------------------------------------------------
-    probabilistic_scenarios: List[ProbabilisticScenario] = Field(
-        description=(
-            "Exactly three scenarios — Bull, Base, Bear — with "
-            "probabilities summing to approximately 100."
-        )
-    )
-
-    # -------------------------------------------------------------------
-    # 10. Thesis statement and falsifiers
-    # -------------------------------------------------------------------
+    # Thesis statement + falsifiers
     key_thesis_statement: str = Field(
         description=(
-            "One-paragraph core causal thesis this score reflects. MUST "
-            "NOT be written as certainty. MUST explicitly distinguish "
-            "observable, inductable, and unknowable elements. Implements "
-            "the framework's Humility Principle."
+            "One paragraph stating the core causal thesis. Probabilistic. "
+            "Distinguish observable / inductable / unknowable elements."
         )
     )
     primary_falsifiers: List[str] = Field(
         description=(
-            "Exactly 3 specific, future-observable signals that would "
-            "materially reduce this score if they appeared in a future "
-            "10-K or in market data. Each must be falsifiable and "
-            "measurable."
+            "Exactly 3 specific future-observable signals that would "
+            "materially reduce this score if they appeared."
         )
     )
 
-    # -------------------------------------------------------------------
-    # 11. Audit method (10 gaps) and signal ranking
-    # -------------------------------------------------------------------
-    gap_safeguards_audit: GapSafeguardsAudit = Field(
-        description="Mandatory 10-gap audit per the framework's Gap Safeguards section."
+    # Gap Safeguards Audit (all 10). 1-3 sentence audit note per gap.
+    gap_quantification: str = Field(description="Were major claims quantified with disclosed numbers?")
+    gap_branch_control: str = Field(description="Were alternative causal branches considered?")
+    gap_narrative_psychology: str = Field(description="Did the analysis guard against narrative intoxication?")
+    gap_reflexivity: str = Field(description="Were reflexive dynamics modeled explicitly?")
+    gap_institutional_power: str = Field(description="Were lobbying / regulatory capture modeled?")
+    gap_substitution_systems: str = Field(description="Was substitution modeled across time horizons?")
+    gap_topology_analysis: str = Field(description="Was capital topology mapped beyond the company itself?")
+    gap_temporal_dynamics: str = Field(description="Were the three clocks distinguished and analyzed?")
+    gap_market_structure: str = Field(description="Were passive flows / ETF concentration / options gamma considered?")
+    gap_civilization_hierarchy: str = Field(description="Were slow latent pressures placed above fast variables?")
+
+    # Signal ranking
+    top_signals: List[str] = Field(
+        description=(
+            "3-5 most causally important signals from the framework's "
+            "24-signal priority list (leverage, liquidity, concentration, "
+            "policy, supply, deglobalization, infrastructure, continuity, "
+            "substitution, inflation, issuance quality, cost of capital, "
+            "energy security, strategic scarcity, sovereign debt, capital "
+            "concentration, institutional capture, power bottlenecks, "
+            "compute concentration, AI physicalization, capex intensity, "
+            "model commoditization)."
+        )
     )
-    signal_ranking: SignalRanking = Field(
-        description="Signal Ranking Module — top causal signals for this thesis."
+    signal_ranking_rationale: str = Field(
+        description="2-4 sentences on why these signals dominate for this case."
     )
 
-    # -------------------------------------------------------------------
-    # 12. Executive summary
-    # -------------------------------------------------------------------
+    # Executive summary
     executive_summary: str = Field(
         description=(
-            "Final 4-6 sentence executive summary: master score, tier, "
-            "capital bucket, any kill condition or integrity flag, and "
-            "the single most important reason a CSPP allocator would or "
-            "would not act. No new claims here — only synthesis of what "
-            "is already in the structured fields above."
+            "4-6 sentences: master score (will be computed by merge), tier, "
+            "capital bucket, any kill condition or integrity flag, and the "
+            "single most important reason a CSPP allocator would or "
+            "would not act. Synthesis only -- no new claims."
         )
     )
 
 
 # ===========================================================================
-# SECTION 14 — Workflow class
+# FINAL MERGED RESULT SHAPE (DB / UI compatible)
 # ---------------------------------------------------------------------------
-# The prompt below is intentionally long because the CSPP framework is
-# dense and the model needs explicit guidance on (a) how to interpret
-# each rubric, (b) how to handle edge cases (pre-revenue, multi-segment,
-# non-US, REITs, etc.), and (c) the analytic order of operations.
+# The shape downstream code expects. The merge function below assembles
+# the 4 sub-results into an instance of this class. If a sub-call failed,
+# the partial result is stored in *_call_raw and _failed_call / _partial
+# fields indicate the degraded state.
+# ===========================================================================
+
+
+class ComponentScore(BaseModel):
+    """A scored CSPP component as it appears in the merged result.
+
+    Includes the computed weight and weighted_contribution (added by the
+    merge step from COMPONENT_WEIGHTS, not trusted to the model).
+    """
+
+    code: Literal[
+        "1A", "1B", "1C", "1D", "1E",
+        "2A", "2B", "2C", "2D",
+        "3A", "3B", "3C",
+        "4A", "4B",
+        "5A", "5B", "5C",
+    ]
+    name: str
+    raw_score: int = Field(ge=0, le=10)
+    weight: float
+    weighted_contribution: float
+    evidence_classification: Literal[
+        "Observable", "Inductable", "Weakly inferable", "Hindsight only", "Unknown",
+    ]
+    reasoning: str
+    supporting_evidence: List[str]
+    kill_condition_triggered: bool
+
+
+class FinancialSurvivalRatios(BaseModel):
+    net_debt_to_ebitda: str
+    interest_coverage: str
+    fcf_yield: str
+    nearest_debt_maturity: str
+    liquidity_buffer: str
+
+
+class ValuationContext(BaseModel):
+    current_multiple: str
+    peer_multiple_range: str
+    analyst_coverage_skew: str
+    stage_implication: str
+
+
+class DomainI_FiveTruthLayers(BaseModel):
+    substrate_truth_1A: ComponentScore
+    economic_capture_truth_1B: ComponentScore
+    financial_survival_truth_1C: ComponentScore
+    financial_survival_ratios: FinancialSurvivalRatios
+    valuation_entry_truth_1D: ComponentScore
+    valuation_context: ValuationContext
+    reflexive_system_truth_1E: ComponentScore
+    domain_total: float = Field(ge=0, le=40)
+
+
+class AntiHindsightChecklist(BaseModel):
+    what_was_observable_then: str
+    what_was_inferable_then: str
+    what_was_unknowable: str
+    alternative_futures: List[str]
+    contradicting_signals: List[str]
+    likely_blind_spots: List[str]
+    historical_false_positives: List[str]
+
+
+class PreMortemScenario(BaseModel):
+    failure_mode: str
+    probability_pct: int = Field(ge=0, le=100)
+    early_warning_signals: List[str]
+    kill_condition: str
+
+
+class PreMortemScenarios(BaseModel):
+    technology: PreMortemScenario
+    financing: PreMortemScenario
+    economic_capture: PreMortemScenario
+    valuation: PreMortemScenario
+    policy: PreMortemScenario
+    substitution: PreMortemScenario
+    timing: PreMortemScenario
+    regulatory: PreMortemScenario
+
+
+class DecisionRule(BaseModel):
+    entry_conditions: str
+    evidence_thresholds: str
+    position_sizing_guidance: str
+    kill_conditions: str
+    valuation_discipline: str
+    survivability_assumptions: str
+    monitoring_signals: List[str]
+
+
+class DomainII_EpistemicIntegrity(BaseModel):
+    latent_pressure_stage_2A: ComponentScore
+    primary_latent_pressure: str
+    estimated_stage: str
+    evidence_observability_2B: ComponentScore
+    anti_hindsight_integrity_2C: ComponentScore
+    anti_hindsight_checklist: AntiHindsightChecklist
+    pre_mortem_discipline_2D: ComponentScore
+    pre_mortem_scenarios: PreMortemScenarios
+    decision_rule: DecisionRule
+    domain_total: float = Field(ge=0, le=20)
+
+
+class DomainIII_PhysicalRealityAnchor(BaseModel):
+    physicalization_constraint_3A: ComponentScore
+    primary_physical_constraint: str
+    capex_to_revenue_pct: str
+    power_and_energy_position_3B: ComponentScore
+    disclosed_energy_agreements: List[str]
+    strategic_scarcity_3C: ComponentScore
+    scarcity_type: str
+    substitution_risks: List[str]
+    domain_total: float = Field(ge=0, le=15)
+
+
+class DomainIV_CapitalTopology(BaseModel):
+    capital_concentration_alignment_4A: ComponentScore
+    largest_disclosed_holders: List[str]
+    insider_ownership_pct: str
+    institutional_ownership_signal: str
+    institutional_capture_favorability_4B: ComponentScore
+    key_regulatory_disclosures: List[str]
+    government_revenue_pct: str
+    domain_total: float = Field(ge=0, le=10)
+
+
+class DomainV_FragilityProfile(BaseModel):
+    liquidity_independence_5A: ComponentScore
+    sovereign_and_trust_stability_5B: ComponentScore
+    geographic_revenue_concentration: str
+    commoditization_resistance_5C: ComponentScore
+    gross_margin_trend_3yr: str
+    roic_trend_3yr: str
+    primary_commoditization_risk: str
+    domain_total: float = Field(ge=0, le=15)
+
+
+class KillConditionCheck(BaseModel):
+    cap_1A_substrate_triggered: bool
+    cap_1C_survival_triggered: bool
+    cap_1D_valuation_triggered: bool
+    integrity_flag_2C_triggered: bool
+    applicable_cap: int = Field(ge=0, le=100)
+
+
+class ProbabilisticScenario(BaseModel):
+    name: Literal["Bull", "Base", "Bear"]
+    narrative: str
+    probability_pct: int = Field(ge=0, le=100)
+    price_target_or_outcome: str
+    key_drivers: List[str]
+
+
+class GapSafeguardsAudit(BaseModel):
+    gap_1_quantification: str
+    gap_2_branch_control: str
+    gap_3_narrative_psychology: str
+    gap_4_reflexivity: str
+    gap_5_institutional_power: str
+    gap_6_substitution_systems: str
+    gap_7_topology_analysis: str
+    gap_8_temporal_dynamics: str
+    gap_9_market_structure: str
+    gap_10_civilization_hierarchy: str
+
+
+class SignalRanking(BaseModel):
+    top_signals: List[str]
+    ranking_rationale: str
+
+
+class DocumentCompleteness(BaseModel):
+    full_doc: bool
+    sections_visible: List[str]
+    sections_missing_or_partial: List[str]
+    completeness_note: str
+
+
+class ThesisClassification(BaseModel):
+    primary_track: str
+    thesis_types: List[str]
+    classification_rationale: str
+
+
+class ThreeClocks(BaseModel):
+    physical_clock_state: str
+    financial_clock_state: str
+    narrative_clock_state: str
+    clock_divergence_assessment: str
+
+
+class ModuleDiagnostics(BaseModel):
+    three_clocks: ThreeClocks
+    bottleneck_inflation_note: str
+    continuity_infrastructure_note: str
+    capex_arms_race_note: str
+    asset_holder_policy_bias_note: str
+    private_market_opacity_note: str
+    sovereign_industrial_compute_note: str
+    jurisdictional_arbitrage_note: str
+    trust_asset_failure_note: str
+    energy_security_note: str
+
+
+class CSPPv26AnalysisResult(BaseModel):
+    """Final merged CSPP v2.6 analysis result.
+
+    Assembled by _merge_results() from the 4 sub-call outputs. Downstream
+    DB storage and UI rendering see this shape (compatible with the
+    previous single-call schema's top-level shape).
+
+    If a sub-call failed, _partial=True and _failed_call identifies which
+    call did not complete. The corresponding sections may contain
+    placeholder strings.
+    """
+
+    # Identification
+    company_name: str
+    ticker: str
+    fiscal_year: int
+    primary_exchange: str
+    primary_thesis: str
+
+    # Completeness + classification + diagnostics + tables
+    document_completeness: DocumentCompleteness
+    thesis_classification: ThesisClassification
+    module_diagnostics: ModuleDiagnostics
+    latent_pressure_table: List[LatentPressureRow]
+    capital_actor_table: List[CapitalActorRow]
+
+    # 5 domains
+    domain_i_five_truth_layers: DomainI_FiveTruthLayers
+    domain_ii_epistemic_integrity: DomainII_EpistemicIntegrity
+    domain_iii_physical_reality_anchor: DomainIII_PhysicalRealityAnchor
+    domain_iv_capital_topology: DomainIV_CapitalTopology
+    domain_v_fragility_profile: DomainV_FragilityProfile
+
+    # Kill check + master score + tier
+    kill_condition_check: KillConditionCheck
+    raw_total: float = Field(ge=0, le=100)
+    master_score: int = Field(ge=0, le=100)
+    allocation_tier: str
+    capital_bucket: str
+
+    # Scenarios + thesis + falsifiers + audit + ranking + summary
+    probabilistic_scenarios: List[ProbabilisticScenario]
+    key_thesis_statement: str
+    primary_falsifiers: List[str]
+    gap_safeguards_audit: GapSafeguardsAudit
+    signal_ranking: SignalRanking
+    executive_summary: str
+
+    # Metadata about the multi-call run. These fields are NEVER sent to
+    # Gemini (the analyze() override bypasses the default single-call
+    # path), so defaults are safe here even though Gemini rejects schemas
+    # with Pydantic defaults.
+    analysis_partial: bool = False
+    failed_call: Optional[str] = None
+
+
+# ===========================================================================
+# PROMPTS (one per sub-call)
+# ---------------------------------------------------------------------------
+# Each prompt is intentionally short and Buffett-shaped: clear field-name
+# references, critical rules at the end, a final note that the response
+# will be Pydantic-validated.
 #
-# Prompt length is acceptable because the 10-K itself dwarfs it and
-# Gemini's input context is generous.
+# Each prompt uses {ticker} and {year} placeholders. The CSPPv26Analyzer
+# class's analyze() method calls .format() before each call.
+# ===========================================================================
+
+
+_PROMPT_ORIENT = """
+You are applying the CSPP v2.6 (Causal Substrate Propagation Protocol)
+framework to {ticker} fiscal year {year} based ONLY on the 10-K filing
+provided at the end of this prompt.
+
+This is CALL 1 of 4 (ORIENT). In this call you produce:
+
+  - Identification (company_name, fiscal_year, primary_exchange,
+    primary_thesis)
+  - Document completeness self-report (full_doc, sections_visible,
+    sections_missing_or_partial, completeness_note)
+  - Thesis classification (Dual Track + 8-type typology +
+    classification_rationale)
+  - Three Clocks Module (physical, financial, narrative, divergence)
+  - Nine module diagnostic notes (bottleneck_inflation, continuity_
+    infrastructure, capex_arms_race, asset_holder_policy, private_
+    market_opacity, sovereign_industrial_compute, jurisdictional_
+    arbitrage, trust_asset_failure, energy_security)
+
+Later calls will use this orientation to score the 17 CSPP components,
+so be thorough here. The Three Clocks output specifically drives the
+later 2A (Latent Pressure Stage Positioning) score.
+
+CRITICAL RULES:
+  1. Be specific. Cite actual disclosures from the 10-K (item number,
+     section name, or short quote).
+  2. Be honest about full_doc. If any part of the 10-K appeared
+     truncated, garbled, or missing, set full_doc to FALSE and list
+     what was affected. A FALSE here is more useful than a silently-
+     incomplete TRUE.
+  3. Be probabilistic. No inevitability language. The CSPP framework's
+     Humility Principle is non-negotiable.
+  4. For each module diagnostic, write 1-3 short sentences. Use "Not
+     applicable - <why>" if the module genuinely doesn't apply.
+
+Your response will be validated against a Pydantic schema (OrientResult).
+Ensure all required fields are provided.
+"""
+
+
+_PROMPT_MAP = """
+You are continuing the CSPP v2.6 analysis of {ticker} fiscal year {year}.
+This is CALL 2 of 4 (MAP). In this call you produce two required tables:
+
+  - latent_pressure_table  (>=3 rows, drawing from >=2 Pressure Registry
+                            categories)
+  - capital_actor_table    (>=2 rows)
+
+The Latent Civilization Pressure Registry includes:
+
+  PHYSICAL              climate, heat, water, wildfire, agriculture,
+                        coastal vulnerability, energy density, grid saturation
+  SUPPLY CHAIN          JIT fragility, offshoring, semiconductor sovereignty,
+                        single-source, reshoring, maritime chokepoints, trade
+                        bloc fragmentation, transformer bottlenecks,
+                        advanced packaging
+  TECHNOLOGY            AI scaling, EVs, robotics, alt energy, battery cost
+                        curves, cyber, space, synbio, quantum, compute
+                        concentration, model commoditization
+  HUMAN                 aging, fertility decline, migration, labor scarcity,
+                        institutional trust decay, polarization, education
+                        mismatch
+  FINANCIAL/INSTITUTIONAL sovereign debt, passive concentration, central bank
+                        dependency, alternative trust systems, insurance
+                        withdrawal, private credit, capital concentration,
+                        jurisdictional competition, institutional capture,
+                        infrastructure financing
+
+For EACH latent pressure row, answer all 11 fields including the 8-question
+Latent Pressure Test (observable, inductable, flows_affected, activation_
+threshold, sectors_benefit, sectors_suffer, falsifier, false_positive_risk)
+plus pressure name, registry_category, and financial_expression.
+
+For the capital_actor_table, focus on actors most influential for THIS
+company / sector. Examples: passive index funds, sovereign wealth funds,
+private credit funds, retail option flow, corporate buybacks, foreign
+reserve managers, activist holders, insider holdings.
+
+CRITICAL RULES:
+  1. Pull from the registry, but the specific pressures must be
+     RELEVANT to this company. Don't list "AI scaling" for a regional
+     water utility unless you can justify it.
+  2. Every pressure row must have a real falsifier -- something specific
+     that, if observed, would prove the pressure is not what you said
+     it was. This is required to avoid narrative capture.
+  3. For each false_positive_risk, name the closest historical analogue
+     (clean tech 2007, 3D printing, SPACs, metaverse, commodity
+     supercycle) and say in one sentence why this case differs or does
+     not.
+
+Your response will be validated against a Pydantic schema (MapResult).
+Ensure all required fields are provided.
+
+Earlier orientation output (for context):
+{orient_context}
+"""
+
+
+_PROMPT_SCORE = """
+You are continuing the CSPP v2.6 analysis of {ticker} fiscal year {year}.
+This is CALL 3 of 4 (SCORE). In this call you produce all 17 component
+scores plus the supporting numerical context that justifies them.
+
+Return exactly 17 entries in component_scores, one per code. For each:
+
+  - code: the CSPP code ("1A" through "5C")
+  - raw_score: integer 0-10 per the framework rubric below
+  - evidence_classification: Observable / Inductable / Weakly inferable /
+    Hindsight only / Unknown
+  - reasoning: 2-6 sentences citing specific 10-K disclosures
+  - supporting_evidence: list of verifiable evidence items
+
+The merge step will add the framework-defined weight and weighted
+contribution -- do not compute them yourself.
+
+RUBRICS (abbreviated -- score conservatively when evidence is thin):
+
+  Domain I (Five Truth Layers)
+    1A Substrate Truth (w=1.0)        0=narrative; 10=irreversible & quantified
+                                      KILL if raw<=2 (caps master at 40)
+    1B Economic Capture (w=1.0)       0=commodity; 10=near-monopolistic capture
+    1C Financial Survival (w=1.0)     0=insolvency risk; 10=fortress / anti-fragile
+                                      KILL if raw<=2 (caps master at 50)
+                                      Populate the 5 financial_survival ratio
+                                      fields with actual numbers.
+    1D Valuation Entry (w=0.5)        0=crowded/priced-for-perfection; 10=deeply
+                                      undercapitalized. If you lack market data,
+                                      score 4-6 and say so in reasoning.
+                                      KILL if raw<=1 (caps master at 60)
+    1E Reflexive System (w=0.5)       0=destructive reflexivity; 10=constructive
+                                      feedback loop
+
+  Domain II (Epistemic Integrity)
+    2A Latent Pressure Stage (w=0.5)  Use the estimated_stage value: Stage 0/1
+                                      = high (8-10), Stage 4/5 = low (0-3)
+    2B Evidence Observability (w=0.5) % of claims directly visible in 10-K
+    2C Anti-Hindsight Integrity (w=0.5) Will be set after Call 4 fills the
+                                      checklist; in this call score the
+                                      ANALYSIS DISCIPLINE -- be conservative
+                                      (5-7 typical). raw<=1 = integrity flag.
+    2D Pre-Mortem Discipline (w=0.5)  Will be set after Call 4 produces the
+                                      pre-mortem; in this call score 5-7
+                                      pending completion.
+
+  Domain III (Physical Reality Anchor)
+    3A Physicalization (w=0.5)        0=purely digital with no constraint;
+                                      10=hard physical ceiling owned. Pure
+                                      SaaS may legitimately be 0-2 -- correct,
+                                      not a flaw.
+    3B Power and Energy (w=0.5)       0=commodity grid consumer; 10=monopoly
+                                      power control
+    3C Strategic Scarcity (w=0.5)     0=abundant substitutes; 10=absolute
+                                      scarcity, fully monetized
+
+  Domain IV (Capital Topology)
+    4A Capital Concentration (w=0.5)  Use disclosed beneficial ownership.
+                                      13F-level data NOT in 10-K -- if
+                                      missing, say so.
+    4B Institutional Capture (w=0.5)  Use Item 1 / Item 1A regulatory
+                                      disclosures.
+
+  Domain V (Fragility Profile)
+    5A Liquidity Independence (w=0.5) 0=collapses in tight money; 10=anti-
+                                      fragile in tight money
+    5B Sovereign / Trust Stability (w=0.5) 0=fully sovereign-dependent;
+                                      10=independent / anti-fragile
+    5C Commoditization Resistance (w=0.5) Use 3yr GM and ROIC trends.
+
+ALSO populate all supporting context fields:
+  - 5 financial_survival ratio fields (net_debt_to_ebitda, interest_
+    coverage, fcf_yield, nearest_debt_maturity, liquidity_buffer)
+  - 4 valuation context fields (current_multiple, peer_multiple_range,
+    analyst_coverage_skew, valuation_stage_implication)
+  - Domain III/IV/V supporting strings
+  - primary_latent_pressure and estimated_stage (used for 2A)
+
+CRITICAL RULES:
+  1. Score every one of the 17 codes -- do not skip.
+  2. Use "n/a" or "unknown - outside 10-K" rather than skipping a string
+     field. Empty list is fine for ACTUALLY empty fields.
+  3. Be honest about uncertainty. Score conservatively when evidence is
+     thin. The framework rewards calibrated uncertainty over false precision.
+
+Your response will be validated against a Pydantic schema (ScoreResult).
+Ensure all required fields are provided.
+
+Earlier orientation output (for context):
+{orient_context}
+
+Earlier mapping output (for context):
+{map_context}
+"""
+
+
+_PROMPT_SYNTHESIZE = """
+You are completing the CSPP v2.6 analysis of {ticker} fiscal year {year}.
+This is CALL 4 of 4 (SYNTHESIZE). The orientation, mapping, and scoring
+have all been done. You now produce:
+
+  - Anti-hindsight checklist (all 7 questions answered)
+  - Pre-mortem across all 8 failure categories (technology, financing,
+    economic_capture, valuation, policy, substitution, timing, regulatory)
+  - Decision rule (all 7 fields: entry_conditions, evidence_thresholds,
+    position_sizing_guidance, kill_conditions, valuation_discipline,
+    survivability_assumptions, monitoring_signals)
+  - Bull/Base/Bear scenarios (exactly 3; probabilities sum ~100)
+  - Allocation tier and capital bucket (based on the projected master
+    score in the supplied context)
+  - Key thesis statement (probabilistic, distinguishing observable /
+    inductable / unknowable)
+  - Exactly 3 primary falsifiers
+  - Gap Safeguards Audit (all 10 gaps with short notes)
+  - Signal Ranking (3-5 top signals from the framework's 24-signal list,
+    plus rationale)
+  - Executive summary (4-6 sentences, synthesis only)
+
+The master score and kill-condition booleans are recomputed by the merge
+step from the raw scores in Call 3 -- you do not need to compute them.
+But your allocation_tier and capital_bucket choices should be consistent
+with the master_score_projection provided in the context below.
+
+CRITICAL RULES:
+  1. The anti-hindsight checklist must include real CONTRADICTING
+     signals from the 10-K and real HISTORICAL FALSE POSITIVES with
+     honest differentiation. This is what 2C tests for.
+  2. Every pre-mortem category must be addressed. If a category truly
+     doesn't apply, write "Not applicable - <why>" in failure_mode and
+     give probability 1-5%.
+  3. Decision rule kill_conditions are POSITION-level (when to fully
+     exit the position), distinct from the framework's score-level
+     kill conditions.
+  4. Exactly 3 falsifiers, each specific, future-observable, and
+     measurable.
+  5. The executive_summary is synthesis ONLY -- do not introduce new
+     claims beyond what is in the earlier calls.
+
+Your response will be validated against a Pydantic schema (SynthesizeResult).
+Ensure all required fields are provided.
+
+Earlier orientation output:
+{orient_context}
+
+Earlier mapping output:
+{map_context}
+
+Earlier scoring output (and projected master score):
+{score_context}
+"""
+
+
+# ===========================================================================
+# WORKFLOW CLASS
+# ---------------------------------------------------------------------------
+# Overrides CustomWorkflow.analyze() to orchestrate the 4 calls and merge
+# the partial results into a CSPPv26AnalysisResult instance.
 # ===========================================================================
 
 
 class CSPPv26Analyzer(CustomWorkflow):
-    """CSPP v2.6 single-year 10-K analyzer.
+    """CSPP v2.6 multi-part 10-K analyzer.
 
-    Applies the Causal Substrate Propagation Protocol v2.6 to the most
-    recent fiscal year of a company's 10-K and produces a 0-100 master
-    score with kill condition audits, allocation tier, capital bucket,
-    Bull/Base/Bear scenarios, latent pressure and capital actor tables,
-    a 10-gap audit, and signal ranking.
+    Splits the analysis into 4 sequential Gemini calls (ORIENT / MAP /
+    SCORE / SYNTHESIZE), each with a small Buffett-shaped schema. Merges
+    the four partial results into a single CSPPv26AnalysisResult.
 
-    Single-year framework: min_years = max_years = 1. The framework's
-    stage positioning and reflexivity analysis is point-in-time.
+    The schema property returns CSPPv26AnalysisResult for downstream
+    compatibility, but the framework's default single-call flow is
+    bypassed in favor of the overridden analyze() method.
     """
 
-    name = "CSPP v2.6 — Causal Substrate Propagation"
+    name = "CSPP v2.6 - Causal Substrate Propagation"
     description = (
         "Apply the Causal Substrate Propagation Protocol v2.6 to one "
-        "fiscal year of a 10-K. Produces 17 component scores across 5 "
-        "domains, kill condition audit, Bull/Base/Bear scenarios, "
-        "10-gap audit, signal ranking, and a 0-100 master score with "
-        "allocation tier and capital bucket."
+        "fiscal year of a 10-K. Runs as 4 sequential Gemini calls "
+        "(orient / map / score / synthesize) and merges the results "
+        "into a 0-100 master score with 17 component scores, kill "
+        "condition audit, scenarios, gap audit, and allocation tier."
     )
-    icon = "🧭"
+    icon = "[CSPP]"
     min_years = 1
-    max_years = 1  # Single-year framework — most recent 10-K only.
+    max_years = 1
     category = "fundamental"
 
     @property
     def prompt_template(self) -> str:
-        # The prompt is structured to walk the model through the same
-        # analytic flow that the schema enforces:
-        #   orient -> diagnose -> score -> audit -> conclude.
-        # Each major section below maps directly to a top-level field in
-        # the CSPPv26AnalysisResult schema.
-        return """
-You are applying the CSPP v2.6 (Causal Substrate Propagation Protocol)
-analytical framework to {ticker} for fiscal year {year}, based ONLY on
-the 10-K filing provided at the end of this prompt.
-
-CSPP v2.6 is a first-principles causal framework. It exists for real-time
-causal inference under uncertainty, NOT for retrospective narrative
-construction. Every conclusion you produce must remain probabilistic and
-falsifiable. The Humility Principle is core: the framework assumes
-important systems are partially unknowable, so survivability matters more
-than predictive precision.
-
-============================================================================
-SCORING ARCHITECTURE (100-point master score)
-============================================================================
-
-Domain I    Five Truth Layers            40 pts   (5 components)
-Domain II   Epistemic Integrity          20 pts   (4 components)
-Domain III  Physical Reality Anchor      15 pts   (3 components)
-Domain IV   Capital Topology             10 pts   (2 components)
-Domain V    Fragility Profile            15 pts   (3 components)
-                                       -----
-                                        100 pts   (17 components total)
-
-Each component is scored 0-10 raw, then multiplied by its weight (1.0
-for 1A/1B/1C; 0.5 for everything else).
-
-KILL CONDITIONS (apply BEFORE finalizing the master score):
-  - 1A Substrate Truth     raw <= 2  -> master capped at 40
-  - 1C Financial Survival  raw <= 2  -> master capped at 50
-  - 1D Valuation Entry     raw <= 1  -> master capped at 60
-  - 2C Anti-Hindsight      raw <= 1  -> INTEGRITY FLAG (no cap, but the
-                                       analysis is marked structurally
-                                       unreliable)
-
-Final master_score = round(min(raw_total, applicable_cap)).
-
-Allocation tiers (final mapping):
-  85-100  Exceptional          Flagship allocation
-  70-84   High conviction      Meaningful position
-  55-69   Moderate conviction  Partial or transition capital
-  40-54   Low conviction       Watchlist or optionality only
-  25-39   Speculative          Avoid or micro-position only
-  0-24    Reject               Short candidate or hard pass
-
-============================================================================
-ORDER OF OPERATIONS (critical — follow this flow)
-============================================================================
-
-1.  Identify the company and verify document_completeness HONESTLY.
-2.  Classify the thesis (Dual Track + 8-type typology).
-3.  Write module_diagnostics — Three Clocks, Bottleneck Inflation,
-    Continuity Infrastructure, Capex Arms Race, Asset Holder Policy Bias,
-    Private Market Opacity, Sovereign Industrial Compute, Jurisdictional
-    Arbitrage, Trust Asset Failure, Energy Security. These are UNSCORED
-    but the framework REQUIRES them and they inform the domain scores.
-4.  Build the latent_pressure_table (>=3 rows from >=2 registry
-    categories, all 8 questions answered per row) and capital_actor_table
-    (>=2 rows).
-5.  Score each domain using its rubric. Use evidence from steps 3-4 to
-    justify scores.
-6.  Audit kill conditions in kill_condition_check.
-7.  Compute raw_total = sum of all 5 domain_total values.
-8.  Compute applicable_cap from kill conditions, then
-    master_score = round(min(raw_total, applicable_cap)).
-9.  Map master_score to allocation_tier and capital_bucket.
-10. Project Bull / Base / Bear scenarios (probabilities sum ~100).
-11. Write key_thesis_statement (probabilistic, distinguishing
-    observable / inductable / unknowable) and 3 primary_falsifiers.
-12. Complete the 10-gap audit (gap_safeguards_audit) and signal_ranking.
-13. Write the final executive_summary (synthesis only, no new claims).
-
-============================================================================
-DOMAIN I — FIVE TRUTH LAYERS (40 pts)
-============================================================================
-
-1A SUBSTRATE TRUTH (weight 1.0). Is the physical or social transformation
-   this company operates within actually real and measurable from
-   disclosed data? Score 0 = pure narrative; 10 = irreversible, fully
-   quantified transformation provable in the filing. KILL: raw<=2 caps
-   master at 40.
-
-1B ECONOMIC CAPTURE TRUTH (weight 1.0). Can this company durably capture
-   value from the transformation? Use disclosed gross margins, operating
-   margins, pricing trends, customer concentration, and competitive moat
-   disclosures. 0 = commodity / zero rent; 10 = near-monopolistic.
-
-1C FINANCIAL SURVIVAL TRUTH (weight 1.0). Can this company survive a
-   severe adverse financing environment? Evaluate net debt / EBITDA,
-   interest coverage, free cash flow, debt maturity profile, disclosed
-   liquidity. 0 = insolvency in mild stress; 10 = fortress / anti-fragile.
-   KILL: raw<=2 caps master at 50. POPULATE financial_survival_ratios
-   with the actual numbers from the filing.
-
-1D VALUATION ENTRY TRUTH (weight 0.5). High score = thesis
-   undercapitalized (favorable entry). Low score = crowded. If you do
-   NOT have reliable market data beyond the 10-K, say so explicitly in
-   valuation_context and score conservatively (typically 4-6). KILL:
-   raw<=1 caps master at 60.
-
-1E REFLEXIVE SYSTEM TRUTH (weight 0.5). Will capital flows into this
-   sector reshape reality FOR or AGAINST the thesis? 0 = destructive
-   reflexivity (overcapacity already forming); 10 = constructive
-   feedback loop accelerating the transformation.
-
-============================================================================
-DOMAIN II — EPISTEMIC INTEGRITY (20 pts)
-============================================================================
-
-2A LATENT PRESSURE STAGE POSITIONING (weight 0.5). Where in the
-   recognition cycle is the primary latent pressure driving the thesis?
-   Stage 0 Ignored / 1 Niche / 2 Early capital / 3 Rerating /
-   4 Consensus / 5 Crowded. High score = early stage. The Three Clocks
-   divergence (physical vs narrative) IS the stage signal — if physical
-   change is real but narrative is absent, score high.
-
-2B EVIDENCE OBSERVABILITY (weight 0.5). What proportion of your claims
-   about this company are directly observable in this 10-K versus
-   inferred?
-
-2C ANTI-HINDSIGHT INTEGRITY (weight 0.5). Does this analysis resist
-   retrospective narrative construction? Populate ALL 7 fields of
-   anti_hindsight_checklist. To score above 6, all 7 must be answered.
-   To score above 7, historical_false_positives must contain real
-   analogues with honest differentiation. INTEGRITY FLAG: raw<=1 marks
-   the entire analysis structurally unreliable.
-
-2D PRE-MORTEM DISCIPLINE (weight 0.5). Have all 8 failure categories
-   been modeled? The schema requires ALL 8 fields of pre_mortem_scenarios
-   to be present. To score above 6, kill_conditions in each scenario
-   must be specific. To score above 7, decision_rule must be fully
-   populated.
-
-============================================================================
-DOMAIN III — PHYSICAL REALITY ANCHOR (15 pts)
-============================================================================
-
-3A PHYSICALIZATION CONSTRAINT DEPTH (weight 0.5). How tightly is the
-   company's capability constrained by physical bottlenecks (compute,
-   power, materials, geography)? Score 0 for purely digital with no
-   physical collision; 10 for hard physical ceilings owned by the
-   company. For pure SaaS / pure services this may legitimately be 0-2 —
-   that is correct, not a flaw.
-
-3B POWER AND ENERGY POSITION (weight 0.5). Does the company control or
-   uniquely benefit from critical power / energy constraints? Use
-   disclosed PPAs, captive generation, geographic positioning. For
-   companies with no special energy position, this is 0-2.
-
-3C STRATEGIC SCARCITY QUALITY (weight 0.5). How durable and monetizable
-   is the scarcity the company controls? Consider substitution risk,
-   political pricing risk, contract structures.
-
-============================================================================
-DOMAIN IV — CAPITAL TOPOLOGY (10 pts)
-============================================================================
-
-4A CAPITAL CONCENTRATION ALIGNMENT (weight 0.5). Is large, concentrated,
-   politically influential capital aligned with the thesis? Use
-   disclosed beneficial ownership (10-K cover lists >5% holders and NEO
-   ownership). Full institutional holder data is in DEF 14A / 13F (NOT
-   in the 10-K) — if you don't have it, say so and score from what is
-   in-filing.
-
-4B INSTITUTIONAL CAPTURE FAVORABILITY (weight 0.5). Does the regulatory
-   environment protect the company? Use Item 1 (Business — Regulation)
-   and Item 1A (Risk Factors — Regulatory).
-
-============================================================================
-DOMAIN V — FRAGILITY PROFILE (15 pts)
-============================================================================
-
-5A LIQUIDITY INDEPENDENCE (weight 0.5). How independent is the business
-   model from easy money? Use FCF yield, debt maturity, rate sensitivity
-   disclosures, insider selling if visible.
-
-5B SOVEREIGN AND TRUST STABILITY (weight 0.5). How exposed is the
-   company to sovereign debt fragility or trust breakdown in its primary
-   operating jurisdictions? Use geographic revenue concentration and
-   government counterparty disclosures. For non-US companies the primary
-   jurisdiction's sovereign rating may matter materially.
-
-5C COMMODITIZATION RESISTANCE (weight 0.5). How resistant is the
-   company to value destruction from competitive capex or technological
-   commoditization? Use 3-year gross margin and ROIC trends; map to the
-   Capex Arms Race diagnostic (offensive vs defensive capex).
-
-============================================================================
-EVIDENCE STANDARD (mandatory for every component)
-============================================================================
-
-Every ComponentScore object must include:
-  - reasoning: explicit, citing specific 10-K disclosures
-  - supporting_evidence: list of verifiable items from the filing
-  - evidence_classification: one of
-        Observable, Inductable, Weakly inferable, Hindsight only, Unknown
-
-Be HONEST about what the 10-K does and does not show. If a component
-requires data outside the 10-K (e.g. current multiple for 1D, full 13F
-data for 4A) and you do not have it, say so explicitly and score
-conservatively. Penalizing absent data is correct; inventing data is not.
-
-============================================================================
-EDGE CASE GUIDANCE
-============================================================================
-
-PRE-REVENUE / RECENT IPO: 3-year trends may be unavailable. Write
-"insufficient history" for trend fields and score 1C and 5C conservatively
-to reflect the uncertainty.
-
-MULTI-SEGMENT / CONGLOMERATE: Think at the segment level where it
-matters (different segments may have different moats, different physical
-constraints). State which segment dominates the thesis.
-
-INTERNATIONAL / NON-US FILER: 5B may carry more weight (sovereign
-rating, currency risk). Geographic_revenue_concentration matters more.
-Note the primary regulator (FCA, BaFin, etc.) if relevant for 4B.
-
-REIT / BDC / BANK / INSURANCE: Standard ratios (gross margin) may not
-apply. Use sector-appropriate analogs (NOI, NIM, combined ratio, book
-value growth) and SAY SO in the reasoning.
-
-HOLDING COMPANY / SPAC / SHELL: Note the structure explicitly. Score
-1A based on the underlying assets, not the holding entity. 1C may be
-strong (cash) but 1A may be weak (no operating substrate yet).
-
-CONTROLLING SHAREHOLDER: 4A interpretation flips — concentrated
-ownership by a long-horizon controlling shareholder is usually positive
-(alignment, no short-term flow risk). Concentration by short-horizon
-financial holders is usually negative (forced selling risk).
-
-STATE-OWNED / QUASI-STATE: 4B is usually high (regulatory protection)
-but 5B may be weak (sovereign dependency). Flag this trade-off.
-
-ACTIVE M&A / RESTRUCTURING: One-time items distort trend analysis. Use
-"organic / continuing operations" figures where the filing distinguishes.
-
-============================================================================
-DOCUMENT COMPLETENESS (CRITICAL METADATA)
-============================================================================
-
-Set document_completeness.full_doc to TRUE only if you were able to read
-and use the ENTIRE 10-K. If any portion appeared truncated, missing,
-garbled, or unreadable, set it to FALSE and list the missing or partial
-sections explicitly. This metadata will be used by downstream systems to
-decide whether to trust the analysis. A FALSE is not a failure — it is
-honest reporting. A FALSE with a clear note is more useful than a
-silently-incomplete TRUE.
-
-============================================================================
-REQUIRED TABLES AND LISTS — CARDINALITY
-============================================================================
-
-  - latent_pressure_table    >= 3 rows, from >= 2 registry categories
-  - capital_actor_table      >= 2 rows
-  - probabilistic_scenarios  exactly 3 (Bull, Base, Bear); probs sum ~100
-  - primary_falsifiers       exactly 3 specific, future-observable signals
-  - pre_mortem_scenarios     ALL 8 categories required (schema enforced)
-  - anti_hindsight_checklist ALL 7 questions answered (schema enforced)
-  - decision_rule            ALL 7 fields populated (schema enforced)
-  - gap_safeguards_audit     ALL 10 gaps assessed (schema enforced)
-  - signal_ranking.top_signals  3-5 signals from the 24-signal framework list
-
-============================================================================
-SCORE ARITHMETIC (do this carefully)
-============================================================================
-
-For each domain, set domain_total = sum of weighted_contribution across
-its components. Then:
-
-  raw_total = sum of all five domain_total values
-
-  applicable_cap = min of {{40 if 1A<=2, 50 if 1C<=2, 60 if 1D<=1,
-                            100 otherwise}}
-
-  master_score = round(min(raw_total, applicable_cap))
-
-The kill_condition_check object MUST be internally consistent with the
-raw scores in the domain blocks. Inconsistency is an analyst error.
-
-============================================================================
-CHUNK LAWS (anchoring principles)
-============================================================================
-
-Keep these laws in mind while scoring — they prevent common failure modes:
-
-  - Transformations can be correct but catastrophically overcapitalized.
-  - Real expansions can become dangerous through unstable leverage.
-  - Trust-dependent liquidity systems can fail nonlinearly.
-  - Low rates push capital toward duration and scalable platforms.
-  - Passive flows and network effects create reflexive concentration.
-  - Essentiality does not equal pricing power when supply discipline
-    collapses.
-  - Continuity infrastructure rerates when normal coordination breaks.
-  - When capital has a price again, optionality without cash flow
-    reprices violently.
-  - Digital capability becomes investable infrastructure when it collides
-    with physical constraints.
-
-============================================================================
-TONE
-============================================================================
-
-Write probabilistically. Avoid inevitability language. When the 10-K
-genuinely supports a strong claim, say so with the evidence. When it
-does not, say so. The framework is designed to surface what you do not
-know as clearly as what you do.
-
-The Humility Principle is non-negotiable: every major claim should be
-classifiable on the Real Time Evidence Standard (Observable / Inductable
-/ Weakly inferable / Hindsight only / Unknown). If you find yourself
-writing "obviously" or "clearly" anywhere, replace it with the actual
-disclosed evidence.
-"""
+        # Required by the base class. Not used by the orchestrated
+        # analyze() path -- each sub-call uses its own prompt below.
+        # We return the ORIENT prompt as a sensible default so the
+        # validation in CustomWorkflow.validate_workflow() passes.
+        return _PROMPT_ORIENT
 
     @property
     def schema(self):
+        # Downstream code introspects this; we keep it as the final
+        # merged shape for DB/UI compatibility.
         return CSPPv26AnalysisResult
+
+    # ---- orchestrated multi-call analysis ---------------------------------
+
+    def analyze(self, ticker: str, year: int, text: str, provider) -> CSPPv26AnalysisResult:
+        """Run the 4 sub-calls and merge into a CSPPv26AnalysisResult.
+
+        Each sub-call is independent -- if one fails, the others still run
+        and the merge produces a degraded result with _partial=True and
+        _failed_call set, so downstream code can surface the partial
+        analysis rather than silently losing the run.
+        """
+        filing_block = f"\n\nHere's the filing content:\n\n{text}"
+
+        # --- Call 1: ORIENT ----------------------------------------------
+        orient_obj: Optional[OrientResult] = None
+        orient_err: Optional[str] = None
+        try:
+            prompt = _PROMPT_ORIENT.format(ticker=ticker, year=year) + filing_block
+            orient_obj = provider.generate_with_retry(
+                prompt=prompt, schema=OrientResult,
+                max_retries=3, retry_delay=10,
+            )
+            logger.info(f"CSPP ORIENT call succeeded for {ticker} {year}")
+        except (AIProviderError, Exception) as e:
+            orient_err = str(e)
+            logger.error(f"CSPP ORIENT call failed for {ticker} {year}: {e}")
+
+        # --- Call 2: MAP -------------------------------------------------
+        map_obj: Optional[MapResult] = None
+        map_err: Optional[str] = None
+        try:
+            orient_ctx = (orient_obj.model_dump_json(indent=2) if orient_obj
+                          else "(ORIENT call failed; proceed without it)")
+            prompt = _PROMPT_MAP.format(
+                ticker=ticker, year=year, orient_context=orient_ctx,
+            ) + filing_block
+            map_obj = provider.generate_with_retry(
+                prompt=prompt, schema=MapResult,
+                max_retries=3, retry_delay=10,
+            )
+            logger.info(f"CSPP MAP call succeeded for {ticker} {year}")
+        except (AIProviderError, Exception) as e:
+            map_err = str(e)
+            logger.error(f"CSPP MAP call failed for {ticker} {year}: {e}")
+
+        # --- Call 3: SCORE -----------------------------------------------
+        score_obj: Optional[ScoreResult] = None
+        score_err: Optional[str] = None
+        try:
+            orient_ctx = (orient_obj.model_dump_json(indent=2) if orient_obj
+                          else "(ORIENT call failed)")
+            map_ctx = (map_obj.model_dump_json(indent=2) if map_obj
+                       else "(MAP call failed)")
+            prompt = _PROMPT_SCORE.format(
+                ticker=ticker, year=year,
+                orient_context=orient_ctx, map_context=map_ctx,
+            ) + filing_block
+            score_obj = provider.generate_with_retry(
+                prompt=prompt, schema=ScoreResult,
+                max_retries=3, retry_delay=10,
+            )
+            logger.info(f"CSPP SCORE call succeeded for {ticker} {year}")
+        except (AIProviderError, Exception) as e:
+            score_err = str(e)
+            logger.error(f"CSPP SCORE call failed for {ticker} {year}: {e}")
+
+        # --- Call 4: SYNTHESIZE -----------------------------------------
+        synth_obj: Optional[SynthesizeResult] = None
+        synth_err: Optional[str] = None
+        try:
+            orient_ctx = (orient_obj.model_dump_json(indent=2) if orient_obj
+                          else "(ORIENT call failed)")
+            map_ctx = (map_obj.model_dump_json(indent=2) if map_obj
+                       else "(MAP call failed)")
+            # Project master score from Call 3 so Call 4 can pick a
+            # consistent allocation tier.
+            if score_obj is not None:
+                projected_master = _compute_master_score_from_components(
+                    score_obj.component_scores
+                )
+                score_ctx = (
+                    score_obj.model_dump_json(indent=2)
+                    + f"\n\n[projected master_score from raw component scores: {projected_master}]"
+                )
+            else:
+                score_ctx = "(SCORE call failed; do your best to synthesize without component scores)"
+            prompt = _PROMPT_SYNTHESIZE.format(
+                ticker=ticker, year=year,
+                orient_context=orient_ctx, map_context=map_ctx,
+                score_context=score_ctx,
+            ) + filing_block
+            synth_obj = provider.generate_with_retry(
+                prompt=prompt, schema=SynthesizeResult,
+                max_retries=3, retry_delay=10,
+            )
+            logger.info(f"CSPP SYNTHESIZE call succeeded for {ticker} {year}")
+        except (AIProviderError, Exception) as e:
+            synth_err = str(e)
+            logger.error(f"CSPP SYNTHESIZE call failed for {ticker} {year}: {e}")
+
+        # --- Merge -------------------------------------------------------
+        failed = []
+        if orient_obj is None:
+            failed.append("ORIENT")
+        if map_obj is None:
+            failed.append("MAP")
+        if score_obj is None:
+            failed.append("SCORE")
+        if synth_obj is None:
+            failed.append("SYNTHESIZE")
+
+        if not failed:
+            merged = _merge_results(ticker, orient_obj, map_obj, score_obj, synth_obj)
+            return merged
+
+        # Degraded merge -- fill missing parts with placeholders so the
+        # final shape still validates and the user gets *something*.
+        if score_obj is None and synth_obj is None:
+            # Both heavy calls failed -- raise so the analysis service
+            # logs a clean failure rather than producing near-empty output.
+            raise AIProviderError(
+                "CSPP v2.6: both SCORE and SYNTHESIZE calls failed; "
+                "cannot produce a meaningful result. "
+                f"Errors: SCORE={score_err}; SYNTHESIZE={synth_err}"
+            )
+
+        merged = _merge_results(
+            ticker, orient_obj, map_obj, score_obj, synth_obj,
+            partial=True, failed_calls=failed,
+        )
+        return merged
+
+
+# ===========================================================================
+# MERGE HELPERS
+# ---------------------------------------------------------------------------
+# Pure functions that take the 4 sub-call outputs and assemble a
+# CSPPv26AnalysisResult. All arithmetic happens here (not in the model)
+# so it cannot drift.
+# ===========================================================================
+
+
+def _placeholder_component(code: str) -> ComponentScore:
+    """Build a placeholder ComponentScore for a code when SCORE failed."""
+    return ComponentScore(
+        code=code,
+        name=COMPONENT_NAMES[code],
+        raw_score=0,
+        weight=COMPONENT_WEIGHTS[code],
+        weighted_contribution=0.0,
+        evidence_classification="Unknown",
+        reasoning="Score call failed; placeholder generated by merge step.",
+        supporting_evidence=[],
+        kill_condition_triggered=False,
+    )
+
+
+def _compute_master_score_from_components(
+    flats: List[ComponentScoreFlat],
+) -> int:
+    """Pre-compute the master score for use in the SYNTHESIZE prompt context."""
+    by_code = {c.code: c for c in flats}
+    raw_total = 0.0
+    for code in COMPONENT_CODES:
+        if code in by_code:
+            raw_total += by_code[code].raw_score * COMPONENT_WEIGHTS[code]
+    cap = _compute_cap(by_code)
+    return int(round(min(raw_total, cap)))
+
+
+def _compute_cap(by_code: Dict[str, ComponentScoreFlat]) -> int:
+    """Determine the lowest applicable master-score cap from raw scores."""
+    cap = 100
+    s1A = by_code.get("1A")
+    s1C = by_code.get("1C")
+    s1D = by_code.get("1D")
+    if s1A and s1A.raw_score <= 2:
+        cap = min(cap, 40)
+    if s1C and s1C.raw_score <= 2:
+        cap = min(cap, 50)
+    if s1D and s1D.raw_score <= 1:
+        cap = min(cap, 60)
+    return cap
+
+
+def _tier_from_score(score: int) -> str:
+    if score >= 85:
+        return "Exceptional (85-100)"
+    if score >= 70:
+        return "High conviction (70-84)"
+    if score >= 55:
+        return "Moderate conviction (55-69)"
+    if score >= 40:
+        return "Low conviction (40-54)"
+    if score >= 25:
+        return "Speculative (25-39)"
+    return "Reject (0-24)"
+
+
+def _bucket_from_score(score: int) -> str:
+    if score >= 85:
+        return "Core capital"
+    if score >= 70:
+        return "Defensive growth"
+    if score >= 55:
+        return "Transition capital"
+    if score >= 40:
+        return "Watchlist capital"
+    if score >= 25:
+        return "Optionality capital"
+    return "Avoid capital"
+
+
+def _flat_to_full(flat: ComponentScoreFlat) -> ComponentScore:
+    """Convert a Call-3 flat score to the merged ComponentScore shape."""
+    weight = COMPONENT_WEIGHTS[flat.code]
+    weighted = round(flat.raw_score * weight, 2)
+    kill = (
+        (flat.code == "1A" and flat.raw_score <= 2)
+        or (flat.code == "1C" and flat.raw_score <= 2)
+        or (flat.code == "1D" and flat.raw_score <= 1)
+        or (flat.code == "2C" and flat.raw_score <= 1)
+    )
+    return ComponentScore(
+        code=flat.code,
+        name=COMPONENT_NAMES[flat.code],
+        raw_score=flat.raw_score,
+        weight=weight,
+        weighted_contribution=weighted,
+        evidence_classification=flat.evidence_classification,
+        reasoning=flat.reasoning,
+        supporting_evidence=flat.supporting_evidence,
+        kill_condition_triggered=kill,
+    )
+
+
+def _placeholder_pre_mortem(reason: str) -> PreMortemScenario:
+    return PreMortemScenario(
+        failure_mode=f"Not analyzed - {reason}",
+        probability_pct=0,
+        early_warning_signals=[],
+        kill_condition="n/a",
+    )
+
+
+def _merge_results(
+    ticker: str,
+    orient: Optional[OrientResult],
+    map_r: Optional[MapResult],
+    score: Optional[ScoreResult],
+    synth: Optional[SynthesizeResult],
+    partial: bool = False,
+    failed_calls: Optional[List[str]] = None,
+) -> CSPPv26AnalysisResult:
+    """Assemble the 4 sub-results into a CSPPv26AnalysisResult."""
+
+    # --- 1. Identification + completeness + classification + diagnostics ---
+    if orient is not None:
+        company_name = orient.company_name
+        fiscal_year = orient.fiscal_year
+        primary_exchange = orient.primary_exchange
+        primary_thesis = orient.primary_thesis
+        doc_completeness = DocumentCompleteness(
+            full_doc=orient.full_doc,
+            sections_visible=orient.sections_visible,
+            sections_missing_or_partial=orient.sections_missing_or_partial,
+            completeness_note=orient.completeness_note,
+        )
+        thesis_classification = ThesisClassification(
+            primary_track=orient.thesis_primary_track,
+            thesis_types=list(orient.thesis_types),
+            classification_rationale=orient.classification_rationale,
+        )
+        module_diagnostics = ModuleDiagnostics(
+            three_clocks=ThreeClocks(
+                physical_clock_state=orient.three_clocks_physical,
+                financial_clock_state=orient.three_clocks_financial,
+                narrative_clock_state=orient.three_clocks_narrative,
+                clock_divergence_assessment=orient.three_clocks_divergence,
+            ),
+            bottleneck_inflation_note=orient.diagnostic_bottleneck_inflation,
+            continuity_infrastructure_note=orient.diagnostic_continuity_infrastructure,
+            capex_arms_race_note=orient.diagnostic_capex_arms_race,
+            asset_holder_policy_bias_note=orient.diagnostic_asset_holder_policy,
+            private_market_opacity_note=orient.diagnostic_private_market_opacity,
+            sovereign_industrial_compute_note=orient.diagnostic_sovereign_industrial_compute,
+            jurisdictional_arbitrage_note=orient.diagnostic_jurisdictional_arbitrage,
+            trust_asset_failure_note=orient.diagnostic_trust_asset_failure,
+            energy_security_note=orient.diagnostic_energy_security,
+        )
+    else:
+        company_name = ticker
+        fiscal_year = 0
+        primary_exchange = "n/a"
+        primary_thesis = "ORIENT call failed; thesis not generated."
+        doc_completeness = DocumentCompleteness(
+            full_doc=False,
+            sections_visible=[],
+            sections_missing_or_partial=["ORIENT call failed"],
+            completeness_note="The ORIENT sub-call did not return a result.",
+        )
+        thesis_classification = ThesisClassification(
+            primary_track="Both",
+            thesis_types=[],
+            classification_rationale="ORIENT call failed.",
+        )
+        module_diagnostics = ModuleDiagnostics(
+            three_clocks=ThreeClocks(
+                physical_clock_state="n/a",
+                financial_clock_state="n/a",
+                narrative_clock_state="n/a",
+                clock_divergence_assessment="ORIENT call failed.",
+            ),
+            bottleneck_inflation_note="ORIENT call failed.",
+            continuity_infrastructure_note="ORIENT call failed.",
+            capex_arms_race_note="ORIENT call failed.",
+            asset_holder_policy_bias_note="ORIENT call failed.",
+            private_market_opacity_note="ORIENT call failed.",
+            sovereign_industrial_compute_note="ORIENT call failed.",
+            jurisdictional_arbitrage_note="ORIENT call failed.",
+            trust_asset_failure_note="ORIENT call failed.",
+            energy_security_note="ORIENT call failed.",
+        )
+
+    # --- 2. Tables --------------------------------------------------------
+    if map_r is not None:
+        latent_pressure_table = map_r.latent_pressure_table
+        capital_actor_table = map_r.capital_actor_table
+    else:
+        latent_pressure_table = []
+        capital_actor_table = []
+
+    # --- 3. Scores --------------------------------------------------------
+    component_lookup: Dict[str, ComponentScore] = {}
+    if score is not None:
+        for flat in score.component_scores:
+            component_lookup[flat.code] = _flat_to_full(flat)
+    # Fill any missing codes with placeholders so the final shape validates.
+    for code in COMPONENT_CODES:
+        if code not in component_lookup:
+            component_lookup[code] = _placeholder_component(code)
+
+    def get_score(code: str) -> ComponentScore:
+        return component_lookup[code]
+
+    # Domain I
+    if score is not None:
+        financial_survival_ratios = FinancialSurvivalRatios(
+            net_debt_to_ebitda=score.net_debt_to_ebitda,
+            interest_coverage=score.interest_coverage,
+            fcf_yield=score.fcf_yield,
+            nearest_debt_maturity=score.nearest_debt_maturity,
+            liquidity_buffer=score.liquidity_buffer,
+        )
+        valuation_context = ValuationContext(
+            current_multiple=score.current_multiple,
+            peer_multiple_range=score.peer_multiple_range,
+            analyst_coverage_skew=score.analyst_coverage_skew,
+            stage_implication=score.valuation_stage_implication,
+        )
+    else:
+        financial_survival_ratios = FinancialSurvivalRatios(
+            net_debt_to_ebitda="n/a", interest_coverage="n/a",
+            fcf_yield="n/a", nearest_debt_maturity="n/a",
+            liquidity_buffer="n/a",
+        )
+        valuation_context = ValuationContext(
+            current_multiple="n/a", peer_multiple_range="n/a",
+            analyst_coverage_skew="n/a",
+            stage_implication="SCORE call failed.",
+        )
+
+    domain_i_total = sum(
+        get_score(c).weighted_contribution for c in ("1A", "1B", "1C", "1D", "1E")
+    )
+    domain_i = DomainI_FiveTruthLayers(
+        substrate_truth_1A=get_score("1A"),
+        economic_capture_truth_1B=get_score("1B"),
+        financial_survival_truth_1C=get_score("1C"),
+        financial_survival_ratios=financial_survival_ratios,
+        valuation_entry_truth_1D=get_score("1D"),
+        valuation_context=valuation_context,
+        reflexive_system_truth_1E=get_score("1E"),
+        domain_total=round(min(domain_i_total, DOMAIN_MAX["i"]), 2),
+    )
+
+    # Domain II (depends on SYNTHESIZE for checklists/pre-mortem/decision rule)
+    if synth is not None:
+        anti_hindsight = AntiHindsightChecklist(
+            what_was_observable_then=synth.ah_what_was_observable_then,
+            what_was_inferable_then=synth.ah_what_was_inferable_then,
+            what_was_unknowable=synth.ah_what_was_unknowable,
+            alternative_futures=synth.ah_alternative_futures,
+            contradicting_signals=synth.ah_contradicting_signals,
+            likely_blind_spots=synth.ah_likely_blind_spots,
+            historical_false_positives=synth.ah_historical_false_positives,
+        )
+        pre_mortem = PreMortemScenarios(
+            technology=PreMortemScenario(**synth.pre_mortem_technology.model_dump()),
+            financing=PreMortemScenario(**synth.pre_mortem_financing.model_dump()),
+            economic_capture=PreMortemScenario(**synth.pre_mortem_economic_capture.model_dump()),
+            valuation=PreMortemScenario(**synth.pre_mortem_valuation.model_dump()),
+            policy=PreMortemScenario(**synth.pre_mortem_policy.model_dump()),
+            substitution=PreMortemScenario(**synth.pre_mortem_substitution.model_dump()),
+            timing=PreMortemScenario(**synth.pre_mortem_timing.model_dump()),
+            regulatory=PreMortemScenario(**synth.pre_mortem_regulatory.model_dump()),
+        )
+        decision_rule = DecisionRule(
+            entry_conditions=synth.dr_entry_conditions,
+            evidence_thresholds=synth.dr_evidence_thresholds,
+            position_sizing_guidance=synth.dr_position_sizing_guidance,
+            kill_conditions=synth.dr_kill_conditions,
+            valuation_discipline=synth.dr_valuation_discipline,
+            survivability_assumptions=synth.dr_survivability_assumptions,
+            monitoring_signals=synth.dr_monitoring_signals,
+        )
+    else:
+        anti_hindsight = AntiHindsightChecklist(
+            what_was_observable_then="SYNTHESIZE call failed.",
+            what_was_inferable_then="SYNTHESIZE call failed.",
+            what_was_unknowable="SYNTHESIZE call failed.",
+            alternative_futures=[],
+            contradicting_signals=[],
+            likely_blind_spots=[],
+            historical_false_positives=[],
+        )
+        pre_mortem = PreMortemScenarios(
+            technology=_placeholder_pre_mortem("SYNTHESIZE call failed"),
+            financing=_placeholder_pre_mortem("SYNTHESIZE call failed"),
+            economic_capture=_placeholder_pre_mortem("SYNTHESIZE call failed"),
+            valuation=_placeholder_pre_mortem("SYNTHESIZE call failed"),
+            policy=_placeholder_pre_mortem("SYNTHESIZE call failed"),
+            substitution=_placeholder_pre_mortem("SYNTHESIZE call failed"),
+            timing=_placeholder_pre_mortem("SYNTHESIZE call failed"),
+            regulatory=_placeholder_pre_mortem("SYNTHESIZE call failed"),
+        )
+        decision_rule = DecisionRule(
+            entry_conditions="SYNTHESIZE call failed.",
+            evidence_thresholds="SYNTHESIZE call failed.",
+            position_sizing_guidance="SYNTHESIZE call failed.",
+            kill_conditions="SYNTHESIZE call failed.",
+            valuation_discipline="SYNTHESIZE call failed.",
+            survivability_assumptions="SYNTHESIZE call failed.",
+            monitoring_signals=[],
+        )
+
+    primary_latent_pressure = (score.primary_latent_pressure
+                               if score is not None else "n/a")
+    estimated_stage = (score.estimated_stage
+                       if score is not None else "Stage 0 - Ignored")
+
+    domain_ii_total = sum(
+        get_score(c).weighted_contribution for c in ("2A", "2B", "2C", "2D")
+    )
+    domain_ii = DomainII_EpistemicIntegrity(
+        latent_pressure_stage_2A=get_score("2A"),
+        primary_latent_pressure=primary_latent_pressure,
+        estimated_stage=estimated_stage,
+        evidence_observability_2B=get_score("2B"),
+        anti_hindsight_integrity_2C=get_score("2C"),
+        anti_hindsight_checklist=anti_hindsight,
+        pre_mortem_discipline_2D=get_score("2D"),
+        pre_mortem_scenarios=pre_mortem,
+        decision_rule=decision_rule,
+        domain_total=round(min(domain_ii_total, DOMAIN_MAX["ii"]), 2),
+    )
+
+    # Domain III
+    domain_iii_total = sum(
+        get_score(c).weighted_contribution for c in ("3A", "3B", "3C")
+    )
+    domain_iii = DomainIII_PhysicalRealityAnchor(
+        physicalization_constraint_3A=get_score("3A"),
+        primary_physical_constraint=(score.primary_physical_constraint
+                                     if score else "n/a"),
+        capex_to_revenue_pct=(score.capex_to_revenue_pct if score else "n/a"),
+        power_and_energy_position_3B=get_score("3B"),
+        disclosed_energy_agreements=(list(score.disclosed_energy_agreements)
+                                     if score else []),
+        strategic_scarcity_3C=get_score("3C"),
+        scarcity_type=(score.scarcity_type if score else "n/a"),
+        substitution_risks=(list(score.substitution_risks) if score else []),
+        domain_total=round(min(domain_iii_total, DOMAIN_MAX["iii"]), 2),
+    )
+
+    # Domain IV
+    domain_iv_total = sum(
+        get_score(c).weighted_contribution for c in ("4A", "4B")
+    )
+    domain_iv = DomainIV_CapitalTopology(
+        capital_concentration_alignment_4A=get_score("4A"),
+        largest_disclosed_holders=(list(score.largest_disclosed_holders)
+                                   if score else []),
+        insider_ownership_pct=(score.insider_ownership_pct if score else "n/a"),
+        institutional_ownership_signal=(score.institutional_ownership_signal
+                                        if score else "n/a"),
+        institutional_capture_favorability_4B=get_score("4B"),
+        key_regulatory_disclosures=(list(score.key_regulatory_disclosures)
+                                    if score else []),
+        government_revenue_pct=(score.government_revenue_pct if score else "n/a"),
+        domain_total=round(min(domain_iv_total, DOMAIN_MAX["iv"]), 2),
+    )
+
+    # Domain V
+    domain_v_total = sum(
+        get_score(c).weighted_contribution for c in ("5A", "5B", "5C")
+    )
+    domain_v = DomainV_FragilityProfile(
+        liquidity_independence_5A=get_score("5A"),
+        sovereign_and_trust_stability_5B=get_score("5B"),
+        geographic_revenue_concentration=(score.geographic_revenue_concentration
+                                          if score else "n/a"),
+        commoditization_resistance_5C=get_score("5C"),
+        gross_margin_trend_3yr=(score.gross_margin_trend_3yr
+                                if score else "n/a"),
+        roic_trend_3yr=(score.roic_trend_3yr if score else "n/a"),
+        primary_commoditization_risk=(score.primary_commoditization_risk
+                                      if score else "n/a"),
+        domain_total=round(min(domain_v_total, DOMAIN_MAX["v"]), 2),
+    )
+
+    # --- Kill conditions + master score (recomputed in Python) ----------
+    s1A = get_score("1A").raw_score
+    s1C = get_score("1C").raw_score
+    s1D = get_score("1D").raw_score
+    s2C = get_score("2C").raw_score
+    cap_1A = s1A <= 2
+    cap_1C = s1C <= 2
+    cap_1D = s1D <= 1
+    flag_2C = s2C <= 1
+    applicable_cap = 100
+    if cap_1A:
+        applicable_cap = min(applicable_cap, 40)
+    if cap_1C:
+        applicable_cap = min(applicable_cap, 50)
+    if cap_1D:
+        applicable_cap = min(applicable_cap, 60)
+
+    raw_total = round(
+        domain_i.domain_total + domain_ii.domain_total
+        + domain_iii.domain_total + domain_iv.domain_total
+        + domain_v.domain_total,
+        2,
+    )
+    master_score = int(round(min(raw_total, applicable_cap)))
+    kill_check = KillConditionCheck(
+        cap_1A_substrate_triggered=cap_1A,
+        cap_1C_survival_triggered=cap_1C,
+        cap_1D_valuation_triggered=cap_1D,
+        integrity_flag_2C_triggered=flag_2C,
+        applicable_cap=applicable_cap,
+    )
+
+    # Allocation tier and capital bucket are deterministic from
+    # master_score per the framework, so compute them in Python rather
+    # than asking the model. This guarantees they never disagree with
+    # the Python-recomputed master score.
+    allocation_tier = _tier_from_score(master_score)
+    capital_bucket = _bucket_from_score(master_score)
+
+    # --- Scenarios, falsifiers, audit, signal ranking, exec summary -----
+    if synth is not None:
+        scenarios = [
+            ProbabilisticScenario(
+                name=s.name, narrative=s.narrative,
+                probability_pct=s.probability_pct,
+                price_target_or_outcome=s.price_target_or_outcome,
+                key_drivers=s.key_drivers,
+            )
+            for s in synth.probabilistic_scenarios
+        ]
+        key_thesis_statement = synth.key_thesis_statement
+        primary_falsifiers = synth.primary_falsifiers
+        gap_audit = GapSafeguardsAudit(
+            gap_1_quantification=synth.gap_quantification,
+            gap_2_branch_control=synth.gap_branch_control,
+            gap_3_narrative_psychology=synth.gap_narrative_psychology,
+            gap_4_reflexivity=synth.gap_reflexivity,
+            gap_5_institutional_power=synth.gap_institutional_power,
+            gap_6_substitution_systems=synth.gap_substitution_systems,
+            gap_7_topology_analysis=synth.gap_topology_analysis,
+            gap_8_temporal_dynamics=synth.gap_temporal_dynamics,
+            gap_9_market_structure=synth.gap_market_structure,
+            gap_10_civilization_hierarchy=synth.gap_civilization_hierarchy,
+        )
+        signal_ranking = SignalRanking(
+            top_signals=synth.top_signals,
+            ranking_rationale=synth.signal_ranking_rationale,
+        )
+        executive_summary = synth.executive_summary
+    else:
+        scenarios = []
+        key_thesis_statement = "SYNTHESIZE call failed."
+        primary_falsifiers = []
+        gap_audit = GapSafeguardsAudit(
+            **{f: "SYNTHESIZE call failed."
+               for f in (
+                   "gap_1_quantification", "gap_2_branch_control",
+                   "gap_3_narrative_psychology", "gap_4_reflexivity",
+                   "gap_5_institutional_power", "gap_6_substitution_systems",
+                   "gap_7_topology_analysis", "gap_8_temporal_dynamics",
+                   "gap_9_market_structure", "gap_10_civilization_hierarchy",
+               )}
+        )
+        signal_ranking = SignalRanking(
+            top_signals=[], ranking_rationale="SYNTHESIZE call failed.",
+        )
+        executive_summary = "SYNTHESIZE call failed; analysis incomplete."
+
+    # --- Assemble final ----------------------------------------------------
+    result = CSPPv26AnalysisResult(
+        company_name=company_name,
+        ticker=ticker,
+        fiscal_year=fiscal_year,
+        primary_exchange=primary_exchange,
+        primary_thesis=primary_thesis,
+        document_completeness=doc_completeness,
+        thesis_classification=thesis_classification,
+        module_diagnostics=module_diagnostics,
+        latent_pressure_table=latent_pressure_table,
+        capital_actor_table=capital_actor_table,
+        domain_i_five_truth_layers=domain_i,
+        domain_ii_epistemic_integrity=domain_ii,
+        domain_iii_physical_reality_anchor=domain_iii,
+        domain_iv_capital_topology=domain_iv,
+        domain_v_fragility_profile=domain_v,
+        kill_condition_check=kill_check,
+        raw_total=raw_total,
+        master_score=master_score,
+        allocation_tier=allocation_tier,
+        capital_bucket=capital_bucket,
+        probabilistic_scenarios=scenarios,
+        key_thesis_statement=key_thesis_statement,
+        primary_falsifiers=primary_falsifiers,
+        gap_safeguards_audit=gap_audit,
+        signal_ranking=signal_ranking,
+        executive_summary=executive_summary,
+    )
+    if partial:
+        result.analysis_partial = True
+        result.failed_call = ",".join(failed_calls or [])
+    return result
