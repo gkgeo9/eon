@@ -72,7 +72,7 @@ class EonConfig(BaseSettings):
 
     # AI Settings
     default_model: str = Field(
-        default="gemini-2.5-flash",
+        default="gemini-3.5-flash",
         description="Default LLM model to use"
     )
     thinking_budget: int = Field(

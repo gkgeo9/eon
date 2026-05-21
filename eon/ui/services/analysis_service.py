@@ -1326,13 +1326,6 @@ class AnalysisService:
                 # Extract text from PDF
                 text = self.extractor.extract_text(pdf_path)
 
-                # Format prompt
-                prompt = workflow.prompt_template.format(
-                    ticker=ticker,
-                    year=year
-                )
-                full_prompt = f"{prompt}\n\nHere's the filing content:\n\n{text}"
-
                 # Use pre-reserved key if available (batch), otherwise reserve per year
                 if api_key:
                     year_key = api_key
@@ -1353,13 +1346,16 @@ class AnalysisService:
                         rate_limiter=self.rate_limiter
                     )
 
-                    result = provider.generate_with_retry(
-                        prompt=full_prompt,
-                        schema=workflow.schema,
-                        max_retries=3,
-                        retry_delay=10
+                    # Delegate to the workflow's analyze() hook. Default
+                    # implementation is a single Gemini call (legacy
+                    # behavior). Workflows that need multi-call
+                    # orchestration override this method.
+                    result = workflow.analyze(
+                        ticker=ticker,
+                        year=year,
+                        text=text,
+                        provider=provider,
                     )
-                    # Usage is recorded by GeminiProvider.generate() — do not double-count
 
                     if result:
                         results[year] = result
@@ -1733,8 +1729,6 @@ class AnalysisService:
 
             try:
                 text = self.extractor.extract_text(pdf_path)
-                prompt = workflow.prompt_template.format(ticker=ticker, year=year)
-                full_prompt = f"{prompt}\n\nHere's the filing content:\n\n{text}"
 
                 # Use pre-reserved key if available (batch), otherwise reserve per year
                 if api_key:
@@ -1756,13 +1750,16 @@ class AnalysisService:
                         rate_limiter=self.rate_limiter
                     )
 
-                    result = provider.generate_with_retry(
-                        prompt=full_prompt,
-                        schema=workflow.schema,
-                        max_retries=3,
-                        retry_delay=10
+                    # Delegate to the workflow's analyze() hook. Default
+                    # implementation is a single Gemini call (legacy
+                    # behavior). Workflows that need multi-call
+                    # orchestration override this method.
+                    result = workflow.analyze(
+                        ticker=ticker,
+                        year=year,
+                        text=text,
+                        provider=provider,
                     )
-                    # Usage is recorded by GeminiProvider.generate() — do not double-count
 
                     if result:
                         results[year] = result
