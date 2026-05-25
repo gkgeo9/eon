@@ -179,12 +179,14 @@ class APIUsageTracker:
                 # Acquire shared lock for reading (cross-platform)
                 portalocker.lock(f, portalocker.LOCK_SH)
                 try:
+                    # Seek to start in case portalocker shifted position (Windows quirk)
+                    f.seek(0)
                     data = json.load(f)
                     return KeyUsageData.from_dict(data)
                 finally:
                     portalocker.unlock(f)
-        except (json.JSONDecodeError, KeyError) as e:
-            self.logger.warning(f"Corrupted usage file for key ...{key_id}, resetting: {e}")
+        except (json.JSONDecodeError, KeyError, OSError, ValueError) as e:
+            self.logger.warning(f"Could not read usage file for key ...{key_id}, resetting: {e}")
             return KeyUsageData(
                 key_id=key_id,
                 key_hash=key_hash,

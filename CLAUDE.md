@@ -248,7 +248,7 @@ Required:
 - `EON_SEC_COMPANY_NAME` - Company name for SEC compliance
 
 Key settings:
-- `EON_DEFAULT_MODEL=gemini-2.5-flash`
+- `EON_DEFAULT_MODEL=gemini-3.5-flash`
 - `EON_NUM_WORKERS=25`
 - `EON_SLEEP_AFTER_REQUEST=65`
 - `EON_STORAGE_BACKEND=parquet`
