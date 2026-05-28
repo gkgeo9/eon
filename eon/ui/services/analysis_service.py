@@ -1308,6 +1308,7 @@ class AnalysisService:
         from eon.ai.providers.gemini import GeminiProvider
 
         results = {}
+        year_errors: Dict[int, str] = {}  # Track per-year failures so we can raise if ALL fail
         total_years = len(pdf_paths)
 
         for idx, (year, pdf_path) in enumerate(pdf_paths.items(), 1):
@@ -1336,6 +1337,7 @@ class AnalysisService:
 
                 if not year_key:
                     self.logger.error("No API keys available for custom workflow")
+                    year_errors[year] = "No API keys available"
                     continue
 
                 try:
@@ -1360,6 +1362,8 @@ class AnalysisService:
                     if result:
                         results[year] = result
                         self.logger.info(f"Completed {workflow.name} analysis for {ticker} {year}")
+                    else:
+                        year_errors[year] = f"{workflow.name}.analyze() returned no result"
 
                 finally:
                     # Only release if we reserved it (not if pre-reserved by batch)
@@ -1368,6 +1372,7 @@ class AnalysisService:
 
             except Exception as e:
                 self.logger.error(f"Failed to analyze {ticker} {year} with {workflow.name}: {e}")
+                year_errors[year] = str(e)
                 continue
 
             # Call progress callback after each year
@@ -1376,6 +1381,17 @@ class AnalysisService:
                     year_progress_callback(year, idx, total_years)
                 except Exception as e:
                     self.logger.warning(f"Year progress callback error: {e}")
+
+        # If every year failed, raise so the run is marked 'failed' rather than
+        # ghost-completed (empty results dict + run.status='completed'). The
+        # batch worker can then retry up to max_retries instead of silently
+        # accepting a useless run.
+        if not results and year_errors:
+            summary = "; ".join(f"FY{y}: {err}" for y, err in year_errors.items())
+            raise AnalysisError(
+                f"{workflow.name} produced no results for {ticker} "
+                f"({len(year_errors)}/{total_years} year(s) failed). {summary}"
+            )
 
         return results
 

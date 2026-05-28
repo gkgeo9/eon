@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Export CSPP v2.6 analysis from a batch to CSV.
+Full CSPP export — pulls from the original Russell 1000 batch plus both
+re-run batches (10-K domestic and 20-F foreign), deduplicates across all
+three by keeping the most recent result per (ticker, fiscal_year, filing_type),
+and writes a single combined CSV.
 
-This version preserves the original master_score and adds:
-
-    updated_score
-    updated_tier
-    updated_score_notes
-
-The updated score is a sharper reweighted screening score designed to create
-better separation across a large universe of companies.
+Batches included:
+  7167deb5  cspp russell 1000 - 21/05/2026          (original)
+  c2de71c5  cspp russell 1000 - rerun 10K domestic   (ghost-completed + quota failures + BNY + dot-ticker fixes)
+  0ebb2480  cspp russell 1000 - rerun 20F foreign     (AS, AU, BEPC, BIRK, BLSH, DOX, GFS, GLOB, NU, ONON, QGEN, SPOT, TIGO, VIK, XP)
 """
 
 import csv
@@ -18,7 +17,11 @@ import sqlite3
 from pathlib import Path
 
 
-BATCH_NAME = "cspp russell 1000 - 21/05/2026"
+BATCH_IDS = [
+    "7167deb5-a81b-48cd-8f06-7d0d56c3c1b4",  # original
+    "c2de71c5-af6d-44f1-bd55-075f4cced4f9",  # 10-K domestic rerun
+    "0ebb2480-08a5-4740-8f16-6c54ba98a356",  # 20-F foreign rerun
+]
 
 FACTSET_CSV = "factset_russell_1000_23052026.csv"
 
@@ -58,25 +61,11 @@ PRE_MORTEM_CATEGORIES = [
 ]
 
 UPDATED_COMPONENT_WEIGHTS = {
-    "1A": 12,
-    "1B": 12,
-    "1C": 10,
-    "1D": 10,
-    "1E": 4,
-    "2A": 12,
-    "2B": 4,
-    "2C": 6,
-    "2D": 4,
-    "3A": 7,
-    "3B": 5,
-    "3C": 7,
-    "4A": 3,
-    "4B": 4,
-    "4C": 4,
-    "5A": 6,
-    "5B": 5,
-    "5C": 8,
-    "5D": 7,
+    "1A": 12, "1B": 12, "1C": 10, "1D": 10, "1E": 4,
+    "2A": 12, "2B": 4,  "2C": 6,  "2D": 4,
+    "3A": 7,  "3B": 5,  "3C": 7,
+    "4A": 3,  "4B": 4,  "4C": 4,
+    "5A": 6,  "5B": 5,  "5C": 8,  "5D": 7,
 }
 
 
@@ -251,54 +240,58 @@ def _load_factset(project_root):
     return fs_fieldnames, lookup
 
 
-def export_cspp_to_csv():
+def export_cspp_full():
     project_root = Path(__file__).parent.parent
     db_path = project_root / "data" / "eon.db"
-    output_path = project_root / "data" / "cspp_export.csv"
+    output_path = project_root / "data" / "cspp_export_full.csv"
 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT batch_id, name, total_tickers, completed_tickers, status "
-        "FROM batch_jobs WHERE name = ?",
-        (BATCH_NAME,),
-    )
-    batch_row = cursor.fetchone()
+    # Report on each batch
+    all_rows = []
+    for batch_id in BATCH_IDS:
+        cursor.execute(
+            "SELECT batch_id, name, total_tickers, completed_tickers, status "
+            "FROM batch_jobs WHERE batch_id = ?",
+            (batch_id,),
+        )
+        batch_row = cursor.fetchone()
 
-    if not batch_row:
-        print(f"Batch '{BATCH_NAME}' not found.")
-        conn.close()
-        return
+        if not batch_row:
+            print(f"  Batch {batch_id[:8]}... not found — skipping.")
+            continue
 
-    batch_id, name, total, completed, status = batch_row
+        _, name, total, completed, status = batch_row
+        print(f"Batch: {name}")
+        print(f"  Status: {status}  |  Progress: {completed}/{total} tickers")
 
-    print(f"Found batch: {name}")
-    print(f"  Status: {status}")
-    print(f"  Progress: {completed}/{total} tickers")
+        cursor.execute(
+            """
+            SELECT ar.ticker, ar.fiscal_year, ar.filing_type, ar.result_json, ar.created_at
+            FROM analysis_results ar
+            JOIN batch_items bi ON ar.run_id = bi.run_id
+            WHERE bi.batch_id = ?
+              AND ar.result_type = 'CSPPv26AnalysisResult'
+            ORDER BY ar.ticker, ar.fiscal_year DESC
+            """,
+            (batch_id,),
+        )
+        batch_rows = cursor.fetchall()
+        print(f"  Results found: {len(batch_rows)}")
+        all_rows.extend(batch_rows)
 
-    cursor.execute(
-        """
-        SELECT ar.ticker, ar.fiscal_year, ar.filing_type, ar.result_json, ar.created_at
-        FROM analysis_results ar
-        JOIN batch_items bi ON ar.run_id = bi.run_id
-        WHERE bi.batch_id = ?
-          AND ar.result_type = 'CSPPv26AnalysisResult'
-        ORDER BY ar.ticker, ar.fiscal_year DESC
-        """,
-        (batch_id,),
-    )
-    rows = cursor.fetchall()
     conn.close()
 
-    if not rows:
-        print("No CSPP results found in this batch yet.")
+    if not all_rows:
+        print("\nNo CSPP results found across any batch.")
         return
 
     fs_fieldnames, fs_lookup = _load_factset(project_root)
 
+    # Deduplicate across all batches: keep most recent created_at per (ticker, fiscal_year, filing_type)
     seen = {}
-    for row in rows:
+    for row in all_rows:
         key = (row[0], row[1], row[2])
         if key not in seen or row[4] > seen[key][4]:
             seen[key] = row
@@ -306,8 +299,8 @@ def export_cspp_to_csv():
     deduped = sorted(seen.values(), key=lambda r: (r[0], -r[1]))
 
     print("")
-    print(f"  Total results: {len(rows)}")
-    print(f"  Duplicates removed: {len(rows) - len(deduped)}")
+    print(f"  Total results across all batches: {len(all_rows)}")
+    print(f"  Duplicates removed: {len(all_rows) - len(deduped)}")
     print(f"  Unique analyses: {len(deduped)}")
 
     fieldnames = [
@@ -621,7 +614,6 @@ def export_cspp_to_csv():
 
         partials = sum(1 for r in csv_rows if _to_bool(r.get("analysis_partial")))
         if partials:
-            print("")
             print(f"  Partial analyses: {partials}")
 
         ai_count = sum(1 for r in csv_rows if _to_bool(r.get("ai_infrastructure_relevant")))
@@ -629,4 +621,4 @@ def export_cspp_to_csv():
 
 
 if __name__ == "__main__":
-    export_cspp_to_csv()
+    export_cspp_full()
