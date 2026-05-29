@@ -20,6 +20,7 @@ from datetime import datetime
 from eon.ui.database import DatabaseRepository
 from eon.ui.services.batch_queue import BatchQueueService, BatchJobConfig
 from eon.ui.theme import apply_theme
+from eon.ui.skin import topbar, components as C
 from eon.core.analysis_types import (
     get_analysis_type,
     get_ui_options,
@@ -49,10 +50,13 @@ if 'batch_queue' not in st.session_state:
 db = st.session_state.db
 queue = st.session_state.batch_queue
 
-st.title("Batch Queue")
-st.markdown("Manage large-scale analysis jobs that run overnight or over multiple days")
-
-st.markdown("---")
+topbar(["Workspace", "Batch Queue"])
+C.page_header(
+    title="Batch queue",
+    eyebrow="EON.04 — Batch Scheduler",
+    desc="Schedule large-scale analyses to run overnight or across multiple days. "
+    "Resumable on interruption with no duplicate cost.",
+)
 
 # Check for stale running batches (crashed but still showing as running)
 stale_batches = queue.get_stale_running_batches(stale_minutes=5)

@@ -13,6 +13,7 @@ from datetime import datetime
 from eon.ui.database import DatabaseRepository
 from eon.ui.services import AnalysisService
 from eon.ui.theme import apply_theme
+from eon.ui.skin import topbar, components as C
 from eon.ui.utils.validators import validate_ticker
 from eon.core import get_filing_category
 from eon.core.analysis_types import (
@@ -154,10 +155,13 @@ def run_batch_analysis_background(service, ticker_configs, result_container):
 
 
 # Page content
-st.title("📊 Analysis")
-st.markdown("Analyze SEC filings with AI-powered perspectives")
-
-st.markdown("---")
+topbar(["Workspace", "Analysis Engine"])
+C.page_header(
+    title="Run a new analysis",
+    eyebrow="EON.01 — Analysis Engine",
+    desc="Synthesize SEC filings into structured intelligence across multiple investment "
+    "perspectives. All outputs trace to original source citations.",
+)
 
 # Mode toggle
 analysis_mode = st.radio(
