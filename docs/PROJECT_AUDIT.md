@@ -111,4 +111,20 @@ These look suspect but are actively used — **do not delete**:
   view that clears `view_run_id` and reruns, bringing back the selector in place.
   (`pages/3_🔍_Results_Viewer.py`)
 
-<!-- UI-AUDIT-FINDINGS -->
+- **Deprecated/inconsistent `use_container_width` in Batch Queue.** Page 4 used
+  `use_container_width=True` in 9 places while every other page uses the modern
+  `width="stretch"` API (`use_container_width` is deprecated in recent Streamlit).
+  Replaced all 9 with `width="stretch"` for consistency and future-proofing.
+  (`pages/4_🌙_Batch_Queue.py`)
+
+### Open issues (catalogued, not yet changed)
+
+| # | File · line | Severity | Issue | Suggested fix |
+|---|-------------|----------|-------|---------------|
+| 1 | `pages/5_⚙️_Settings.py` · 473 vs 512 | Low–Med | The two prompt-fetch DB methods return different key names: `get_prompts_by_type()` maps `prompt_template` → `template` (so line 473's `prompt['template']` works), but `get_prompt_by_name()` returns the raw `prompt_template` (so line 512 needs a `.get('prompt_template', …)` fallback). Both work today, but the divergent keys are a latent `KeyError` footgun. | Normalize the two repository methods to return the same key (preferably `template`), then simplify the UI accessors. |
+| 2 | `pages/1_📊_Analysis.py` · ~750/865/950 | Low–Med | After a batch is submitted, `st.session_state['batch_csv_df']` is never cleared, so an uploaded CSV lingers in memory across reruns/tab switches. | Delete `batch_csv_df` from session state once the batch is launched. |
+| 3 | `pages/4_🌙_Batch_Queue.py` · 179 | Low | Separator check tests both `"─"` and `"---"`, but the dropdown separator built in `eon/core/analysis_types.py` only uses en-dashes (`─`). The `"---"` branch is dead code. | Drop the redundant `or …startswith("---")`. |
+
+All three are minor and were left unchanged to keep this pass focused on
+documentation accuracy and the reported Results Viewer bug. None affects
+correctness of analysis output.

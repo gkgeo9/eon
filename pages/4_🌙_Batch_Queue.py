@@ -154,7 +154,7 @@ with st.expander("New Batch", expanded=False):
                             if pd.notna(row['ticker']) and pd.notna(row.get('company_name')):
                                 company_names_dict[str(row['ticker']).upper()] = str(row['company_name'])
                     st.success(f"Loaded {len(tickers)} tickers from CSV")
-                    st.dataframe(df.head(10), use_container_width=True)
+                    st.dataframe(df.head(10), width="stretch")
                 else:
                     st.error("CSV must have a 'ticker' column")
             except Exception as e:
@@ -345,7 +345,7 @@ else:
                         import pandas as _pd
                         st.dataframe(
                             _pd.DataFrame(worker_data),
-                            use_container_width=True,
+                            width="stretch",
                             hide_index=True,
                         )
 
@@ -522,7 +522,7 @@ if 'export_batch_id' in st.session_state:
             summary_df = pd.DataFrame(summary_data)
 
             # Display summary
-            st.dataframe(summary_df, use_container_width=True, hide_index=True)
+            st.dataframe(summary_df, width="stretch", hide_index=True)
 
             # Export options
             col1, col2 = st.columns(2)
@@ -711,7 +711,7 @@ if 'view_batch_id' in st.session_state:
                 st.dataframe(
                     df[cols_to_show],
                     hide_index=True,
-                    use_container_width=True
+                    width="stretch"
                 )
             else:
                 st.info("No items")
@@ -723,7 +723,7 @@ if 'view_batch_id' in st.session_state:
                 st.dataframe(
                     df[['ticker', 'run_id', 'completed_at']],
                     hide_index=True,
-                    use_container_width=True
+                    width="stretch"
                 )
 
                 # Link to view results
@@ -743,7 +743,7 @@ if 'view_batch_id' in st.session_state:
                 st.dataframe(
                     df[['ticker', 'attempts', 'error_message']],
                     hide_index=True,
-                    use_container_width=True
+                    width="stretch"
                 )
             else:
                 st.info("No failed items")
@@ -758,7 +758,7 @@ if 'view_batch_id' in st.session_state:
                 st.dataframe(
                     df[cols],
                     hide_index=True,
-                    use_container_width=True
+                    width="stretch"
                 )
             else:
                 st.info("No pending items")
@@ -781,9 +781,9 @@ st.markdown("---")
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("Home", use_container_width=True):
+    if st.button("Home", width="stretch"):
         st.switch_page("streamlit_app.py")
 
 with col2:
-    if st.button("Analysis History", use_container_width=True):
+    if st.button("Analysis History", width="stretch"):
         st.switch_page("pages/2_📈_Analysis_History.py")
