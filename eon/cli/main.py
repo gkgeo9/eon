@@ -148,45 +148,59 @@ def cache_clear(older_than_days: int):
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
 def cli(verbose: bool):
     """
-    Erebus Observatory Network
+    Erebus Observatory Network (EON)
 
-    A comprehensive platform for analyzing SEC 10-K filings through multiple
-    investment perspectives (Buffett, Taleb, Contrarian) with parallel processing
-    capabilities for 1,000+ companies.
+    AI-powered analysis of SEC filings (10-K, 20-F, 10-Q, and more) through
+    multiple investment perspectives — Warren Buffett value investing, Nassim
+    Taleb antifragility, and contrarian opportunity detection — with parallel
+    batch processing for 1,000+ companies.
 
-    Features:
-    - SEC 10-K fundamental analysis
-    - Multi-perspective analysis (Value, Antifragility, Contrarian)
-    - Multi-year trend analysis (30+ years)
-    - Parallel batch processing (25+ workers)
-    - Contrarian opportunity scanner
-    - Benchmark comparison against top performers
+    \b
+    FEATURES
+      - SEC filing fundamental analysis (10-K, 20-F, 10-Q, 8-K, ...)
+      - Multi-perspective analysis (Buffett, Taleb, Contrarian)
+      - Multi-year trend & success-factor analysis (30+ years)
+      - Multi-day batch processing with automatic resume
+      - Contrarian opportunity scanner (6-dimension alpha scoring)
+      - Auto-discovered custom workflows
+      - Both a web UI and this command-line interface
 
-    Examples:
+    \b
+    COMMON COMMANDS
+      eon web                      Launch the Streamlit web UI
+      eon analyze AAPL --years 5   Analyze a single company
+      eon batch tickers.csv        Batch-process many companies
+      eon workflows                List available custom workflows
+      eon export -o results.csv    Export stored results
 
+    \b
+    EXAMPLES
       # Launch the web UI
       eon web
-
-      # Analyze single company
+      # Fundamental analysis of the last 5 years
       eon analyze AAPL --years 5
-
-      # Batch process companies in parallel
-      eon batch tickers.csv --workers 10
-
-      # Analyze through all three perspectives
-      eon analyze AAPL --perspective
-
+      # Multi-perspective (Buffett + Taleb + Contrarian)
+      eon analyze AAPL --analysis-type multi --years 5
+      # Batch-process a CSV of tickers, 7 years each
+      eon batch tickers.csv --years 7
       # Export all results to CSV
       eon export --format csv --output results.csv
+
+    Run 'eon COMMAND --help' for detailed help on any command.
     """
     if verbose:
         import logging
         logging.getLogger("eon").setLevel(logging.DEBUG)
         logger.debug("Verbose logging enabled")
 
-    # Display banner on first run
-    config = get_config()
-    logger.debug(f"Loaded configuration from {config.data_dir}")
+    # Best-effort debug banner. Config validation (API keys, SEC email) is
+    # deferred to the individual commands that actually need it, so that
+    # `--help` and other discovery commands work without a configured .env.
+    try:
+        config = get_config()
+        logger.debug(f"Loaded configuration from {config.data_dir}")
+    except Exception as e:
+        logger.debug(f"Configuration not fully loaded: {e}")
 
 
 @cli.command()

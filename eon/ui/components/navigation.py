@@ -39,7 +39,7 @@ def render_multi_button_navigation(buttons: Dict[str, str], show_divider: bool =
 
     Args:
         buttons: Dictionary mapping button label to page path
-            Example: {"🏠 Home": "streamlit_app.py", "📜 History": "pages/3_📈_Analysis_History.py"}
+            Example: {"🏠 Home": "streamlit_app.py", "📜 History": "pages/2_📈_Analysis_History.py"}
         show_divider: If True, show divider before navigation
     """
     if show_divider:
