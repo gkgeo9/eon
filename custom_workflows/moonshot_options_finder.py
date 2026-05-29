@@ -83,7 +83,12 @@ which embeds the Call-1 diagnosis as a sub-object so the reasoning is visible
 alongside the recommendation.
 """
 
-from typing import List, Literal, Optional
+import csv
+import os
+import threading
+from pathlib import Path
+from typing import Dict, List, Literal, Optional
+
 from pydantic import BaseModel, Field
 
 from custom_workflows.base import CustomWorkflow
@@ -91,6 +96,189 @@ from eon.core import get_logger
 from eon.core.exceptions import AIProviderError
 
 logger = get_logger(__name__)
+
+
+# ===========================================================================
+# OPTIONAL FACTSET MARKET-DATA ENRICHMENT
+# ---------------------------------------------------------------------------
+# The 10-K answers the *fundamental* moonshot questions (right-to-win, runway,
+# catalysts) but is blind to the *market* side: implied vol, skew, short
+# interest, live valuation, and option liquidity. Those are exactly the inputs
+# needed to judge "is it priced in?" and "which option structure?". This module
+# optionally injects a per-ticker snapshot from a FactSet CSV into both prompts.
+#
+# It is STRICTLY OPTIONAL and gracefully degrading: if no CSV is configured or
+# the ticker is absent, the workflow behaves exactly as the 10-K-only version.
+#
+# CSV format (one row per ticker; column order does not matter):
+#   * A 'ticker' or 'symbol' column is required to key the row.
+#   * Any of the recognized columns below are rendered with friendly labels.
+#   * Any other columns are passed through generically.
+# Data is treated as "as-of" reference context (it may lag by a day or two),
+# NOT as executable live quotes -- recommendations stay structural.
+#
+# Config: set EON_FACTSET_CSV to the CSV path, or drop a file at
+#   <data_dir>/factset/options_context.csv
+# ===========================================================================
+
+# Recognized columns -> (human label, unit/interpretation hint for the model).
+# These are the fields that actually move this workflow's outputs.
+_FACTSET_FIELDS: Dict[str, tuple] = {
+    "as_of_date": ("As-of date", "snapshot date; data may lag a day or two"),
+    "price": ("Last price", "current share price (USD)"),
+    "market_cap": ("Market cap", "live market cap; use for the payoff-multiple math"),
+    "iv_30d": ("Implied vol (30d)", "annualized IV, %"),
+    "iv_rank": (
+        "IV rank",
+        "0-100; HIGH (>70) = options rich, favor spreads/calendars; LOW (<30) = cheap, favor outright long calls/LEAPS",
+    ),
+    "iv_percentile": ("IV percentile", "0-100; same interpretation as IV rank"),
+    "realized_vol_30d": (
+        "Realized vol (30d)",
+        "annualized RV, %; IV >> RV means options expensive",
+    ),
+    "iv_rv_ratio": ("IV/RV ratio", ">1.2 rich, <1.0 cheap"),
+    "term_structure": (
+        "IV term structure",
+        "front-vs-back month; backwardation = event/fear priced near-term",
+    ),
+    "skew_25d": (
+        "25-delta skew",
+        "put-call skew; heavy put skew = downside fear priced; call skew = lottery/FOMO priced",
+    ),
+    "option_volume": ("Avg daily option volume", "contracts/day; liquidity gate"),
+    "open_interest": (
+        "Total open interest",
+        "contracts; liquidity gate -- thin OI = wide spreads, hard to size",
+    ),
+    "short_interest_pct_float": (
+        "Short interest",
+        "% of float short; high = contrarian/squeeze signal",
+    ),
+    "days_to_cover": ("Days to cover", "short-interest / avg volume; >5 = crowded short"),
+    "borrow_fee": ("Borrow fee", "% hard-to-borrow cost; high = squeeze risk / expensive to short"),
+    "analyst_count": (
+        "Analyst coverage",
+        "number of covering analysts; low/zero = ignored by the street",
+    ),
+    "avg_rating": ("Avg analyst rating", "consensus rating"),
+    "pct_off_52w_high": ("% off 52-week high", "depressed despite progress = contrarian tell"),
+    "ev_sales": ("EV/Sales", "valuation multiple"),
+    "ev_ebitda": ("EV/EBITDA", "valuation multiple"),
+    "ps_ratio": ("P/S", "valuation multiple"),
+    "next_earnings_date": ("Next earnings date", "near-term catalyst / vol event"),
+}
+
+_TICKER_KEYS = ("ticker", "symbol", "Ticker", "Symbol", "TICKER", "SYMBOL")
+
+# Class/module-level cache: the analysis service builds a FRESH workflow
+# instance per run across many parallel workers, so the CSV is parsed once
+# here (keyed by mtime) and shared, guarded by a lock.
+_factset_lock = threading.Lock()
+_factset_cache: Dict[str, Dict[str, str]] = {}
+_factset_cache_path: Optional[str] = None
+_factset_cache_mtime: Optional[float] = None
+
+
+def _resolve_factset_path() -> Optional[Path]:
+    """Return the configured FactSet CSV path, or None if not available."""
+    env_path = os.environ.get("EON_FACTSET_CSV")
+    if env_path:
+        p = Path(env_path).expanduser()
+        return p if p.is_file() else None
+    # Fall back to a default location under the data dir, if config is usable.
+    try:
+        from eon.core import get_config
+
+        p = get_config().get_data_path("factset", "options_context.csv")
+        return p if p.is_file() else None
+    except Exception:
+        return None
+
+
+def _load_factset() -> Dict[str, Dict[str, str]]:
+    """Load and cache the FactSet CSV, keyed by uppercased ticker.
+
+    Reloads only when the file path or mtime changes. Returns an empty dict
+    when no CSV is configured or parsing fails (enrichment is optional).
+    """
+    global _factset_cache, _factset_cache_path, _factset_cache_mtime
+
+    path = _resolve_factset_path()
+    if path is None:
+        return {}
+
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return {}
+
+    with _factset_lock:
+        if str(path) == _factset_cache_path and mtime == _factset_cache_mtime:
+            return _factset_cache
+
+        rows: Dict[str, Dict[str, str]] = {}
+        try:
+            with path.open(newline="", encoding="utf-8-sig") as fh:
+                reader = csv.DictReader(fh)
+                tkey = next((k for k in (reader.fieldnames or []) if k in _TICKER_KEYS), None)
+                if tkey is None:
+                    logger.warning("FactSet CSV %s has no ticker/symbol column; ignoring.", path)
+                    rows = {}
+                else:
+                    for row in reader:
+                        tk = (row.get(tkey) or "").strip().upper()
+                        if tk:
+                            rows[tk] = {k: (v or "").strip() for k, v in row.items()}
+            logger.info("Loaded FactSet market data for %d tickers from %s", len(rows), path)
+        except Exception as e:  # malformed CSV must never break analysis
+            logger.warning("Failed to load FactSet CSV %s: %s", path, e)
+            rows = {}
+
+        _factset_cache = rows
+        _factset_cache_path = str(path)
+        _factset_cache_mtime = mtime
+        return rows
+
+
+def get_market_context(ticker: str) -> tuple:
+    """Return (formatted_block, asof_date) for a ticker.
+
+    formatted_block is "" when no data is available. asof_date is None unless
+    the row carries an 'as_of_date'.
+    """
+    data = _load_factset()
+    if not data:
+        return "", None
+    row = data.get((ticker or "").strip().upper())
+    if not row:
+        return "", None
+
+    tkey_present = {k for k in _TICKER_KEYS}
+    asof = row.get("as_of_date") or None
+
+    lines: List[str] = []
+    rendered = set()
+    # Recognized fields first, in a sensible order, with labels + hints.
+    for col, (label, hint) in _FACTSET_FIELDS.items():
+        val = row.get(col)
+        if val:
+            lines.append(f"  - {label}: {val}  ({hint})")
+            rendered.add(col)
+    # Pass through any extra columns generically.
+    for col, val in row.items():
+        if col in rendered or col in tkey_present or not val:
+            continue
+        lines.append(f"  - {col}: {val}")
+
+    if not lines:
+        return "", asof
+
+    header = (
+        "EXTERNAL MARKET DATA (FactSet snapshot -- reference context, may lag "
+        "a day or two; treat as approximate, NOT as executable live quotes):"
+    )
+    return header + "\n" + "\n".join(lines), asof
 
 
 # ===========================================================================
@@ -189,6 +377,15 @@ class MoonshotDiagnosis(BaseModel):
         "partner', 'forced dilutive raise', 'competitor ships first')."
     )
 
+    market_signals_used: List[str] = Field(
+        default_factory=list,
+        description="If an EXTERNAL MARKET DATA block was provided, list the "
+        "specific signals that informed the 'priced-in' / room-to-move call "
+        "(e.g. 'IV rank 82 = options rich', 'short interest 31% of float', "
+        "'no analyst coverage', 'trading 70% off highs'). Empty if no market "
+        "data was supplied (then the judgment is fundamentals-only).",
+    )
+
 
 # ===========================================================================
 # CALL 2 SCHEMA -- TRADE STRUCTURE (intermediate; merged into final)
@@ -256,6 +453,28 @@ class OptionsStructure(BaseModel):
     ] = Field(
         description="Strike selection and why, given conviction and how much "
         "room-to-move the diagnosis found."
+    )
+
+    iv_environment: Literal[
+        "Rich - prefer spreads/calendars to cut vega",
+        "Moderate - outright longs acceptable",
+        "Cheap - favor outright long calls/LEAPS",
+        "Unknown - no market data provided",
+    ] = Field(
+        description="Implied-vol read. Base on the EXTERNAL MARKET DATA block "
+        "(IV rank/percentile, IV vs realized) if provided; otherwise 'Unknown - "
+        "no market data provided' and reason about structure from fundamentals."
+    )
+
+    options_liquidity: Literal[
+        "Liquid - tradeable",
+        "Thin - use limit orders / smaller size",
+        "Illiquid - options impractical, consider stock",
+        "Unknown - no market data provided",
+    ] = Field(
+        description="Tradeability gate from option volume / open interest in the "
+        "EXTERNAL MARKET DATA block. A great thesis with illiquid options is not "
+        "an options play. 'Unknown' if no market data was supplied."
     )
 
     asymmetry_summary: str = Field(
@@ -337,6 +556,17 @@ class MoonshotOptionsResult(BaseModel):
         description="The moonshot diagnosis from reading the 10-K."
     )
 
+    # --- market-data enrichment metadata (set in code, not by the model) ---
+    used_market_data: bool = Field(
+        default=False,
+        description="True if a FactSet market-data snapshot was injected into "
+        "the prompts for this ticker.",
+    )
+    market_data_asof: Optional[str] = Field(
+        default=None,
+        description="As-of date of the injected FactSet snapshot, if available.",
+    )
+
     # --- run metadata ---
     partial: bool = Field(
         default=False,
@@ -386,6 +616,14 @@ Be quantitative. Quote cash balances, burn, debt, TAM, and market cap when the
 filing gives them. Distinguish EVIDENCE (milestones, contracts, approvals) from
 ASPIRATION (plans, intentions). Most companies are NOT moonshots -- mark them so.
 
+USING EXTERNAL MARKET DATA: If an "EXTERNAL MARKET DATA" block is provided below
+(FactSet snapshot), use it to sharpen the "ROOM TO MOVE / priced-in" judgment --
+short interest, analyst coverage, live valuation vs the prize, and % off highs
+are far better priced-in evidence than anything in the 10-K. The filing's market
+cap can be a year stale; prefer the snapshot's live market cap for the payoff
+math. Record which signals you used in 'market_signals_used'. If no such block
+is provided, reason from fundamentals only and leave that list empty.
+
 Produce the structured diagnosis. Do not design the trade yet -- that is the
 next step.
 
@@ -417,6 +655,23 @@ Translate the diagnosis into a trade. Rules of the desk:
     a PASS verdict. Be selective.
   * Most names should score below 50. Reserve 70+ for setups where all five
     moonshot conditions are broadly met with filing evidence.
+
+USING EXTERNAL MARKET DATA: If an "EXTERNAL MARKET DATA" block is provided below
+(FactSet snapshot), it is your edge for structure selection -- the diagnosis
+above is fundamentals-only and cannot see the vol surface:
+  * IV rank/percentile and IV-vs-realized set 'iv_environment': rich vol => cut
+    vega with debit spreads / calendars; cheap vol => outright long calls/LEAPS.
+  * Option volume and open interest set 'options_liquidity': thin OI means wide
+    spreads and hard sizing -- a great thesis with illiquid options is NOT an
+    options play (consider stock or pass).
+  * Skew / term structure reveal what the market already prices (priced-in tail).
+  * Use the live price / market cap (not the stale 10-K figure) for the payoff
+    multiple. Treat all figures as as-of reference context, NOT executable
+    quotes -- recommend structure, expiry windows, and strike DISTANCE, not
+    hard prices.
+If no market-data block is provided, set 'iv_environment' and
+'options_liquidity' to their 'Unknown - no market data provided' values and
+reason about structure from the fundamentals.
 
 Do the asymmetry math at the option level (upside multiple vs premium at risk)
 and a probability-weighted EV sanity check against a ~3:1 bar. Keep scores
@@ -471,11 +726,20 @@ class MoonshotOptionsFinder(CustomWorkflow):
         """
         filing_block = f"\n\nHere's the filing content:\n\n{text}"
 
+        # Optional FactSet market-data enrichment (no-op if not configured).
+        market_block, market_asof = get_market_context(ticker)
+        used_market_data = bool(market_block)
+        market_section = f"\n\n{market_block}\n" if market_block else ""
+        if used_market_data:
+            logger.info(f"Moonshot: injected FactSet market data for {ticker}")
+
         # --- Call 1: DIAGNOSE -------------------------------------------------
         diag_obj: Optional[MoonshotDiagnosis] = None
         diag_err: Optional[str] = None
         try:
-            prompt = _PROMPT_DIAGNOSE.format(ticker=ticker, year=year) + filing_block
+            prompt = (
+                _PROMPT_DIAGNOSE.format(ticker=ticker, year=year) + market_section + filing_block
+            )
             diag_obj = provider.generate_with_retry(
                 prompt=prompt,
                 schema=MoonshotDiagnosis,
@@ -503,6 +767,7 @@ class MoonshotOptionsFinder(CustomWorkflow):
                     year=year,
                     diagnosis_context=diag_ctx,
                 )
+                + market_section
                 + filing_block
             )
             struct_obj = provider.generate_with_retry(
@@ -516,7 +781,15 @@ class MoonshotOptionsFinder(CustomWorkflow):
             struct_err = str(e)
             logger.error(f"Moonshot STRUCTURE call failed for {ticker} {year}: {e}")
 
-        return self._merge(ticker, diag_obj, struct_obj, diag_err, struct_err)
+        return self._merge(
+            ticker,
+            diag_obj,
+            struct_obj,
+            diag_err,
+            struct_err,
+            used_market_data=used_market_data,
+            market_asof=market_asof,
+        )
 
     # ---- merge -----------------------------------------------------------
 
@@ -527,6 +800,8 @@ class MoonshotOptionsFinder(CustomWorkflow):
         struct_obj: Optional[OptionsStructure],
         diag_err: Optional[str],
         struct_err: Optional[str],
+        used_market_data: bool = False,
+        market_asof: Optional[str] = None,
     ) -> MoonshotOptionsResult:
         """Assemble the final result, degrading gracefully on partial failure."""
         diagnosis = diag_obj or self._placeholder_diagnosis(diag_err)
@@ -562,6 +837,8 @@ class MoonshotOptionsFinder(CustomWorkflow):
             priced_in_room_score=structure.priced_in_room_score,
             structure=structure,
             diagnosis=diagnosis,
+            used_market_data=used_market_data,
+            market_data_asof=market_asof,
             partial=bool(failed),
             notes=notes,
         )
@@ -595,6 +872,8 @@ class MoonshotOptionsFinder(CustomWorkflow):
             play_rationale=msg + (f" Error: {err}" if err else ""),
             suggested_expiry_window="N/A",
             strike_aggressiveness="N/A",
+            iv_environment="Unknown - no market data provided",
+            options_liquidity="Unknown - no market data provided",
             asymmetry_summary=msg,
             expected_value_logic=msg,
             priced_in_room_score=0,
