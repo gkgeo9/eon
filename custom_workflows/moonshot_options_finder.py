@@ -81,11 +81,33 @@ favor of the narrative (or vice-versa); splitting keeps both rigorous. The
 final ``schema`` returned for DB/UI compatibility is ``MoonshotOptionsResult``,
 which embeds the Call-1 diagnosis as a sub-object so the reasoning is visible
 alongside the recommendation.
+
+OPTIONAL MARKET-DATA ENRICHMENT (both off/no-op unless configured)
+-----------------------------------------------------------------
+The 10-K is blind to the market side ("is it priced in?", "which structure?").
+Two optional, independently-degrading sources can be injected into both prompts:
+
+  * FactSet CSV (EON_FACTSET_CSV) -- a static per-ticker snapshot: IV rank,
+    skew, short interest, live valuation, option volume / open interest, etc.
+    May lag a day or two; treated as as-of reference context.
+  * Live options chain (EON_YFINANCE_OPTIONS=1) -- a live yfinance AGGREGATE
+    summary of the actual tradeable expiry ladder: per-expiry contract counts,
+    open interest, volume, and median IV. NO individual strikes are exposed.
+    Cached per-ticker (EON_YFINANCE_TTL) since the service builds a fresh
+    workflow instance per run across many workers; off by default because it
+    makes live network calls.
+
+Both are framed as reference context, never executable quotes -- the model
+recommends structure, expiry windows, and strike DISTANCE, not hard prices.
+``used_market_data`` / ``used_live_options_chain`` / ``market_data_asof`` on the
+result record which sources were actually applied.
 """
 
 import csv
 import os
 import threading
+import time
+from datetime import date
 from pathlib import Path
 from typing import Dict, List, Literal, Optional
 
@@ -279,6 +301,153 @@ def get_market_context(ticker: str) -> tuple:
         "a day or two; treat as approximate, NOT as executable live quotes):"
     )
     return header + "\n" + "\n".join(lines), asof
+
+
+# ===========================================================================
+# OPTIONAL LIVE OPTIONS-CHAIN SUMMARY (yfinance)
+# ---------------------------------------------------------------------------
+# Complements the FactSet CSV with a LIVE view of the actual tradeable expiry
+# ladder. We pull only AGGREGATE numbers per expiry -- date, contract counts,
+# open interest, volume, and a median implied vol -- and deliberately NEVER
+# expose individual strikes. This tells the model which expiries actually exist
+# (so it can match a catalyst to a real expiry), how liquid each one is, and the
+# IV term structure across expiries.
+#
+# STRICTLY OPTIONAL and OFF BY DEFAULT: it makes live network calls (slow, and
+# Yahoo throttles), so enable it explicitly with EON_YFINANCE_OPTIONS=1. Results
+# are cached per-ticker with a TTL because the analysis service spins up a fresh
+# workflow instance per run across many parallel workers. Any failure (no
+# network, throttling, missing package) degrades silently to no block.
+#
+# Config:
+#   EON_YFINANCE_OPTIONS=1        enable (default: disabled)
+#   EON_YFINANCE_TTL=3600         cache seconds (default: 1 hour)
+#   EON_YFINANCE_MAX_EXPIRIES=8   how many expiries to summarize (default: 8)
+# ===========================================================================
+
+_YF_LOCK = threading.Lock()
+_yf_cache: Dict[str, tuple] = {}  # ticker -> (fetched_at_epoch, block_str)
+
+
+def _yfinance_enabled() -> bool:
+    return os.environ.get("EON_YFINANCE_OPTIONS", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def _yf_int_env(name: str, default: int, minimum: int = 1) -> int:
+    try:
+        return max(minimum, int(os.environ.get(name, str(default))))
+    except (TypeError, ValueError):
+        return default
+
+
+def _summarize_options_chain(tk: str) -> str:
+    """Fetch and format an aggregate options-chain summary for one ticker.
+
+    Returns "" on any failure. No individual strikes are ever included.
+    """
+    try:
+        import yfinance as yf
+    except Exception:
+        return ""
+
+    try:
+        t = yf.Ticker(tk)
+        expiries = list(t.options or [])
+        if not expiries:
+            return ""
+
+        spot = None
+        try:
+            fi = t.fast_info
+            spot = fi.get("lastPrice") or fi.get("last_price")
+        except Exception:
+            spot = None
+
+        max_n = _yf_int_env("EON_YFINANCE_MAX_EXPIRIES", 8)
+        rows: List[tuple] = []
+        tot_call_oi = 0
+        tot_put_oi = 0
+        for exp in expiries[:max_n]:
+            try:
+                oc = t.option_chain(exp)
+            except Exception:
+                continue
+            calls, puts = oc.calls, oc.puts
+            n_calls, n_puts = int(len(calls)), int(len(puts))
+
+            def _sum(df, col):
+                try:
+                    return int(df[col].fillna(0).sum())
+                except Exception:
+                    return 0
+
+            c_oi, p_oi = _sum(calls, "openInterest"), _sum(puts, "openInterest")
+            c_vol, p_vol = _sum(calls, "volume"), _sum(puts, "volume")
+            iv_med = None
+            try:
+                ivs = calls["impliedVolatility"].dropna()
+                if len(ivs):
+                    iv_med = round(float(ivs.median()) * 100, 1)
+            except Exception:
+                iv_med = None
+            tot_call_oi += c_oi
+            tot_put_oi += p_oi
+            rows.append((exp, n_calls, n_puts, c_oi, p_oi, c_vol, p_vol, iv_med))
+
+        if not rows:
+            return ""
+
+        lines = [
+            "LIVE OPTIONS CHAIN (yfinance snapshot as of {0}; AGGREGATE ONLY, no "
+            "strikes; reference context, not executable quotes):".format(date.today().isoformat())
+        ]
+        spot_txt = f"~{spot}" if spot else "n/a"
+        pc_ratio = round(tot_put_oi / tot_call_oi, 2) if tot_call_oi else "n/a"
+        lines.append(
+            f"  - Spot: {spot_txt} | expiries listed: {len(expiries)} "
+            f"(showing {len(rows)}) | total call OI: {tot_call_oi} vs put OI: "
+            f"{tot_put_oi} (put/call OI ratio: {pc_ratio})"
+        )
+        lines.append(
+            "  - Per expiry [date | #calls | #puts | call OI | put OI | call vol "
+            "| put vol | ~median call IV]:"
+        )
+        for exp, n_c, n_p, c_oi, p_oi, c_vol, p_vol, iv_med in rows:
+            iv_txt = f"{iv_med}%" if iv_med is not None else "n/a"
+            lines.append(
+                f"    {exp} | {n_c} | {n_p} | {c_oi} | {p_oi} | {c_vol} | " f"{p_vol} | {iv_txt}"
+            )
+        return "\n".join(lines)
+    except Exception as e:  # network/throttle/parse -- never break analysis
+        logger.warning("yfinance options summary failed for %s: %s", tk, e)
+        return ""
+
+
+def get_options_chain_summary(ticker: str) -> str:
+    """Return a cached aggregate options-chain block, or "" if disabled/unavailable."""
+    if not _yfinance_enabled():
+        return ""
+    tk = (ticker or "").strip().upper()
+    if not tk:
+        return ""
+
+    ttl = _yf_int_env("EON_YFINANCE_TTL", 3600)
+    now = time.time()
+    with _YF_LOCK:
+        hit = _yf_cache.get(tk)
+        if hit and (now - hit[0]) < ttl:
+            return hit[1]
+
+    block = _summarize_options_chain(tk)  # slow network call, outside the lock
+
+    with _YF_LOCK:
+        _yf_cache[tk] = (now, block)
+    return block
 
 
 # ===========================================================================
@@ -566,6 +735,12 @@ class MoonshotOptionsResult(BaseModel):
         default=None,
         description="As-of date of the injected FactSet snapshot, if available.",
     )
+    used_live_options_chain: bool = Field(
+        default=False,
+        description="True if a live yfinance aggregate options-chain summary "
+        "(expiries, contract counts, OI/volume, median IV -- no strikes) was "
+        "injected into the prompts for this ticker.",
+    )
 
     # --- run metadata ---
     partial: bool = Field(
@@ -656,22 +831,27 @@ Translate the diagnosis into a trade. Rules of the desk:
   * Most names should score below 50. Reserve 70+ for setups where all five
     moonshot conditions are broadly met with filing evidence.
 
-USING EXTERNAL MARKET DATA: If an "EXTERNAL MARKET DATA" block is provided below
-(FactSet snapshot), it is your edge for structure selection -- the diagnosis
-above is fundamentals-only and cannot see the vol surface:
+USING EXTERNAL MARKET DATA: An "EXTERNAL MARKET DATA" (FactSet snapshot) and/or
+a "LIVE OPTIONS CHAIN" (yfinance aggregate) block may be provided below. They
+are your edge for structure selection -- the diagnosis above is fundamentals-
+only and cannot see the vol surface:
   * IV rank/percentile and IV-vs-realized set 'iv_environment': rich vol => cut
     vega with debit spreads / calendars; cheap vol => outright long calls/LEAPS.
   * Option volume and open interest set 'options_liquidity': thin OI means wide
     spreads and hard sizing -- a great thesis with illiquid options is NOT an
     options play (consider stock or pass).
-  * Skew / term structure reveal what the market already prices (priced-in tail).
+  * The LIVE OPTIONS CHAIN block lists the ACTUAL available expiries with per-
+    expiry contract counts, OI, volume, and a median IV (no strikes). Anchor
+    'suggested_expiry_window' to an expiry that actually exists AND has real OI/
+    volume; read the median-IV column ACROSS expiries as the term structure (a
+    near-term IV hump = an event is priced there); use put/call OI for skew.
   * Use the live price / market cap (not the stale 10-K figure) for the payoff
     multiple. Treat all figures as as-of reference context, NOT executable
     quotes -- recommend structure, expiry windows, and strike DISTANCE, not
     hard prices.
-If no market-data block is provided, set 'iv_environment' and
-'options_liquidity' to their 'Unknown - no market data provided' values and
-reason about structure from the fundamentals.
+If neither block is provided, set 'iv_environment' and 'options_liquidity' to
+their 'Unknown - no market data provided' values and reason about structure from
+the fundamentals.
 
 Do the asymmetry math at the option level (upside multiple vs premium at risk)
 and a probability-weighted EV sanity check against a ~3:1 bar. Keep scores
@@ -726,12 +906,22 @@ class MoonshotOptionsFinder(CustomWorkflow):
         """
         filing_block = f"\n\nHere's the filing content:\n\n{text}"
 
-        # Optional FactSet market-data enrichment (no-op if not configured).
-        market_block, market_asof = get_market_context(ticker)
-        used_market_data = bool(market_block)
+        # Optional external market data (both no-ops unless configured/enabled):
+        #   * FactSet CSV snapshot (EON_FACTSET_CSV)
+        #   * live aggregate options-chain summary (EON_YFINANCE_OPTIONS=1)
+        factset_block, market_asof = get_market_context(ticker)
+        chain_block = get_options_chain_summary(ticker)
+        used_market_data = bool(factset_block)
+        used_live_options_chain = bool(chain_block)
+        market_block = "\n\n".join(b for b in (factset_block, chain_block) if b)
         market_section = f"\n\n{market_block}\n" if market_block else ""
-        if used_market_data:
-            logger.info(f"Moonshot: injected FactSet market data for {ticker}")
+        if market_block:
+            logger.info(
+                "Moonshot: injected external market data for %s (factset=%s, " "live_chain=%s)",
+                ticker,
+                used_market_data,
+                used_live_options_chain,
+            )
 
         # --- Call 1: DIAGNOSE -------------------------------------------------
         diag_obj: Optional[MoonshotDiagnosis] = None
@@ -789,6 +979,7 @@ class MoonshotOptionsFinder(CustomWorkflow):
             struct_err,
             used_market_data=used_market_data,
             market_asof=market_asof,
+            used_live_options_chain=used_live_options_chain,
         )
 
     # ---- merge -----------------------------------------------------------
@@ -802,6 +993,7 @@ class MoonshotOptionsFinder(CustomWorkflow):
         struct_err: Optional[str],
         used_market_data: bool = False,
         market_asof: Optional[str] = None,
+        used_live_options_chain: bool = False,
     ) -> MoonshotOptionsResult:
         """Assemble the final result, degrading gracefully on partial failure."""
         diagnosis = diag_obj or self._placeholder_diagnosis(diag_err)
@@ -839,6 +1031,7 @@ class MoonshotOptionsFinder(CustomWorkflow):
             diagnosis=diagnosis,
             used_market_data=used_market_data,
             market_data_asof=market_asof,
+            used_live_options_chain=used_live_options_chain,
             partial=bool(failed),
             notes=notes,
         )
