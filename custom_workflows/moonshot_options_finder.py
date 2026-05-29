@@ -148,7 +148,10 @@ logger = get_logger(__name__)
 _FACTSET_FIELDS: Dict[str, tuple] = {
     "as_of_date": ("As-of date", "snapshot date; data may lag a day or two"),
     "price": ("Last price", "current share price (USD)"),
-    "market_cap": ("Market cap", "live market cap in $ millions (FactSet CSV); use for the payoff-multiple math"),
+    "market_cap": (
+        "Market cap",
+        "live market cap in $ millions (FactSet CSV); use for the payoff-multiple math",
+    ),
     "iv_30d": ("Implied vol (30d)", "annualized IV, %"),
     "iv_rank": (
         "IV rank",
@@ -220,7 +223,7 @@ _FACTSET_SKIP_COLUMNS = frozenset(
     {
         "company_name",
         "Exchng Ticker",
-        "Local Price 52 Week Low",   # used only for derived pct_off_52w_high
+        "Local Price 52 Week Low",  # used only for derived pct_off_52w_high
         "Local Price 52 Week High",  # used only for derived pct_off_52w_high
     }
     | set(_TICKER_KEYS)
@@ -254,75 +257,69 @@ def _normalize_factset_row(row: Dict[str, str]) -> Dict[str, str]:
     return normalized
 
 
-# Class/module-level cache: the analysis service builds a FRESH workflow
-# instance per run across many parallel workers, so the CSV is parsed once
-# here (keyed by mtime) and shared, guarded by a lock.
-_factset_lock = threading.Lock()
-_factset_cache: Dict[str, Dict[str, str]] = {}
-_factset_cache_path: Optional[str] = None
-_factset_cache_mtime: Optional[float] = None
+# Hard-coded FactSet CSV path. Set this to the export you want to use. Relying on
+# an env var proved fragile (it must be present in the exact shell that spawns the
+# batch worker, and was silently dropping enrichment); a hard path always works.
+# To switch exports, just edit this one line.
+_FACTSET_CSV_PATH = r"c:\Users\vdocv\PycharmProjects\eon\factset_russell_1000_29052026.csv"
 
 
 def _resolve_factset_path() -> Optional[Path]:
-    """Return the configured FactSet CSV path, or None if not available."""
+    """Return the FactSet CSV path, or None if no candidate is a real file.
+
+    The hard-coded ``_FACTSET_CSV_PATH`` is the source of truth. An optional
+    EON_FACTSET_CSV override is honored ONLY if it points to an existing file --
+    a malformed/quoted .env value (e.g. backslash paths in double quotes get
+    mangled into control chars by dotenv) silently falls back to the hard-coded
+    path instead of disabling enrichment. Quotes/whitespace are stripped first.
+    """
+    candidates: List[str] = []
     env_path = os.environ.get("EON_FACTSET_CSV")
     if env_path:
-        p = Path(env_path).expanduser()
-        return p if p.is_file() else None
-    # Fall back to a default location under the data dir, if config is usable.
-    try:
-        from eon.core import get_config
+        candidates.append(env_path.strip().strip('"').strip("'"))
+    candidates.append(_FACTSET_CSV_PATH)
 
-        p = get_config().get_data_path("factset", "options_context.csv")
-        return p if p.is_file() else None
-    except Exception:
-        return None
+    for cand in candidates:
+        try:
+            p = Path(cand).expanduser()
+            if p.is_file():
+                return p
+        except Exception:
+            continue
+    return None
 
 
-def _load_factset() -> Dict[str, Dict[str, str]]:
-    """Load and cache the FactSet CSV, keyed by uppercased ticker.
+def _find_factset_row(ticker: str) -> Dict[str, str]:
+    """Read the FactSet CSV and return the one normalized row for ``ticker``.
 
-    Reloads only when the file path or mtime changes. Returns an empty dict
-    when no CSV is configured or parsing fails (enrichment is optional).
+    Reads the file fresh on every call -- it's small (a few thousand rows) and
+    the analysis it feeds takes 60+ seconds, so parsing cost is irrelevant and
+    there is no cache to go stale or get poisoned. Returns {} if the CSV is not
+    found, has no ticker column, the ticker is absent, or anything goes wrong
+    (enrichment is strictly optional and must never break the analysis).
     """
-    global _factset_cache, _factset_cache_path, _factset_cache_mtime
-
     path = _resolve_factset_path()
     if path is None:
         return {}
 
-    try:
-        mtime = path.stat().st_mtime
-    except OSError:
+    want = (ticker or "").strip().upper()
+    if not want:
         return {}
 
-    with _factset_lock:
-        if str(path) == _factset_cache_path and mtime == _factset_cache_mtime:
-            return _factset_cache
-
-        rows: Dict[str, Dict[str, str]] = {}
-        try:
-            with path.open(newline="", encoding="utf-8-sig") as fh:
-                reader = csv.DictReader(fh)
-                tkey = next((k for k in (reader.fieldnames or []) if k in _TICKER_KEYS), None)
-                if tkey is None:
-                    logger.warning("FactSet CSV %s has no ticker/symbol column; ignoring.", path)
-                    rows = {}
-                else:
-                    for row in reader:
-                        tk = (row.get(tkey) or "").strip().upper()
-                        if tk:
-                            stripped = {k: (v or "").strip() for k, v in row.items()}
-                            rows[tk] = _normalize_factset_row(stripped)
-            logger.info("Loaded FactSet market data for %d tickers from %s", len(rows), path)
-        except Exception as e:  # malformed CSV must never break analysis
-            logger.warning("Failed to load FactSet CSV %s: %s", path, e)
-            rows = {}
-
-        _factset_cache = rows
-        _factset_cache_path = str(path)
-        _factset_cache_mtime = mtime
-        return rows
+    try:
+        with path.open(newline="", encoding="utf-8-sig") as fh:
+            reader = csv.DictReader(fh)
+            tkey = next((k for k in (reader.fieldnames or []) if k in _TICKER_KEYS), None)
+            if tkey is None:
+                logger.warning("FactSet CSV %s has no ticker/symbol column; ignoring.", path)
+                return {}
+            for row in reader:
+                if (row.get(tkey) or "").strip().upper() == want:
+                    stripped = {k: (v or "").strip() for k, v in row.items()}
+                    return _normalize_factset_row(stripped)
+    except Exception as e:  # missing/locked/malformed CSV must never break analysis
+        logger.warning("Failed to read FactSet CSV %s for %s: %s", path, want, e)
+    return {}
 
 
 def get_market_context(ticker: str) -> tuple:
@@ -331,10 +328,7 @@ def get_market_context(ticker: str) -> tuple:
     formatted_block is "" when no data is available. asof_date is None unless
     the row carries an 'as_of_date'.
     """
-    data = _load_factset()
-    if not data:
-        return "", None
-    row = data.get((ticker or "").strip().upper())
+    row = _find_factset_row(ticker)
     if not row:
         return "", None
 
@@ -510,6 +504,82 @@ def get_options_chain_summary(ticker: str) -> str:
     with _YF_LOCK:
         _yf_cache[tk] = (now, block)
     return block
+
+
+# ===========================================================================
+# PRE-FLIGHT / WATCHDOG HELPERS
+# ---------------------------------------------------------------------------
+#  * WALL-CLOCK TIMEOUT. A handful of huge 10-Ks make a Gemini call grind for
+#    hours instead of erroring (the user saw ~2h with no failure). We cap the
+#    TOTAL analysis time and give up once it is exceeded so the batch moves on.
+#    Tunable via EON_MOONSHOT_TIMEOUT_SECONDS (default 1800 = 30 min).
+#  * FILING-TYPE SANITY. The batch runs with one --filing-type (default 10-K),
+#    but some Russell 1000 names file a 20-F (foreign annual report). analyze()
+#    only gets the extracted text, so we fingerprint the form from the head:
+#       * 20-F / 40-F  -> valid annual report; proceed but RELABEL + flag it.
+#       * 10-Q / 8-K   -> not an annual report; fail fast (wrong document).
+#       * unknown      -> proceed as 10-K but note the ambiguity.
+# ===========================================================================
+
+
+def _analysis_timeout_seconds() -> int:
+    """Total wall-clock budget for one company's analysis. Tunable via env."""
+    try:
+        return max(60, int(os.environ.get("EON_MOONSHOT_TIMEOUT_SECONDS", "1800")))
+    except (TypeError, ValueError):
+        return 900
+
+
+def _call_with_deadline(fn, timeout_s: float):
+    """Run ``fn()`` but give up after ``timeout_s`` seconds.
+
+    Gemini calls are blocking network I/O that cannot be force-killed, so on
+    timeout we abandon the worker thread (it finishes on its own or dies with
+    the process) and raise TimeoutError -- returning control so the batch can
+    move on to the next company instead of stalling for hours.
+    """
+    import concurrent.futures
+
+    ex = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    fut = ex.submit(fn)
+    try:
+        return fut.result(timeout=max(1.0, timeout_s))
+    except concurrent.futures.TimeoutError:
+        raise TimeoutError(f"call exceeded its {timeout_s:.0f}s time budget")
+    finally:
+        # Do NOT wait -- a hung call would otherwise block us here too.
+        ex.shutdown(wait=False)
+
+
+# (substring fingerprint -> canonical form label); checked in order, most
+# specific first, against the uppercased first slice of the document.
+_FORM_FINGERPRINTS = (
+    ("FORM 20-F", "20-F"),
+    ("FORM 40-F", "40-F"),
+    ("FORM 10-K405", "10-K405"),
+    ("FORM 10-KSB", "10-KSB"),
+    ("FORM 10-K", "10-K"),
+    ("FORM 10-Q", "10-Q"),
+    ("FORM 8-K", "8-K"),
+)
+
+
+def _detect_form_type(text: str) -> Optional[str]:
+    """Best-effort detection of the SEC form type from the filing text."""
+    head = (text or "")[:20000].upper()
+    for pat, label in _FORM_FINGERPRINTS:
+        if pat in head:
+            return label
+    # Looser fallbacks for filings that don't use the exact "FORM xx" phrasing.
+    if "20-F" in head and "ANNUAL REPORT" in head:
+        return "20-F"
+    if "10-K" in head:
+        return "10-K"
+    return None
+
+
+# Forms this workflow treats as a valid annual report to analyze.
+_ANNUAL_FORMS = frozenset({"10-K", "10-K405", "10-KSB", "20-F", "40-F"})
 
 
 # ===========================================================================
@@ -820,8 +890,8 @@ class MoonshotOptionsResult(BaseModel):
 
 _PROMPT_DIAGNOSE = """
 You are a contrarian, evidence-driven analyst hunting for ASYMMETRIC OPTIONS
-setups in public equities. You are reading the most recent 10-K of {ticker}
-(fiscal year {year}).
+setups in public equities. You are reading the most recent annual report (a
+{form}) of {ticker} (fiscal year {year}).
 
 You are NOT grading this as a quality compounder. You are testing whether it is
 a MOONSHOT: a non-linear payoff that an options buyer could capture with capped
@@ -966,6 +1036,47 @@ class MoonshotOptionsFinder(CustomWorkflow):
         a note; if STRUCTURE fails we return a degraded PASS result built from
         whatever diagnosis we have, so the run is never silently lost.
         """
+        # --- Wall-clock watchdog ---------------------------------------------
+        # Cap the TOTAL time spent on one company. A huge filing can make a
+        # Gemini call grind for hours; once the budget is spent we give up so the
+        # batch moves on instead of stalling a worker. The budget is shared
+        # across both calls (see _remaining()).
+        deadline_s = _analysis_timeout_seconds()
+        _start = time.monotonic()
+
+        def _remaining() -> float:
+            return deadline_s - (time.monotonic() - _start)
+
+        # --- Filing-type sanity ----------------------------------------------
+        detected_form = _detect_form_type(text)
+        form_note: Optional[str] = None
+        if detected_form is None:
+            form_note = (
+                "Could not detect the SEC form type from the document; analyzed "
+                "as a 10-K by default."
+            )
+            logger.warning("Moonshot: %s FY%s -- %s", ticker, year, form_note)
+        elif detected_form not in _ANNUAL_FORMS:
+            # e.g. a 10-Q / 8-K was fed in -- this workflow expects an annual
+            # report, so fail fast rather than produce a misleading diagnosis.
+            msg = (
+                f"Document for {ticker} FY{year} looks like a {detected_form}, not "
+                f"an annual report (10-K/20-F). The moonshot diagnosis requires a "
+                f"full annual filing; failing fast."
+            )
+            logger.error("Moonshot: %s", msg)
+            raise AIProviderError(msg)
+        elif detected_form != "10-K":
+            # 20-F / 40-F are valid foreign annual reports: proceed, but relabel
+            # the form in the prompts and flag it on the result.
+            form_note = (
+                f"Filing is a {detected_form} (foreign/variant annual report), not "
+                f"a standard 10-K. Analysis proceeded with that in mind."
+            )
+            logger.info("Moonshot: %s FY%s -- %s", ticker, year, form_note)
+
+        form_label = detected_form or "10-K"
+
         filing_block = f"\n\nHere's the filing content:\n\n{text}"
 
         # Optional external market data (both no-ops unless configured/enabled):
@@ -990,13 +1101,18 @@ class MoonshotOptionsFinder(CustomWorkflow):
         diag_err: Optional[str] = None
         try:
             prompt = (
-                _PROMPT_DIAGNOSE.format(ticker=ticker, year=year) + market_section + filing_block
+                _PROMPT_DIAGNOSE.format(ticker=ticker, year=year, form=form_label)
+                + market_section
+                + filing_block
             )
-            diag_obj = provider.generate_with_retry(
-                prompt=prompt,
-                schema=MoonshotDiagnosis,
-                max_retries=3,
-                retry_delay=10,
+            diag_obj = _call_with_deadline(
+                lambda: provider.generate_with_retry(
+                    prompt=prompt,
+                    schema=MoonshotDiagnosis,
+                    max_retries=3,
+                    retry_delay=10,
+                ),
+                _remaining(),
             )
             logger.info(f"Moonshot DIAGNOSE call succeeded for {ticker} {year}")
         except (AIProviderError, Exception) as e:
@@ -1022,18 +1138,21 @@ class MoonshotOptionsFinder(CustomWorkflow):
                 + market_section
                 + filing_block
             )
-            struct_obj = provider.generate_with_retry(
-                prompt=prompt,
-                schema=OptionsStructure,
-                max_retries=3,
-                retry_delay=10,
+            struct_obj = _call_with_deadline(
+                lambda: provider.generate_with_retry(
+                    prompt=prompt,
+                    schema=OptionsStructure,
+                    max_retries=3,
+                    retry_delay=10,
+                ),
+                _remaining(),
             )
             logger.info(f"Moonshot STRUCTURE call succeeded for {ticker} {year}")
         except (AIProviderError, Exception) as e:
             struct_err = str(e)
             logger.error(f"Moonshot STRUCTURE call failed for {ticker} {year}: {e}")
 
-        return self._merge(
+        result = self._merge(
             ticker,
             diag_obj,
             struct_obj,
@@ -1043,6 +1162,12 @@ class MoonshotOptionsFinder(CustomWorkflow):
             market_asof=market_asof,
             used_live_options_chain=used_live_options_chain,
         )
+
+        # Surface the filing-type note (e.g. a 20-F) alongside any failure notes.
+        if form_note:
+            result.notes = f"{result.notes} | {form_note}" if result.notes else form_note
+
+        return result
 
     # ---- merge -----------------------------------------------------------
 
