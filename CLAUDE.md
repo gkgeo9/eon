@@ -85,7 +85,7 @@ streamlit run streamlit_app.py
 
 # Run CLI
 eon analyze AAPL --years 5
-eon batch tickers.csv --workers 10
+eon batch tickers.csv --years 7
 
 # Testing
 pytest                           # Run all tests

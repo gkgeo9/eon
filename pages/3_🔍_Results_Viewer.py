@@ -58,6 +58,12 @@ if not run_id:
 
 # Display results if run_id is available
 if run_id:
+    # Let the user pick a different analysis without reloading the page.
+    # Clearing view_run_id and rerunning brings back the selector above.
+    if st.button("← Select a different analysis"):
+        st.session_state.view_run_id = None
+        st.rerun()
+
     # Get run details
     run_details = db.get_run_details(run_id)
 

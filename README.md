@@ -122,9 +122,12 @@ Opens at `http://localhost:8501`
 # Single company analysis
 eon analyze AAPL --years 5
 
-# Batch processing
-eon batch tickers.csv --workers 10
+# Batch processing (one row per ticker in the CSV)
+eon batch tickers.csv --years 7
 ```
+
+> Run `eon --help`, or `eon COMMAND --help` (e.g. `eon batch --help`), for the
+> full, always-up-to-date reference for any command.
 
 ---
 
@@ -409,37 +412,75 @@ These features are specifically designed for large-scale processing (1000+ compa
 
 ## CLI Reference
 
+After `pip install -e .`, the `eon` command is available. Every command has
+detailed, example-rich help — run `eon COMMAND --help` (e.g. `eon analyze --help`).
+
 ```bash
-# Analyze a single company
-eon analyze AAPL --years 5 --type fundamental
+# Launch the web UI
+eon web                                   # default localhost:8501
+eon web --port 8080 --host 0.0.0.0        # custom port, external access
 
-# Analyze with specific years
-eon analyze MSFT --years 2020 2021 2022 2023
+# Analyze a single company (last 5 years of 10-K filings)
+eon analyze AAPL --years 5
 
-# Batch process from file
-eon batch tickers.csv --workers 10 --type buffett
+# Multi-perspective analysis (Buffett + Taleb + Contrarian)
+eon analyze AAPL --analysis-type multi --years 5
 
-# Contrarian scan with minimum score filter
-eon scan --tickers-file universe.txt --min-score 400
+# Analyze a foreign issuer's 20-F filings
+eon analyze TSM --filing-type 20-F --years 5
 
-# Export results
+# Analyze by SEC CIK number instead of ticker
+eon analyze 0000320193 --input-mode cik --years 5
+
+# Run a custom workflow (see `eon workflows` for IDs)
+eon analyze AAPL --analysis-type custom:examples.moonshot_analyzer
+
+# List available custom workflows
+eon workflows
+eon workflows --verbose
+
+# Batch-process many companies (CSV or one ticker per line)
+eon batch tickers.csv --years 7 --analysis-type buffett
+
+# List incomplete batches, then resume the most recent one
+eon batch --list-incomplete
+eon batch -r                              # resume most recent
+eon batch -r <batch-id>                   # resume a specific batch
+
+# Contrarian opportunity scan (TICKER_FILE is a positional argument)
+eon scan-contrarian universe.csv --min-score 75 --top-n 10
+
+# Export stored results
 eon export --format csv --output results.csv
+eon export --format parquet --output results.parquet
+eon export --stats                        # summary statistics only
 
-# Export from a specific batch run
+# Export the results of a specific batch run
 eon export --batch-id abc12345 --output batch_results.csv
-
-# Export only completed items
 eon export --batch-id abc12345 --status-filter completed --output completed.csv
+
+# Manage the SEC-filing download cache
+eon cache stats
+eon cache scan
+eon cache clear --older-than-days 30
 ```
 
-### CLI Options
+### Commands & Key Options
 
-| Command   | Options                                       | Description                     |
-| --------- | --------------------------------------------- | ------------------------------- |
-| `analyze` | `--years`, `--type`, `--filing`               | Single company analysis         |
-| `batch`   | `--years`, `--type`, `--priority`, `--resume` | Multi-day batch processing      |
-| `scan`    | `--min-score`, `--tickers-file`               | Contrarian opportunity scanning |
-| `export`  | `--format`, `--output`, `--batch-id`          | Export results to file          |
+| Command           | Key options / arguments                                                | Description                                  |
+| ----------------- | --------------------------------------------------------------------- | -------------------------------------------- |
+| `web`             | `--port`, `--host`                                                     | Launch the Streamlit web UI                  |
+| `analyze`         | `TICKER`, `--years`, `--analysis-type`, `--filing-type`, `--input-mode` | Single-company analysis                      |
+| `batch`           | `TICKER_FILE`, `--years`, `--analysis-type`, `--filing-type`, `--resume`, `--priority`, `--list-incomplete` | Multi-day batch processing                   |
+| `scan-contrarian` | `TICKER_FILE`, `--min-score`, `--top-n`, `--min-confidence`, `--output` | Contrarian opportunity scanning              |
+| `export`          | `--format`, `--output`, `--analysis-type`, `--batch-id`, `--status-filter`, `--stats` | Export results to CSV / Excel / Parquet      |
+| `workflows`       | `--verbose`                                                            | List auto-discovered custom workflows        |
+| `cache`           | `scan`, `stats`, `clear`                                               | Manage the downloaded-filing cache           |
+
+> **Note on analysis types:** valid `--analysis-type` values are
+> `fundamental`, `excellent`, `objective`, `buffett`, `taleb`, `contrarian`,
+> `multi`, `scanner`, or `custom:<workflow_id>`. Types `excellent`, `objective`,
+> and `scanner` require at least 3 years of data.
 
 ---
 
@@ -483,37 +524,49 @@ eon/
 ├── ui/                          # Streamlit web interface
 │   ├── database/                # Data access layer
 │   │   ├── repository.py        # DatabaseRepository (SQLite with retry/backup)
-│   │   └── migrations/          # Schema migration files (v001-v012)
+│   │   ├── mixins/              # Repository mixins (runs, results, cache, ...)
+│   │   └── migrations/          # Schema migration files (v001–v014)
 │   ├── services/                # Business logic
 │   │   ├── analysis_service.py  # AnalysisService (main orchestrator)
 │   │   ├── batch_queue.py       # Multi-day batch processing with monitoring
 │   │   └── cancellation.py      # Analysis cancellation token system
-│   └── components/              # Reusable UI components
+│   └── components/              # Reusable UI components (navigation, results)
 │
-├── cli/                         # Command-line interface
-│   └── main.py                  # Click-based CLI
+├── cli/                         # Command-line interface (Click)
+│   ├── main.py                  # CLI group + web/cache commands
+│   ├── analyze.py               # `eon analyze`
+│   ├── batch.py                 # `eon batch`
+│   ├── export.py                # `eon export`
+│   ├── scan.py                  # `eon scan-contrarian`
+│   ├── workflows.py             # `eon workflows`
+│   └── utils.py                 # Shared CLI helpers
 │
 ├── core/                        # Shared infrastructure
 │   ├── config.py                # Pydantic configuration management
+│   ├── analysis_types.py        # Built-in analysis type registry
 │   ├── exceptions.py            # Custom exception hierarchy
+│   ├── interfaces.py            # Protocol definitions (IKeyManager, ...)
 │   ├── logging.py               # Centralized logging with rotation
-│   ├── monitoring.py            # Disk/process/health monitoring (NEW)
-│   └── notifications.py         # Discord webhook notifications (NEW)
+│   ├── formatting.py            # Status/duration formatting helpers
+│   ├── monitoring.py            # Disk/process/health monitoring
+│   └── notifications.py         # Discord webhook notifications
 │
 └── processing/                  # Parallel processing
-    ├── pipeline.py              # Analysis pipeline orchestration
     ├── parallel.py              # ThreadPool worker management
-    ├── progress.py              # Thread-safe progress tracking
-    └── resume.py                # Resume interrupted analyses
+    └── progress.py              # Thread-safe progress tracking
 
 custom_workflows/                # User-defined workflows (auto-discovered)
 ├── __init__.py                  # Auto-discovery mechanism
 ├── base.py                      # CustomWorkflow base class
+├── moonshot_options_finder.py   # Example top-level workflow
+├── cspp_v26_analyzer.py         # Example top-level workflow
 └── examples/                    # Example workflows
     ├── growth_analyzer.py
     ├── moat_analyzer.py
     ├── risk_analyzer.py
-    └── management_analyzer.py
+    ├── management_analyzer.py
+    ├── moonshot_analyzer.py
+    └── option_analyzer.py
 
 pages/                           # Streamlit pages
 ├── 1_📊_Analysis.py             # Single/batch analysis
@@ -522,8 +575,11 @@ pages/                           # Streamlit pages
 ├── 4_🌙_Batch_Queue.py          # Multi-day batch processing
 └── 5_⚙️_Settings.py             # Settings and database viewer
 
-scripts/                         # Utility scripts
-└── export_multi_analysis_to_csv.py  # Export results to CSV
+scripts/                         # Maintenance utilities
+└── dedup_db.py                  # De-duplicate analysis_results rows
+
+experimental/                    # Standalone research scripts (not core)
+└── backtester/                  # Strategy backtesting sandbox
 
 streamlit_app.py                 # Home page / dashboard
 ```
@@ -730,6 +786,8 @@ Located in `eon/ui/database/migrations/`:
 | v010    | Synthesis checkpoints                                    |
 | v011    | Batch year tracking                                      |
 | v012    | Batch improvements (indexes, year checkpoints)           |
+| v013    | Batch item priority ordering                              |
+| v014    | Unique constraint on analysis results (de-duplication)    |
 
 ---
 
@@ -893,4 +951,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## Documentation
 
 - [Custom Workflows Guide](docs/CUSTOM_WORKFLOWS.md) - Complete developer documentation
+- [Project Audit](docs/PROJECT_AUDIT.md) - Documentation corrections, removable dead code, and known UI issues
 - [Contributing Guide](CONTRIBUTING.md) - Development setup and contribution guidelines
+- **CLI:** run `eon --help` or `eon COMMAND --help` for built-in, always-current command docs
