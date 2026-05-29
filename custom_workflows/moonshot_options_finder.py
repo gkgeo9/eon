@@ -148,7 +148,7 @@ logger = get_logger(__name__)
 _FACTSET_FIELDS: Dict[str, tuple] = {
     "as_of_date": ("As-of date", "snapshot date; data may lag a day or two"),
     "price": ("Last price", "current share price (USD)"),
-    "market_cap": ("Market cap", "live market cap; use for the payoff-multiple math"),
+    "market_cap": ("Market cap", "live market cap in $ millions (FactSet CSV); use for the payoff-multiple math"),
     "iv_30d": ("Implied vol (30d)", "annualized IV, %"),
     "iv_rank": (
         "IV rank",
@@ -189,9 +189,70 @@ _FACTSET_FIELDS: Dict[str, tuple] = {
     "ev_ebitda": ("EV/EBITDA", "valuation multiple"),
     "ps_ratio": ("P/S", "valuation multiple"),
     "next_earnings_date": ("Next earnings date", "near-term catalyst / vol event"),
+    "put_call_ratio": (
+        "Put/Call ratio",
+        "options sentiment; >1 = more puts (bearish hedge); <0.7 = call dominance (bullish speculation/FOMO)",
+    ),
 }
 
 _TICKER_KEYS = ("ticker", "symbol", "Ticker", "Symbol", "TICKER", "SYMBOL")
+
+# Maps FactSet CSV column headers to the internal _FACTSET_FIELDS keys so the
+# recognized-field labels and hints are applied correctly regardless of the
+# source CSV's header format.
+_FACTSET_COLUMN_ALIASES: Dict[str, str] = {
+    "Closing Price": "price",
+    "Current Market Value": "market_cap",
+    "Theor. Imp Vol": "iv_30d",
+    "IV Rank": "iv_rank",
+    "Option Volume": "option_volume",
+    "Option Open interest": "open_interest",
+    "Short Interest": "short_interest_pct_float",
+    "Entrpr Value/ EBITDA": "ev_ebitda",
+    "Price /Sales CFY": "ps_ratio",
+    "Entrpr Value/ Sales": "ev_sales",
+    "EPS Report Date": "next_earnings_date",
+    "Put/Call Ratio": "put_call_ratio",
+}
+
+# Columns to omit from the generic pass-through (housekeeping / redundant fields).
+_FACTSET_SKIP_COLUMNS = frozenset(
+    {
+        "company_name",
+        "Exchng Ticker",
+        "Local Price 52 Week Low",   # used only for derived pct_off_52w_high
+        "Local Price 52 Week High",  # used only for derived pct_off_52w_high
+    }
+    | set(_TICKER_KEYS)
+)
+
+
+def _normalize_factset_row(row: Dict[str, str]) -> Dict[str, str]:
+    """Apply column aliases and compute derived fields for one FactSet CSV row.
+
+    Returns a new dict with canonical key names (matching _FACTSET_FIELDS where
+    applicable) so recognized fields get their friendly labels and hints in the
+    model prompt.  Columns that are only used to derive other values are removed
+    from the output to avoid repetition.
+    """
+    normalized: Dict[str, str] = {}
+    for col, val in row.items():
+        if col in _FACTSET_SKIP_COLUMNS:
+            continue
+        alias = _FACTSET_COLUMN_ALIASES.get(col)
+        normalized[alias if alias else col] = val
+
+    # Compute pct_off_52w_high from closing price and 52-week high.
+    try:
+        price = float((row.get("Closing Price") or "").replace(",", ""))
+        high = float((row.get("Local Price 52 Week High") or "").replace(",", ""))
+        if price > 0 and high > 0:
+            normalized["pct_off_52w_high"] = f"{round((1 - price / high) * 100, 1)}%"
+    except (ValueError, ZeroDivisionError, AttributeError):
+        pass
+
+    return normalized
+
 
 # Class/module-level cache: the analysis service builds a FRESH workflow
 # instance per run across many parallel workers, so the CSV is parsed once
@@ -251,7 +312,8 @@ def _load_factset() -> Dict[str, Dict[str, str]]:
                     for row in reader:
                         tk = (row.get(tkey) or "").strip().upper()
                         if tk:
-                            rows[tk] = {k: (v or "").strip() for k, v in row.items()}
+                            stripped = {k: (v or "").strip() for k, v in row.items()}
+                            rows[tk] = _normalize_factset_row(stripped)
             logger.info("Loaded FactSet market data for %d tickers from %s", len(rows), path)
         except Exception as e:  # malformed CSV must never break analysis
             logger.warning("Failed to load FactSet CSV %s: %s", path, e)
