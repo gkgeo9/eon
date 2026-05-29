@@ -15,16 +15,16 @@ from eon.ui.theme import apply_theme
 setup_logging(level=20)  # INFO level
 logger = get_logger(__name__)
 
-# Apply global theme
-apply_theme()
-
-# Configure page
+# Configure page (must run before any other Streamlit command)
 st.set_page_config(
     page_title="Erebus Observatory Network",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Apply global theme / skin (renders sidebar chrome, so runs after page config)
+apply_theme()
 
 
 def init_session_state():
