@@ -14,8 +14,11 @@ and, in a SINGLE Gemini call, answers two linked questions at once:
      already studied as excellent (durable compounders)? Is it investing for the
      future / building something that lasts, or just a lottery ticket?
 
-The headline output is a single blended ``combined_score`` (asymmetry x
-excellence) so a whole SET of companies can be ranked in one fast pass.
+The headline outputs are an ``opportunity_bucket`` (True Moonshot / Fallen
+Excellence / Cash Compounder / Speculative Lottery / Pass) plus a
+``combined_score`` -- a code-computed weighted average of six anchored 0-10
+scoring dimensions -- so a whole SET of companies can be bucketed and ranked in
+one fast pass.
 
 WHY ONE CALL (a deliberate, weighed choice)
 -------------------------------------------
@@ -282,6 +285,24 @@ def get_excellence_corpus() -> tuple[str, dict]:
 
 
 # ===========================================================================
+# HEADLINE SCORE WEIGHTS
+# ---------------------------------------------------------------------------
+# combined_score is computed IN CODE (not by the model) as a weighted average of
+# the six 0-10 dimensions, rescaled to 0-100. Equal weights by default; tune here
+# in one place to emphasise a dimension (e.g. raise mispricing_room_score to
+# favour cheap names, or payoff_magnitude to favour bigger swings).
+# ===========================================================================
+_SCORE_WEIGHTS: dict[str, float] = {
+    "payoff_magnitude": 1.0,
+    "right_to_win_score": 1.0,
+    "catalyst_and_runway_score": 1.0,
+    "excellence_alignment_score": 1.0,
+    "excellence_trajectory_score": 1.0,
+    "mispricing_room_score": 1.0,
+}
+
+
+# ===========================================================================
 # OUTPUT SCHEMA (single call -> single result)
 # ===========================================================================
 
@@ -308,25 +329,61 @@ class SharedTrait(BaseModel):
 class MoonshotExcellenceResult(BaseModel):
     """Single-call result: asymmetric-bet diagnosis blended with an excellence read."""
 
-    # --- headline / ranking (top-level for easy cross-company sorting) -------
+    # --- headline (top-level; bucket + code-computed rollup scores) ---------
     combined_score: int = Field(
+        default=0,
         ge=0,
         le=100,
-        description="PRIMARY RANKING SCORE across a set of companies. A blend of "
-        "asymmetry_score (the convex options/moonshot setup) and "
-        "excellence_alignment_score (how strongly it shares excellent-company "
-        "traits / is investing for the future). Weight asymmetry and excellence "
-        "roughly equally, but a name with NO non-linear payoff cannot score high "
-        "no matter how 'excellent' it looks, and vice-versa. 70+ = strong "
-        "asymmetric bet that is also building toward durable excellence; 50-69 = "
-        "worth deeper work; <50 = pass. Be selective -- most names should be low.",
+        description="PRIMARY RANKING SCORE (0-100). COMPUTED BY THE SYSTEM as a "
+        "weighted average of the six 0-10 scoring dimensions below, rescaled to "
+        "0-100. Do NOT set this yourself -- score the six dimensions honestly and "
+        "the system derives this. Use opportunity_bucket to group, then "
+        "combined_score to rank within a group.",
     )
-    final_verdict: Literal[
-        "PRIORITY - asymmetric bet also building toward excellence",
-        "INVESTIGATE - promising, needs confirmation",
-        "PASS - no asymmetric edge or no excellence trajectory",
+    opportunity_bucket: Literal[
+        "True Moonshot - new business could re-rate the valuation category",
+        "Fallen Excellence - proven compounder at a depressed valuation",
+        "Cash Compounder - durable but fairly valued, limited convexity",
+        "Speculative Lottery - big claimed payoff but no right-to-win",
+        "Pass - no asymmetry, no excellence, no edge",
     ] = Field(
-        description="Final call. PRIORITY requires BOTH a real asymmetric setup AND a credible excellence trajectory."
+        description="What KIND of opportunity this is. Pick the single best fit "
+        "from your six dimension scores using the decision rules in the prompt's "
+        "SCORING section, exercising judgment at the boundaries."
+    )
+    asymmetry_score: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="COMPUTED BY THE SYSTEM (0-100): the moonshot axis -- the mean "
+        "of payoff_magnitude, right_to_win_score, and catalyst_and_runway_score "
+        "rescaled to 0-100. Do NOT set this yourself.",
+    )
+    excellence_score: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description="COMPUTED BY THE SYSTEM (0-100): the excellence axis -- the "
+        "mean of excellence_alignment_score and excellence_trajectory_score "
+        "rescaled to 0-100. Do NOT set this yourself.",
+    )
+    one_line_pitch: str = Field(
+        description="The thesis in one punchy line: '[Company] -- [structure or "
+        "stance] to capture [thesis] by [catalyst]; [excellent trait / quality]; "
+        "[downside] for [X]x upside.'"
+    )
+    recommended_play: Literal[
+        "Long LEAPS Calls (>12mo)",
+        "Long Calls / Call Debit Spread (1-6mo)",
+        "Call Calendar / Diagonal",
+        "Stock + Protective Put / Risk Reversal",
+        "Long Puts / Put Debit Spread (bearish)",
+        "No Options Trade (buy stock or pass)",
+    ] = Field(
+        description="Whatever way of expressing this you genuinely think is best, "
+        "given the bucket, scores, catalyst timing, runway, and volatility "
+        "character -- your discretion. Convex options/LEAPS suit a True Moonshot; "
+        "buying the stock usually suits a Fallen Excellence or Cash Compounder."
     )
     moonshot_archetype: Literal[
         "0-to-1 Platform / New TAM",
@@ -337,47 +394,62 @@ class MoonshotExcellenceResult(BaseModel):
         "Commodity / Resource Leverage",
         "Not a Moonshot",
     ] = Field(
-        description="Classify the setup. 'Not a Moonshot' if there is no non-linear payoff or no right-to-win."
-    )
-    one_line_pitch: str = Field(
-        description="The thesis in one punchy line: '[Company] -- [structure] to "
-        "capture [thesis] by [catalyst]; building [excellent trait]; risk capped "
-        "at premium for [X]x upside.'"
-    )
-    recommended_play: Literal[
-        "Long LEAPS Calls (>12mo)",
-        "Long Calls / Call Debit Spread (1-6mo)",
-        "Call Calendar / Diagonal",
-        "Stock + Protective Put / Risk Reversal",
-        "Long Puts / Put Debit Spread (bearish)",
-        "No Options Trade (buy stock or pass)",
-    ] = Field(
-        description="The optimal options structure given catalyst timing, runway, and the volatility character."
+        description="If (and only if) this is a True Moonshot, the moonshot flavor; "
+        "otherwise 'Not a Moonshot'."
     )
 
-    # --- sub-scores ----------------------------------------------------------
-    asymmetry_score: int = Field(
+    # --- scoring dimensions (each 0-10, anchored at 0 / 5 / 10) --------------
+    payoff_magnitude: int = Field(
         ge=0,
-        le=100,
-        description="The convex-options/moonshot setup strength ALONE. Combine: "
-        "non-linear payoff size + strength of right-to-win + evidence of progress "
-        "+ room to move + survivable runway + a clean dated catalyst. 70+ only "
-        "when all five moonshot conditions are broadly met with filing evidence.",
+        le=10,
+        description="Size of the upside IF the thesis works. 0 = no real upside / "
+        "conventional <20% move; 5 = a plausible ~2x (double) from growth or "
+        "re-rating; 10 = a credible 5-10x+ that would move the company into a new "
+        "valuation category.",
+    )
+    right_to_win_score: int = Field(
+        ge=0,
+        le=10,
+        description="How defensible the company's claim on the prize is -- why THIS "
+        "company. 0 = pure gamble, no durable edge, easily replicated; 5 = real but "
+        "contestable advantages (some assets/IP, beatable); 10 = scarce/licensed "
+        "assets, defensible IP, installed base, or regulatory moat that clearly "
+        "enables the thesis.",
+    )
+    catalyst_and_runway_score: int = Field(
+        ge=0,
+        le=10,
+        description="A dated catalyst inside a tradeable window AND funded survival "
+        "to reach it. 0 = no dated catalyst and/or must raise equity before any "
+        "payoff (dilution risk); 5 = a catalyst exists but timing is loose or "
+        "runway is tight; 10 = a specific dated catalyst with cash/financing "
+        "clearly sufficient to reach it without dilution.",
     )
     excellence_alignment_score: int = Field(
         ge=0,
-        le=100,
-        description="How strongly this company shares the structural traits of the "
-        "excellent companies in the reference corpus -- even if it is small or "
-        "still growing. Reward durable moats, reinvestment-driven compounding, "
-        "scalable economics, and credible long-horizon investment for the future. "
-        "Penalize hype with no underlying build. Judge trajectory, not just size.",
+        le=10,
+        description="How strongly the company shares the structural traits/"
+        "mechanisms of the excellent-company corpus (durable moat, reinvestment-"
+        "driven compounding, scalable economics, disciplined capital allocation). "
+        "0 = none / value-destructive; 5 = some excellent traits but mixed or "
+        "unproven at scale; 10 = strongly echoes multiple excellent-company "
+        "mechanisms.",
     )
-    priced_in_room_score: int = Field(
+    excellence_trajectory_score: int = Field(
         ge=0,
-        le=100,
-        description="How much upside room remains for the bet to capture. 100 = "
-        "market ignores the optionality entirely; 0 = success fully priced in.",
+        le=10,
+        description="Whether the company is genuinely building/investing toward "
+        "durable excellence. 0 = not on an excellence path, chasing a one-off; "
+        "5 = investing for the future but unproven; 10 = already exhibits "
+        "excellent-company traits with a long proof record.",
+    )
+    mispricing_room_score: int = Field(
+        ge=0,
+        le=10,
+        description="How much upside the market is ignoring (room to move). 0 = "
+        "success fully priced in or overvalued; 5 = partially recognized; 10 = "
+        "market ignores the optionality entirely, or a quality company at a deeply "
+        "depressed valuation.",
     )
 
     # --- moonshot diagnosis (condensed single-call version) ------------------
@@ -414,14 +486,7 @@ class MoonshotExcellenceResult(BaseModel):
     is_it_priced_in: str = Field(
         description="Is the market already discounting success? Assess valuation vs "
         "the prize, a new business hidden in an old narrative, market cap vs TAM, "
-        "short interest, and analyst coverage."
-    )
-    room_to_move: Literal[
-        "WIDE - market largely ignores the optionality",
-        "SOME - partially recognized",
-        "NARROW - success mostly priced in",
-    ] = Field(
-        description="Remaining upside room for the bet to capture, derived from is_it_priced_in."
+        "short interest, and analyst coverage. (Scored as mispricing_room_score.)"
     )
     key_risks: list[str] = Field(
         description="Top 3-5 ways this fails: technology, regulatory, financing/"
@@ -441,14 +506,6 @@ class MoonshotExcellenceResult(BaseModel):
     missing_or_weak_traits: list[str] = Field(
         description="Important excellent-company traits this company clearly LACKS "
         "or is weak on -- the gaps between it and a durable compounder."
-    )
-    excellence_trajectory: Literal[
-        "Already exhibits excellent-company traits",
-        "Early but credibly on-track",
-        "Investing for the future, unproven",
-        "Not on an excellence path",
-    ] = Field(
-        description="Overall read on whether this company is on a durable-excellence trajectory, allowing for small/early companies."
     )
     on_track_assessment: str = Field(
         description="Is this company genuinely investing for the future and building "
@@ -623,18 +680,59 @@ self-funding cash flow are direct evidence of an excellent trajectory, while hea
 leverage with negative cash flow sharpens the dilution/runway risk in JOB 1.
 
 ==================================================================
-SCORING
+SCORING -- SIX DIMENSIONS, EACH 0-10
 ==================================================================
-  * 'asymmetry_score' (0-100): Job 1 strength alone (the five conditions).
-  * 'excellence_alignment_score' (0-100): Job 2 -- how strongly it shares the
-    corpus's excellent traits / is investing for the future (judge trajectory,
-    not size).
-  * 'combined_score' (0-100): the PRIMARY ranking field -- blend the two roughly
-    equally, BUT a name with no non-linear payoff cannot score high however
-    excellent it looks, and a hype name with no excellence build cannot score
-    high however convex it looks. Be selective: most names should score below 50;
-    reserve 70+ for setups that are BOTH a real asymmetric bet AND credibly
-    building toward durable excellence.
+Score each dimension on its own 0-10 scale, anchored at 0 / 5 / 10. Use the FULL
+range and be selective -- a 10 is rare. Do NOT compute any 0-100 score yourself;
+the system derives combined_score, asymmetry_score, and excellence_score from
+these six.
+
+  1. payoff_magnitude -- upside IF it works. 0 = conventional <20% move; 5 = a
+     plausible ~2x; 10 = a credible 5-10x+ that re-rates the valuation category.
+  2. right_to_win_score -- why THIS company. 0 = pure gamble, no edge; 5 = real
+     but contestable advantages; 10 = scarce/licensed assets, defensible IP,
+     installed base, or regulatory moat that clearly enables the thesis.
+  3. catalyst_and_runway_score -- dated catalyst in a tradeable window AND funded
+     survival to reach it. 0 = no catalyst and/or must dilute first; 5 = catalyst
+     exists but loose timing or tight runway; 10 = specific dated catalyst with
+     cash/financing sufficient to reach it without dilution.
+  4. excellence_alignment_score -- shares the corpus's excellent mechanisms (moat,
+     reinvestment compounding, scalable economics, capital discipline). 0 = none /
+     value-destructive; 5 = some traits, mixed/unproven; 10 = strongly echoes
+     multiple excellent-company mechanisms.
+  5. excellence_trajectory_score -- genuinely building toward durable excellence.
+     0 = not on an excellence path; 5 = investing for the future but unproven;
+     10 = already exhibits excellent traits with a long proof record.
+  6. mispricing_room_score -- how much upside the market ignores. 0 = fully priced
+     / overvalued; 5 = partially recognized; 10 = market ignores the optionality,
+     or a quality company at a deeply depressed valuation.
+
+==================================================================
+PICK THE OPPORTUNITY BUCKET
+==================================================================
+Using your six scores, classify the company into the single best-fitting
+'opportunity_bucket'. These are guidelines -- use judgment at the boundaries. The
+two KEY distinctions are (a) does the upside come from a NEW business (moonshot)
+or from RE-RATING an existing proven business (fallen excellence)? and (b) is it
+cheap (high mispricing_room) or fairly valued?
+
+  * True Moonshot -- payoff_magnitude high (>=7) with a real right_to_win (>=6)
+    and room to move; upside comes from a NEW business / 0-to-1 that could change
+    the valuation category.
+  * Fallen Excellence -- a proven compounder (excellence_alignment >=6) at a
+    depressed valuation (mispricing_room >=6) where the upside is mainly
+    RE-RATING the existing business, not a new TAM.
+  * Cash Compounder -- durable/excellent (excellence_alignment >=6) but fairly or
+    fully valued (mispricing_room <=5) with modest payoff_magnitude -- own-it
+    quality, limited convexity right now.
+  * Speculative Lottery -- a big claimed payoff (payoff_magnitude >=7) but weak
+    right_to_win (<=4) and little excellence -- an exciting gamble, not a moonshot.
+  * Pass -- nothing scores well; no asymmetry, no excellence, no edge.
+
+Then set 'moonshot_archetype' (only meaningful for a True Moonshot; else 'Not a
+Moonshot') and choose 'recommended_play' as whatever you genuinely think is the
+best way to express this -- convex options for a True Moonshot, buying the stock
+for a Fallen Excellence / Cash Compounder, or no trade. Your discretion.
 
 Be quantitative -- quote cash, burn, debt, TAM, and market cap where the filing
 gives them. Distinguish EVIDENCE from ASPIRATION. Most companies are neither
@@ -782,6 +880,31 @@ class MoonshotExcellenceFinder(CustomWorkflow):
             _remaining(),
         )
         logger.info(f"MoonshotExcellence call succeeded for {ticker} {year}")
+
+        # --- Derived, code-owned scores (deterministic aggregation) ----------
+        # The model fills the six 0-10 dimensions; we compute the 0-100 rollups
+        # and the headline combined_score so ranking is transparent and tunable
+        # (the model is notoriously bad at honouring a "blend these" instruction).
+        result.asymmetry_score = round(
+            (result.payoff_magnitude + result.right_to_win_score + result.catalyst_and_runway_score)
+            / 3
+            * 10
+        )
+        result.excellence_score = round(
+            (result.excellence_alignment_score + result.excellence_trajectory_score) / 2 * 10
+        )
+        _dims = {
+            "payoff_magnitude": result.payoff_magnitude,
+            "right_to_win_score": result.right_to_win_score,
+            "catalyst_and_runway_score": result.catalyst_and_runway_score,
+            "excellence_alignment_score": result.excellence_alignment_score,
+            "excellence_trajectory_score": result.excellence_trajectory_score,
+            "mispricing_room_score": result.mispricing_room_score,
+        }
+        _total_w = sum(_SCORE_WEIGHTS.values()) or 1.0
+        result.combined_score = round(
+            sum(_SCORE_WEIGHTS[k] * v for k, v in _dims.items()) / _total_w * 10
+        )
 
         # --- Stamp code-owned metadata ---------------------------------------
         result.used_market_data = used_market_data
