@@ -556,19 +556,23 @@ risk) and a probability-weighted EV check against a ~3:1 bar.
 ==================================================================
 JOB 2 -- IS THIS COMPANY ON AN "EXCELLENT" TRAJECTORY?
 ==================================================================
-Below is an EXCELLENT-COMPANY REFERENCE CORPUS: factor analyses of companies we
-have already studied as excellent, durable compounders. Use it HOLISTICALLY as a
-yardstick. Even if {ticker} is small or still growing, judge whether it SHARES the
-structural traits of those excellent companies -- durable moats, reinvestment-
-driven compounding, scalable economics, disciplined capital allocation, and
-credible long-horizon investment for the future (R&D, capex, capability-building).
-Distinguish a company that is genuinely BUILDING something durable from one merely
-chasing a one-off payoff.
+Below is an EXCELLENT-COMPANY REFERENCE CORPUS: a library of recurring success
+patterns and/or per-company factor analyses distilled from companies we have
+already studied as excellent, durable compounders (their mechanisms of advantage,
+capital allocation, and failure modes). Use it HOLISTICALLY as a yardstick. Even
+if {ticker} is small or still growing, judge whether it SHARES the structural
+traits and operating MECHANISMS of those excellent companies -- durable moats,
+reinvestment-driven compounding, scalable economics, operational density / network
+effects, disciplined capital allocation, and credible long-horizon investment for
+the future (R&D, capex, capability-building). Name the actual mechanism of
+advantage, not just the category, and test whether it is strengthening, stable, or
+weakening. Distinguish a company genuinely BUILDING something durable from one
+merely chasing a one-off payoff.
 
 IMPORTANT: Do NOT summarize the corpus back to me. Use it only as the standard
 against which you judge {ticker}, and when you cite a match, name the specific
-excellent pattern it echoes. If the corpus is empty/absent, judge excellence from
-first principles and note that no corpus was provided.
+excellent pattern or mechanism it echoes. If the corpus is empty/absent, judge
+excellence from first principles and note that no corpus was provided.
 
 === EXCELLENT-COMPANY REFERENCE CORPUS START ===
 {excellence_corpus}
@@ -589,6 +593,13 @@ figures as as-of reference context, NOT executable quotes -- recommend structure
 expiry windows, and strike DISTANCE, not hard prices. If no such block is
 provided, set 'iv_environment' and 'options_liquidity' to their 'Unknown' values
 and reason from fundamentals.
+
+The market-data block may also carry MULTI-YEAR fundamentals -- a 'Net Sales'
+series (latest plus 'Net Sales - N y ago'), 5y/10y compound total returns, free
+cash flow, EBITDA margin, total debt/equity, and insider purchases. Use these
+directly for JOB 2: a long, steady revenue/return compounding record and positive
+self-funding cash flow are direct evidence of an excellent trajectory, while heavy
+leverage with negative cash flow sharpens the dilution/runway risk in JOB 1.
 
 ==================================================================
 SCORING
