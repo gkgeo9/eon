@@ -17,14 +17,35 @@ and, in a SINGLE Gemini call, answers two linked questions at once:
 The headline output is a single blended ``combined_score`` (asymmetry x
 excellence) so a whole SET of companies can be ranked in one fast pass.
 
-WHY ONE CALL
-------------
+WHY ONE CALL (a deliberate, weighed choice)
+-------------------------------------------
 The sibling workflow ``moonshot_options_finder`` splits the work into two Gemini
-calls (DIAGNOSE then STRUCTURE) for maximum rigor. This workflow deliberately
-collapses everything into ONE call so it can be run faster and more regularly
-across many names. The prompt is heavily sectioned and the schema kept focused
-to keep both the trade design and the excellence comparison honest in a single
-pass.
+calls (DIAGNOSE then STRUCTURE) because a single giant schema tends to shortchange
+the trade design in favor of the narrative. That concern is real -- so why does
+THIS workflow use one call?
+
+  1. IT IS A SCREENER, NOT A TRADE-EXECUTION TOOL. The headline deliverable is
+     ``combined_score`` for ranking a SET of companies you run regularly. At the
+     screening stage, ranking accuracy matters far more than the exact expiry/
+     strike on every name; you hand-structure (or deep-dive) only the few that
+     score high. A slightly rough trade sketch on a name you will PASS costs
+     nothing.
+  2. THE RIGOROUS VERSION ALREADY EXISTS. ``moonshot_options_finder`` is the
+     two-call deep dive for execution-grade structure. The intended workflow is:
+     run THIS as the wide net (fast, adds the excellence lens), then run the
+     sibling on the top-ranked winners. Making this two calls would just clone a
+     tool you already have, but slower.
+  3. THE INPUT IS HEAVY HERE. On top of the full 10-K this call injects the
+     excellence corpus (up to ~250k tokens). Splitting risks re-sending heavy
+     context (roughly doubling input cost/latency) and adds a second request --
+     a second mandatory inter-request sleep and a second draw on the rate-limit
+     budget -- on every company. For frequent batch runs that tax is real.
+
+The single-call quality risk is contained by a heavily sectioned prompt, a focused
+schema, and the provider's thinking budget; the screener role makes a rougher
+trade sketch acceptable. If you find the trade structure getting shortchanged on
+high scorers, the right move is to run those names through
+``moonshot_options_finder`` rather than to split this screener in two.
 
 THE EXCELLENT-COMPANY REFERENCE CORPUS
 --------------------------------------
