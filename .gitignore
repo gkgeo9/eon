@@ -99,7 +99,7 @@ output/
 results/
 exports/
 analyzed_10k/
-excellent_company_factors/
+# excellent_company_factors/
 random_company_factors/
 contrarian_scans/
 *.csv
@@ -130,3 +130,7 @@ temp/
 
 # Build outputs
 site/
+
+experimental/excellent_company_factors/*.json
+!experimental/excellent_company_factors/unified_factors.json
+!all_companies_refined_04062026.csv
