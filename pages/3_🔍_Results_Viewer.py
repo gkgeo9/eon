@@ -9,7 +9,6 @@ import streamlit as st
 from eon.ui.database import DatabaseRepository
 from eon.ui.components.results_display import display_results
 from eon.ui.theme import apply_theme
-from eon.ui.skin import topbar, components as C
 
 # Apply global theme
 apply_theme()
@@ -21,20 +20,16 @@ if 'db' not in st.session_state:
 
 db = st.session_state.db
 
+st.title("🔍 Results Viewer")
+st.markdown("View and export analysis results")
+
+st.markdown("---")
+
 # Get run_id from session state or selection
 run_id = st.session_state.get('view_run_id', None)
 
-topbar(["Workspace", "Results Viewer"] + ([str(st.session_state.get('view_ticker', ''))]
-       if st.session_state.get('view_ticker') else []))
-
 # If no run_id, show selector
 if not run_id:
-    C.page_header(
-        title="Results viewer",
-        eyebrow="EON.03 — Results Viewer",
-        desc="Open any completed analysis to read its structured findings, financial "
-        "metrics, risk factors, and source citations.",
-    )
     # Get all completed analyses
     completed_analyses = db.search_analyses(status='completed')
 
@@ -84,37 +79,31 @@ if run_id:
         if not results:
             st.warning("No results available for this analysis.")
         else:
-            _ticker = str(run_details.get('ticker', 'N/A')).upper()
-            _type = str(run_details.get('analysis_type', 'N/A')).replace('_', ' ').title()
-            years = run_details.get('years', [])
-            if years:
-                year_range = f"{min(years)}–{max(years)}" if len(years) > 1 else str(years[0])
-            else:
-                year_range = "N/A"
-            st.session_state.view_ticker = _ticker
+            # Quick info bar
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Ticker", run_details.get('ticker', 'N/A'))
+            with col2:
+                st.metric("Type", run_details.get('analysis_type', 'N/A').title())
+            with col3:
+                years = run_details.get('years', [])
+                if years:
+                    year_range = f"{min(years)}-{max(years)}" if len(years) > 1 else str(years[0])
+                else:
+                    year_range = "N/A"
+                st.metric("Years", year_range)
+            with col4:
+                st.metric("Results", len(results))
 
-            # Page header + identity strip (design language)
-            C.page_header(
-                title=_ticker,
-                eyebrow="EON.03 — Results Viewer",
-                desc=f"{_type} · {run_details.get('filing_type', '10-K')} · {year_range}. "
-                f"Run {run_id}.",
-            )
-            C.kpi_grid([
-                {"label": "Ticker", "value": _ticker},
-                {"label": "Analysis", "value": _type},
-                {"label": "Years", "value": year_range},
-                {"label": "Stored results", "value": len(results)},
-            ])
-            st.write("")
+            st.markdown("---")
 
-            # Display results (substantive analysis output)
+            # Display results
             display_results(run_details, results)
 
             st.markdown("---")
 
             # Actions section - Synthesize and Export
-            C.section_h("Actions")
+            st.subheader("Actions")
 
             # Show synthesize button for multi-year analyses (2+ years)
             # Don't show for synthesis results themselves

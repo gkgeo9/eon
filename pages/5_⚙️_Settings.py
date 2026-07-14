@@ -12,7 +12,6 @@ from pathlib import Path
 from eon.ui.database import DatabaseRepository
 from eon.ui.utils.validators import validate_prompt_template, validate_prompt_name
 from eon.ui.theme import apply_theme
-from eon.ui.skin import topbar, components as C
 from eon.core.analysis_types import CLI_ANALYSIS_CHOICES
 
 # Apply global theme
@@ -30,13 +29,10 @@ if 'edit_prompt_id' not in st.session_state:
 
 db = st.session_state.db
 
-topbar(["Workspace", "Settings & Database"])
-C.page_header(
-    title="Settings & database",
-    eyebrow="EON.05 — Database & System",
-    desc="Inspect the run ledger, cached filings, custom prompts, statistics, and API "
-    "consumption. Everything Erebus has seen lives here.",
-)
+st.title("🗄️ Database Viewer")
+st.markdown("Inspect cached data, analysis runs, and database statistics")
+
+st.markdown("---")
 
 # Tab selection
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([

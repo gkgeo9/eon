@@ -1,12 +1,19 @@
 [theme]
-# Base theme for the Erebus skin (eon/ui/skin). The skin re-skins every widget
-# via CSS and exposes an in-app dark/light toggle; these values set the initial
-# navy paint so there is no light flash before the skin loads. Dark is default.
-base = "dark"
-primaryColor = "#5b8def"
-backgroundColor = "#14171f"
-secondaryBackgroundColor = "#1c2130"
-textColor = "#f4f5fa"
+# EON uses Streamlit's native theming
+# Dark/light mode follows your system preference automatically
+# To force a specific theme, uncomment one of these:
+
+# Light mode (default)
+primaryColor = "#3b82f6"
+# backgroundColor = "#ffffff"
+# secondaryBackgroundColor = "#f0f2f6"
+# textColor = "#262730"
+
+# Dark mode - uncomment these and comment out light mode above:
+# backgroundColor = "#0e1117"
+# secondaryBackgroundColor = "#262730"
+# textColor = "#fafafa"
+
 font = "sans serif"
 
 [server]
