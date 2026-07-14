@@ -38,6 +38,8 @@ LIGHT_VARS = """
   --logo-fg:   oklch(0.98 0.005 260);
   --ring:      0 0 0 3px oklch(0.46 0.18 250 / 0.18);
   --scan: oklch(0.94 0.008 260);
+  /* Text that sits on top of a solid --accent fill. */
+  --on-accent: oklch(0.99 0.002 260);
 """
 
 DARK_VARS = """
@@ -69,6 +71,8 @@ DARK_VARS = """
   --logo-fg:   oklch(0.98 0.005 260);
   --ring:      0 0 0 3px oklch(0.78 0.14 240 / 0.30);
   --scan: oklch(0.225 0.030 262);
+  /* Dark-theme --accent is a light sky blue, so accent fills need dark text. */
+  --on-accent: oklch(0.16 0.03 262);
 """
 
 
@@ -93,7 +97,7 @@ _DESIGN_CSS = """
   border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center;
   gap: 8px; line-height: 1; box-shadow: var(--shadow-1);
 }
-.eon .btn.accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+.eon .btn.accent { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .eon .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--fg-mid); }
 .eon .btn.sm { padding: 5px 10px; font-size: 12px; }
 
@@ -174,6 +178,22 @@ html, body, .stApp, [class*="st-"] {
   font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
   letter-spacing: -0.005em;
 }
+/* The rule above matches Streamlit's icon spans (their emotion classes all start
+   with "st-"), which replaces the ligature font and renders glyph names such as
+   "dashboard" as literal text. Hand the icon font back and re-enable the
+   ligatures that turn those names into glyphs. */
+[data-testid="stIconMaterial"], .material-symbols-rounded {
+  font-family: "Material Symbols Rounded" !important;
+  font-variant-ligatures: normal contextual !important;
+  -webkit-font-feature-settings: 'liga' !important;
+  font-feature-settings: 'liga' !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  white-space: nowrap;
+}
+[data-testid="stIconEmoji"] {
+  font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif !important;
+}
 .stApp, [data-testid="stMain"], [data-testid="stAppViewContainer"] { background: var(--bg) !important; color: var(--fg) !important; }
 [data-testid="stMainBlockContainer"], .block-container { padding-top: 2.6rem; max-width: 1180px; }
 [data-testid="stHeader"] { background: transparent !important; backdrop-filter: blur(8px); }
@@ -201,18 +221,26 @@ hr, [data-testid="stMarkdownContainer"] hr { border-color: var(--bd) !important;
 [data-testid="stSidebarHeader"] { padding-bottom: 0; }
 [data-testid="stSidebar"] [data-testid="stMainBlockContainer"] { padding-top: 1rem; }
 
-/* Custom nav via st.page_link */
+/* Custom nav via st.page_link. Streamlit renders these as stSidebarNavLink
+   (stPageLink-NavLink does not exist in the installed version). */
 [data-testid="stSidebar"] [data-testid="stPageLink"] a,
+[data-testid="stSidebar"] a[data-testid="stSidebarNavLink"],
 [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"] {
   display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 8px;
   color: var(--fg-mid) !important; font-size: 13.5px; font-weight: 500;
   border: 1px solid transparent; margin: 1px 0; text-decoration: none;
 }
+[data-testid="stSidebar"] a[data-testid="stSidebarNavLink"]:hover,
 [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"]:hover { background: var(--bg-2); color: var(--fg) !important; }
+[data-testid="stSidebar"] a[data-testid="stSidebarNavLink"][aria-current],
+[data-testid="stSidebar"] a[data-testid="stSidebarNavLink"].active,
 [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"][aria-current],
 [data-testid="stSidebar"] a[data-testid="stPageLink-NavLink"].active {
   background: var(--bg-2); color: var(--fg) !important; border-color: var(--bd); box-shadow: var(--shadow-1);
 }
+/* Keep the icon from stretching / overlapping the label text. */
+[data-testid="stSidebar"] a[data-testid="stSidebarNavLink"] > span:first-child { flex: 0 0 auto; display: inline-flex; }
+[data-testid="stSidebar"] a[data-testid="stSidebarNavLink"] > span:last-child { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Brand block */
 .eon-brand { display: flex; align-items: center; gap: 12px; padding: 6px 4px 16px; margin-bottom: 8px; border-bottom: 1px solid var(--bd); }
@@ -237,8 +265,12 @@ hr, [data-testid="stMarkdownContainer"] hr { border-color: var(--bd) !important;
   font-weight: 500 !important; border-radius: 8px !important; box-shadow: var(--shadow-1); transition: background 0.12s, transform 0.12s;
 }
 .stButton > button:hover, .stDownloadButton > button:hover, [data-testid="stFormSubmitButton"] button:hover { background: var(--bg-2) !important; transform: translateY(-1px); color: var(--fg) !important; }
-.stButton > button[kind="primary"], [data-testid="stBaseButton-primary"], [data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"] { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; }
-.stButton > button[kind="primary"]:hover, [data-testid="stBaseButton-primary"]:hover { filter: brightness(1.08); }
+.stButton > button[kind="primary"], [data-testid="stBaseButton-primary"], [data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"] { background: var(--accent) !important; border-color: var(--accent) !important; color: var(--on-accent) !important; font-weight: 600 !important; }
+/* The label lives in a nested stMarkdownContainer, which the generic markdown
+   colour rule would otherwise repaint to --fg on top of the accent fill. */
+.stButton > button[kind="primary"] *, [data-testid="stBaseButton-primary"] *,
+[data-testid="stFormSubmitButton"] button[kind="primaryFormSubmit"] * { color: var(--on-accent) !important; }
+.stButton > button[kind="primary"]:hover, [data-testid="stBaseButton-primary"]:hover { filter: brightness(1.08); color: var(--on-accent) !important; }
 
 /* Inputs / selects / textareas */
 .stTextInput input, .stNumberInput input, .stTextArea textarea, .stDateInput input,
@@ -251,8 +283,11 @@ hr, [data-testid="stMarkdownContainer"] hr { border-color: var(--bd) !important;
 
 /* Metrics → KPI cards */
 [data-testid="stMetric"] { padding: 16px 18px; border: 1px solid var(--bd); border-radius: 12px; background: var(--bg-1); box-shadow: var(--shadow-1); }
-[data-testid="stMetricLabel"] { font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-faint) !important; }
-[data-testid="stMetricValue"] { font-family: 'Geist Mono', monospace !important; font-weight: 600 !important; color: var(--fg) !important; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+[data-testid="stMetricLabel"], [data-testid="stMetricLabel"] p {
+  font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.08em !important;
+  text-transform: uppercase; color: var(--fg-faint) !important;
+}
+[data-testid="stMetricValue"] { font-family: 'Geist Mono', monospace !important; font-size: 24px !important; font-weight: 600 !important; color: var(--fg) !important; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 [data-testid="stMetricDelta"] { font-family: 'Geist Mono', monospace !important; }
 
 /* Tabs */
