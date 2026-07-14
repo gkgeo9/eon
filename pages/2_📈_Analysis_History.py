@@ -49,17 +49,21 @@ with st.expander("🔍 Filters", expanded=False):
             ["All", "completed", "running", "pending", "failed", "cancelled"]
         )
 
-    # Date range
+    # Date range. Off by default: a fixed default window silently hides the whole
+    # ledger whenever the most recent run is older than it.
+    use_dates = st.checkbox("Filter by date range", value=False)
     col1, col2 = st.columns(2)
     with col1:
         date_from = st.date_input(
             "From Date",
-            value=date.today() - timedelta(days=30)
+            value=date.today() - timedelta(days=30),
+            disabled=not use_dates,
         )
     with col2:
         date_to = st.date_input(
             "To Date",
-            value=date.today()
+            value=date.today(),
+            disabled=not use_dates,
         )
 
 # Apply filters
@@ -72,8 +76,8 @@ analyses_df = db.search_analyses(
     ticker=ticker_filter,
     analysis_type=type_filter,
     status=status_filter,
-    date_from=date_from,
-    date_to=date_to,
+    date_from=date_from if use_dates else None,
+    date_to=date_to if use_dates else None,
 )
 
 # ── KPI strip (real, from the filtered ledger) ──────────────────────────────

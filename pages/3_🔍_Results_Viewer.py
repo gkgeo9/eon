@@ -86,7 +86,13 @@ if run_id:
         else:
             _ticker = str(run_details.get('ticker', 'N/A')).upper()
             _type = str(run_details.get('analysis_type', 'N/A')).replace('_', ' ').title()
-            years = run_details.get('years', [])
+            # years_analyzed is stored as a JSON string (e.g. "[2024, 2025]").
+            years = run_details.get('years_analyzed') or []
+            if isinstance(years, str):
+                try:
+                    years = json.loads(years)
+                except (ValueError, TypeError):
+                    years = []
             if years:
                 year_range = f"{min(years)}–{max(years)}" if len(years) > 1 else str(years[0])
             else:
