@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Moonshot Options Finder Workflow.
 
@@ -109,7 +108,7 @@ import threading
 import time
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -145,7 +144,7 @@ logger = get_logger(__name__)
 
 # Recognized columns -> (human label, unit/interpretation hint for the model).
 # These are the fields that actually move this workflow's outputs.
-_FACTSET_FIELDS: Dict[str, tuple] = {
+_FACTSET_FIELDS: dict[str, tuple] = {
     "as_of_date": ("As-of date", "snapshot date; data may lag a day or two"),
     "price": ("Last price", "current share price (USD)"),
     "market_cap": (
@@ -196,6 +195,62 @@ _FACTSET_FIELDS: Dict[str, tuple] = {
         "Put/Call ratio",
         "options sentiment; >1 = more puts (bearish hedge); <0.7 = call dominance (bullish speculation/FOMO)",
     ),
+    "iv_max_1y": (
+        "IV high (1y)",
+        "highest implied vol over the past year; upper bound for IV rank context",
+    ),
+    "iv_min_1y": (
+        "IV low (1y)",
+        "lowest implied vol over the past year; lower bound for IV rank context",
+    ),
+    "beta_3y": (
+        "3y beta vs index",
+        "systematic risk; >1.5 = moves violently, helps size convexity",
+    ),
+    "avg_daily_volume": ("Avg daily share volume", "underlying liquidity gate for sizing"),
+    # --- fundamentals / quality / multi-year compounding (excellence signals) ---
+    "net_sales": (
+        "Net sales (latest)",
+        "latest annual revenue; compare with the 'Net Sales - N y ago' columns to judge multi-year compounding",
+    ),
+    "fwd_sales_growth": (
+        "Fwd sales growth (est.)",
+        "consensus next-year revenue growth, %; growth runway for the thesis",
+    ),
+    "ebitda_margin": ("EBITDA margin", "%; profitability/quality of the business model"),
+    "net_income": (
+        "Net income (latest)",
+        "before extraordinary/discontinued ops; is it actually profitable",
+    ),
+    "free_cash_flow": (
+        "Free cash flow",
+        "FCF; positive FCF self-funds the thesis and cuts dilution risk (the options killer)",
+    ),
+    "debt_to_equity": (
+        "Total debt / equity",
+        "leverage; high = financing/dilution risk into the catalyst; low = survivable runway",
+    ),
+    "pe_ratio": ("P/E", "earnings valuation multiple"),
+    "ev_fcf": ("EV/FCF", "valuation vs cash generation"),
+    "price_target_mean": (
+        "Analyst price target (mean)",
+        "consensus target vs current price = street-implied upside (low coverage = ignored)",
+    ),
+    "insider_purchases_1y": (
+        "Insider purchases (1y)",
+        "count of insider buys last year; clustered buying = insider conviction / contrarian tell",
+    ),
+    "industry": ("Industry", "sector context for the thesis and comparables"),
+    "ret_1y": ("1y total return", "%; recent momentum / how the market has been treating it"),
+    "ret_2y": ("2y total return", "%; medium-term momentum"),
+    "ret_5y": (
+        "5y compound total return",
+        "%; durable multi-year compounding -- direct evidence for the excellence read",
+    ),
+    "ret_10y": (
+        "10y compound total return",
+        "%; decade-long compounding -- strong evidence the company is an excellent compounder",
+    ),
 }
 
 _TICKER_KEYS = ("ticker", "symbol", "Ticker", "Symbol", "TICKER", "SYMBOL")
@@ -203,7 +258,7 @@ _TICKER_KEYS = ("ticker", "symbol", "Ticker", "Symbol", "TICKER", "SYMBOL")
 # Maps FactSet CSV column headers to the internal _FACTSET_FIELDS keys so the
 # recognized-field labels and hints are applied correctly regardless of the
 # source CSV's header format.
-_FACTSET_COLUMN_ALIASES: Dict[str, str] = {
+_FACTSET_COLUMN_ALIASES: dict[str, str] = {
     "Closing Price": "price",
     "Current Market Value": "market_cap",
     "Theor. Imp Vol": "iv_30d",
@@ -216,6 +271,26 @@ _FACTSET_COLUMN_ALIASES: Dict[str, str] = {
     "Entrpr Value/ Sales": "ev_sales",
     "EPS Report Date": "next_earnings_date",
     "Put/Call Ratio": "put_call_ratio",
+    # Richer Russell-1000 export columns (fundamentals + multi-year compounding).
+    "IV Max - 1y": "iv_max_1y",
+    "IV Min -1y": "iv_min_1y",
+    "3y BETA Rel to Loc Idx": "beta_3y",
+    "Average Daily Volume": "avg_daily_volume",
+    "Net Sales": "net_sales",
+    "FE Growth Sales Mean CY 1CY Roll Over -1AW": "fwd_sales_growth",
+    "EBITDA Margin": "ebitda_margin",
+    "Net Inc Before Extra & Disc Op": "net_income",
+    "Free Cash Flow": "free_cash_flow",
+    "Total Debt% Equity": "debt_to_equity",
+    "Price / Earns Ratio": "pe_ratio",
+    "EV/FCF": "ev_fcf",
+    "FE Price_Tgt Mean": "price_target_mean",
+    "Number of Insider Purchases (last year)": "insider_purchases_1y",
+    "Industry": "industry",
+    "1y - Compound Tot Ret": "ret_1y",
+    "2y - Compound Tot Ret": "ret_2y",
+    "5y - Compound Tot Ret": "ret_5y",
+    "10y - Compound Tot Ret": "ret_10y",
 }
 
 # Columns to omit from the generic pass-through (housekeeping / redundant fields).
@@ -230,7 +305,7 @@ _FACTSET_SKIP_COLUMNS = frozenset(
 )
 
 
-def _normalize_factset_row(row: Dict[str, str]) -> Dict[str, str]:
+def _normalize_factset_row(row: dict[str, str]) -> dict[str, str]:
     """Apply column aliases and compute derived fields for one FactSet CSV row.
 
     Returns a new dict with canonical key names (matching _FACTSET_FIELDS where
@@ -238,12 +313,15 @@ def _normalize_factset_row(row: Dict[str, str]) -> Dict[str, str]:
     model prompt.  Columns that are only used to derive other values are removed
     from the output to avoid repetition.
     """
-    normalized: Dict[str, str] = {}
+    normalized: dict[str, str] = {}
     for col, val in row.items():
-        if col in _FACTSET_SKIP_COLUMNS:
+        # Some export headers carry stray surrounding whitespace (e.g.
+        # "FE Price_Tgt Mean "); match aliases/skips on the stripped name too.
+        key = col.strip()
+        if col in _FACTSET_SKIP_COLUMNS or key in _FACTSET_SKIP_COLUMNS:
             continue
-        alias = _FACTSET_COLUMN_ALIASES.get(col)
-        normalized[alias if alias else col] = val
+        alias = _FACTSET_COLUMN_ALIASES.get(col) or _FACTSET_COLUMN_ALIASES.get(key)
+        normalized[alias if alias else key] = val
 
     # Compute pct_off_52w_high from closing price and 52-week high.
     try:
@@ -264,7 +342,7 @@ def _normalize_factset_row(row: Dict[str, str]) -> Dict[str, str]:
 _FACTSET_CSV_PATH = r"c:\Users\vdocv\PycharmProjects\eon\factset_russell_1000_29052026.csv"
 
 
-def _resolve_factset_path() -> Optional[Path]:
+def _resolve_factset_path() -> Path | None:
     """Return the FactSet CSV path, or None if no candidate is a real file.
 
     The hard-coded ``_FACTSET_CSV_PATH`` is the source of truth. An optional
@@ -273,7 +351,7 @@ def _resolve_factset_path() -> Optional[Path]:
     mangled into control chars by dotenv) silently falls back to the hard-coded
     path instead of disabling enrichment. Quotes/whitespace are stripped first.
     """
-    candidates: List[str] = []
+    candidates: list[str] = []
     env_path = os.environ.get("EON_FACTSET_CSV")
     if env_path:
         candidates.append(env_path.strip().strip('"').strip("'"))
@@ -289,7 +367,7 @@ def _resolve_factset_path() -> Optional[Path]:
     return None
 
 
-def _find_factset_row(ticker: str) -> Dict[str, str]:
+def _find_factset_row(ticker: str) -> dict[str, str]:
     """Read the FactSet CSV and return the one normalized row for ``ticker``.
 
     Reads the file fresh on every call -- it's small (a few thousand rows) and
@@ -335,7 +413,7 @@ def get_market_context(ticker: str) -> tuple:
     tkey_present = {k for k in _TICKER_KEYS}
     asof = row.get("as_of_date") or None
 
-    lines: List[str] = []
+    lines: list[str] = []
     rendered = set()
     # Recognized fields first, in a sensible order, with labels + hints.
     for col, (label, hint) in _FACTSET_FIELDS.items():
@@ -382,7 +460,7 @@ def get_market_context(ticker: str) -> tuple:
 # ===========================================================================
 
 _YF_LOCK = threading.Lock()
-_yf_cache: Dict[str, tuple] = {}  # ticker -> (fetched_at_epoch, block_str)
+_yf_cache: dict[str, tuple] = {}  # ticker -> (fetched_at_epoch, block_str)
 
 
 def _yfinance_enabled() -> bool:
@@ -425,7 +503,7 @@ def _summarize_options_chain(tk: str) -> str:
             spot = None
 
         max_n = _yf_int_env("EON_YFINANCE_MAX_EXPIRIES", 8)
-        rows: List[tuple] = []
+        rows: list[tuple] = []
         tot_call_oi = 0
         tot_put_oi = 0
         for exp in expiries[:max_n]:
@@ -459,8 +537,8 @@ def _summarize_options_chain(tk: str) -> str:
             return ""
 
         lines = [
-            "LIVE OPTIONS CHAIN (yfinance snapshot as of {0}; AGGREGATE ONLY, no "
-            "strikes; reference context, not executable quotes):".format(date.today().isoformat())
+            f"LIVE OPTIONS CHAIN (yfinance snapshot as of {date.today().isoformat()}; AGGREGATE ONLY, no "
+            "strikes; reference context, not executable quotes):"
         ]
         spot_txt = f"~{spot}" if spot else "n/a"
         pc_ratio = round(tot_put_oi / tot_call_oi, 2) if tot_call_oi else "n/a"
@@ -564,7 +642,7 @@ _FORM_FINGERPRINTS = (
 )
 
 
-def _detect_form_type(text: str) -> Optional[str]:
+def _detect_form_type(text: str) -> str | None:
     """Best-effort detection of the SEC form type from the filing text."""
     head = (text or "")[:20000].upper()
     for pat, label in _FORM_FINGERPRINTS:
@@ -613,7 +691,7 @@ class MoonshotDiagnosis(BaseModel):
         "=> ~6x from here'). Use figures from the filing where possible."
     )
 
-    right_to_win: List[str] = Field(
+    right_to_win: list[str] = Field(
         description="Why THIS company can plausibly pull it off. List concrete "
         "structural advantages found in the filing: scarce/licensed assets, "
         "defensible IP/patents, named credible-counterparty partnerships, "
@@ -621,7 +699,7 @@ class MoonshotDiagnosis(BaseModel):
         "track records. Empty list = no right to win = gamble, not moonshot."
     )
 
-    evidence_of_progress: List[str] = Field(
+    evidence_of_progress: list[str] = Field(
         description="Concrete proof-of-life from the filing (NOT promises): "
         "milestones hit, paying customers/LOIs, pilots succeeded, capacity "
         "coming online, approvals/submissions, patents granted. Distinguish "
@@ -636,7 +714,7 @@ class MoonshotDiagnosis(BaseModel):
         "if the thesis is right. State the dilution/financing risk explicitly."
     )
 
-    dated_catalysts: List[str] = Field(
+    dated_catalysts: list[str] = Field(
         description="Specific events with timing that could resolve the thesis. "
         "Format 'Timeframe: Event' (e.g. 'H2 2026: first commercial launch', "
         "'Q3: debt maturity refinance'). Catalysts define the option expiry. "
@@ -667,7 +745,7 @@ class MoonshotDiagnosis(BaseModel):
         "live IV is not in the filing."
     )
 
-    key_risks: List[str] = Field(
+    key_risks: list[str] = Field(
         description="Top 3-5 ways this fails: technology, regulatory, financing/"
         "dilution, competition, execution, timing. Be brutally honest."
     )
@@ -678,7 +756,7 @@ class MoonshotDiagnosis(BaseModel):
         "partner', 'forced dilutive raise', 'competitor ships first')."
     )
 
-    market_signals_used: List[str] = Field(
+    market_signals_used: list[str] = Field(
         default_factory=list,
         description="If an EXTERNAL MARKET DATA block was provided, list the "
         "specific signals that informed the 'priced-in' / room-to-move call "
@@ -863,7 +941,7 @@ class MoonshotOptionsResult(BaseModel):
         description="True if a FactSet market-data snapshot was injected into "
         "the prompts for this ticker.",
     )
-    market_data_asof: Optional[str] = Field(
+    market_data_asof: str | None = Field(
         default=None,
         description="As-of date of the injected FactSet snapshot, if available.",
     )
@@ -879,7 +957,7 @@ class MoonshotOptionsResult(BaseModel):
         default=False,
         description="True if one of the two Gemini calls failed and this result " "is degraded.",
     )
-    notes: Optional[str] = Field(
+    notes: str | None = Field(
         default=None, description="Any degradation / failure notes from the run."
     )
 
@@ -1049,7 +1127,7 @@ class MoonshotOptionsFinder(CustomWorkflow):
 
         # --- Filing-type sanity ----------------------------------------------
         detected_form = _detect_form_type(text)
-        form_note: Optional[str] = None
+        form_note: str | None = None
         if detected_form is None:
             form_note = (
                 "Could not detect the SEC form type from the document; analyzed "
@@ -1097,8 +1175,8 @@ class MoonshotOptionsFinder(CustomWorkflow):
             )
 
         # --- Call 1: DIAGNOSE -------------------------------------------------
-        diag_obj: Optional[MoonshotDiagnosis] = None
-        diag_err: Optional[str] = None
+        diag_obj: MoonshotDiagnosis | None = None
+        diag_err: str | None = None
         try:
             prompt = (
                 _PROMPT_DIAGNOSE.format(ticker=ticker, year=year, form=form_label)
@@ -1120,8 +1198,8 @@ class MoonshotOptionsFinder(CustomWorkflow):
             logger.error(f"Moonshot DIAGNOSE call failed for {ticker} {year}: {e}")
 
         # --- Call 2: STRUCTURE -----------------------------------------------
-        struct_obj: Optional[OptionsStructure] = None
-        struct_err: Optional[str] = None
+        struct_obj: OptionsStructure | None = None
+        struct_err: str | None = None
         try:
             diag_ctx = (
                 diag_obj.model_dump_json(indent=2)
@@ -1174,12 +1252,12 @@ class MoonshotOptionsFinder(CustomWorkflow):
     def _merge(
         self,
         ticker: str,
-        diag_obj: Optional[MoonshotDiagnosis],
-        struct_obj: Optional[OptionsStructure],
-        diag_err: Optional[str],
-        struct_err: Optional[str],
+        diag_obj: MoonshotDiagnosis | None,
+        struct_obj: OptionsStructure | None,
+        diag_err: str | None,
+        struct_err: str | None,
         used_market_data: bool = False,
-        market_asof: Optional[str] = None,
+        market_asof: str | None = None,
         used_live_options_chain: bool = False,
     ) -> MoonshotOptionsResult:
         """Assemble the final result, degrading gracefully on partial failure."""
@@ -1224,7 +1302,7 @@ class MoonshotOptionsFinder(CustomWorkflow):
         )
 
     @staticmethod
-    def _placeholder_diagnosis(err: Optional[str]) -> MoonshotDiagnosis:
+    def _placeholder_diagnosis(err: str | None) -> MoonshotDiagnosis:
         msg = "DIAGNOSE call failed; placeholder generated by merge step."
         return MoonshotDiagnosis(
             is_moonshot_candidate="NO - Conventional or linear business",
@@ -1242,7 +1320,7 @@ class MoonshotOptionsFinder(CustomWorkflow):
         )
 
     @staticmethod
-    def _placeholder_structure(err: Optional[str]) -> OptionsStructure:
+    def _placeholder_structure(err: str | None) -> OptionsStructure:
         msg = "STRUCTURE call failed; placeholder generated by merge step."
         return OptionsStructure(
             moonshot_archetype="Not a Moonshot",
