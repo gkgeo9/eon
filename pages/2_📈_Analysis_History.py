@@ -9,6 +9,7 @@ import time
 from datetime import date, timedelta
 from eon.ui.database import DatabaseRepository
 from eon.ui.theme import apply_theme
+from eon.ui.skin import topbar, components as C
 from eon.core.formatting import format_duration, format_status as _fmt_status
 from eon.core.analysis_types import CLI_ANALYSIS_CHOICES
 
@@ -21,10 +22,13 @@ if 'db' not in st.session_state:
 
 db = st.session_state.db
 
-st.title("📈 Analysis History")
-st.markdown("View and manage your analysis history")
-
-st.markdown("---")
+topbar(["Workspace", "Analysis History"])
+C.page_header(
+    title="Analysis history",
+    eyebrow="EON.02 — Run Ledger",
+    desc="Every analysis run is logged with its source citations, status, and runtime. "
+    "Filter the ledger, resume interrupted runs, or re-open completed results.",
+)
 
 # Filters
 with st.expander("🔍 Filters", expanded=False):
@@ -72,67 +76,72 @@ analyses_df = db.search_analyses(
     date_to=date_to,
 )
 
-st.markdown("---")
+# ── KPI strip (real, from the filtered ledger) ──────────────────────────────
+import pandas as pd
+
+_n = len(analyses_df)
+if _n:
+    _counts = analyses_df['status'].value_counts()
+    _completed = int(_counts.get('completed', 0))
+    _running = int(_counts.get('running', 0))
+    _failed = int(_counts.get('failed', 0))
+    _rate = f"{(_completed / _n * 100):.1f}" if _n else "0.0"
+else:
+    _completed = _running = _failed = 0
+    _rate = "0.0"
+
+C.kpi_grid([
+    {"label": "Runs in view", "value": f"{_n:,}"},
+    {"label": "Success rate", "value": _rate, "suffix": "%"},
+    {"label": "Running", "value": _running, "delta": "live" if _running else None,
+     "delta_dir": "up" if _running else ""},
+    {"label": "Failed", "value": _failed, "delta_dir": "down" if _failed else ""},
+])
+st.write("")
 
 # Display results
-st.subheader(f"Results ({len(analyses_df)} analyses)")
+C.section_h(
+    f"Results — {_n} {'analysis' if _n == 1 else 'analyses'}", num="01",
+    right_html='<span class="dim mono" style="font-size:11px">click an action below to manage a run</span>',
+)
 
 if analyses_df.empty:
     st.info("No analyses found matching filters.")
 else:
-    import pandas as pd
+    has_progress = 'progress_percent' in analyses_df.columns
 
-    # Format display
-    display_df = analyses_df.copy()
-
-    # Format timestamps
-    display_df['Start Time'] = pd.to_datetime(display_df['created_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
-    display_df['End Time'] = pd.to_datetime(display_df['completed_at'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
-    display_df['End Time'] = display_df['End Time'].fillna('-')
-
-    # Calculate duration using shared formatter
-    display_df['Duration'] = display_df.apply(
-        lambda row: format_duration(
+    rows = []
+    for _, row in analyses_df.iterrows():
+        started = pd.to_datetime(row.get('created_at'), errors='coerce')
+        started_str = started.strftime('%Y-%m-%d %H:%M') if pd.notna(started) else '—'
+        duration = format_duration(
             start=row['created_at'] if pd.notna(row.get('created_at')) else None,
             end=row['completed_at'] if pd.notna(row.get('completed_at')) else None,
-        ).replace("N/A", "-"),
-        axis=1,
+        ).replace("N/A", "—")
+
+        status_cell = C.status_pill(row['status'])
+        if row['status'] == 'running' and has_progress:
+            pct = row.get('progress_percent') or 0
+            status_cell += (
+                f'<div style="width:96px;height:3px;background:var(--bg-3);border-radius:2px;'
+                f'margin-top:5px;overflow:hidden"><div style="width:{pct}%;height:100%;'
+                f'background:var(--accent)"></div></div>'
+            )
+
+        rows.append([
+            C.tick(str(row.get('ticker', '')).upper()),
+            str(row.get('analysis_type', '')).capitalize(),
+            status_cell,
+            f'<span class="tnum dim" style="font-size:11.5px">{started_str}</span>',
+            f'<span class="tnum" style="font-size:12.5px">{duration}</span>',
+        ])
+
+    C.html_table(
+        [("Ticker", 100), "Analysis", ("Status", 150), ("Started", 170), ("Runtime", 100)],
+        rows,
     )
 
-    # Status display using shared formatter, with running-progress enhancement
-    def _status_with_progress(row):
-        base = _fmt_status(row['status'])
-        if row['status'] == 'running' and 'progress_percent' in analyses_df.columns:
-            progress = row.get('progress_percent')
-            if progress is not None and progress > 0:
-                return f"{base} ({progress}%)"
-            return f"{base}..."
-        return base
-
-    display_df['Status'] = analyses_df.apply(_status_with_progress, axis=1)
-
-    # Clean up names
-    display_df['Ticker'] = display_df['ticker'].str.upper()
-    display_df['Analysis'] = display_df['analysis_type'].str.capitalize()
-
-    # Display table
-    st.dataframe(
-        display_df[[
-            'Ticker', 'Analysis', 'Status', 'Start Time', 'End Time', 'Duration'
-        ]],
-        width="stretch",
-        hide_index=True,
-        column_config={
-            "Ticker": st.column_config.TextColumn("Ticker", width="small"),
-            "Analysis": st.column_config.TextColumn("Analysis Type", width="medium"),
-            "Status": st.column_config.TextColumn("Status", width="medium"),
-            "Start Time": st.column_config.TextColumn("Started", width="medium"),
-            "End Time": st.column_config.TextColumn("Completed", width="medium"),
-            "Duration": st.column_config.TextColumn("Duration", width="small"),
-        }
-    )
-
-    st.markdown("---")
+    st.write("")
 
     # Show detailed progress for running analyses
     running_analyses = analyses_df[analyses_df['status'] == 'running']
@@ -309,15 +318,27 @@ else:
                 st.error(f"Error deleting analysis: {e}")
 
 # Statistics
-st.markdown("---")
-st.subheader("Statistics")
+st.write("")
+C.section_h("Statistics by type", num="02")
 
 stats_df = db.get_stats_by_type()
 
 if not stats_df.empty:
     # Pivot for better display
     stats_pivot = stats_df.pivot(index='analysis_type', columns='status', values='count').fillna(0)
-    st.dataframe(stats_pivot, width="stretch")
+    _status_cols = list(stats_pivot.columns)
+    _rows = []
+    for _atype, _r in stats_pivot.iterrows():
+        _cells = [f'<span style="font-weight:500">{str(_atype).capitalize()}</span>']
+        for _c in _status_cols:
+            _cells.append(f'<span class="tnum">{int(_r[_c])}</span>')
+        _rows.append(_cells)
+    C.html_table(
+        ["Analysis type"] + [str(c).capitalize() for c in _status_cols],
+        _rows,
+    )
+else:
+    st.info("No statistics yet.")
 
 # Navigation
 st.markdown("---")

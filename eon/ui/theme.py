@@ -3,57 +3,24 @@
 """
 Theme utilities for EON UI.
 
-Streamlit handles dark/light mode natively through:
-1. User's system preference (automatic)
-2. .streamlit/config.toml settings
-3. Streamlit Cloud settings
+Styling is delegated to the presentation-only ``eon.ui.skin`` package, which
+implements the "Erebus Observatory Network" design system (Geist / Fraunces
+type, navy oklch palette, sidebar brand, card metrics, restyled widgets) and a
+custom in-app dark/light toggle. The skin is purely cosmetic and does not alter
+any app behaviour.
 
-This module provides minimal shared styling.
+``apply_theme`` is kept as the stable entry point so every page picks up the
+skin automatically without per-page changes.
 """
 
-import streamlit as st
+from eon.ui.skin import apply_skin
 
 
 def apply_theme():
     """
-    Apply consistent styling across all pages.
+    Apply consistent styling across all pages via the Erebus skin.
 
-    Note: Dark/light mode is handled by Streamlit natively.
-    Configure in .streamlit/config.toml or let it follow system preference.
+    Delegates to :func:`eon.ui.skin.apply_skin`, which injects the design system
+    CSS (driven by the in-app dark/light toggle) and renders the sidebar brand.
     """
-    st.markdown("""
-    <style>
-    /* Consistent button styling */
-    .stButton button {
-        border-radius: 0.5rem;
-        transition: all 0.2s ease;
-    }
-
-    .stButton button:hover {
-        transform: translateY(-1px);
-    }
-
-    /* Form styling */
-    .stForm {
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-    }
-
-    /* Metric cards */
-    .stMetric {
-        padding: 1rem;
-        border-radius: 0.75rem;
-    }
-
-    /* DataFrames */
-    .stDataFrame {
-        border-radius: 0.5rem;
-        overflow: hidden;
-    }
-
-    /* Expanders */
-    .stExpander {
-        border-radius: 0.5rem;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    apply_skin()
