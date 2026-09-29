@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="451.44pt" height="331.2pt" viewBox="0 0 451.44 331.2" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>EON paper renderer</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 331.2 
+L 451.44 331.2 
+L 451.44 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #263238" x="6.7716" y="23.597812" transform="rotate(-0 6.7716 23.597812)">Fix the question, then read everything</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">Four designs, May 2025 to June 2026  /  dates from files, git history and batch records</text>
+   </g>
+   <g id="text_3">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #263238" x="6.7716" y="91.667614" transform="rotate(-0 6.7716 91.667614)">Origin</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="6.7716" y="106.902814" transform="rotate(-0 6.7716 106.902814)">A study of excellence</text>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #263238" x="6.7716" y="138.981899" transform="rotate(-0 6.7716 138.981899)">Design 1</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="6.7716" y="154.217099" transform="rotate(-0 6.7716 154.217099)">Workflow builder</text>
+   </g>
+   <g id="text_7">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #263238" x="6.7716" y="186.296185" transform="rotate(-0 6.7716 186.296185)">Design 2</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="6.7716" y="201.531385" transform="rotate(-0 6.7716 201.531385)">One question, all filings</text>
+   </g>
+   <g id="text_9">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #263238" x="6.7716" y="233.610471" transform="rotate(-0 6.7716 233.610471)">Design 3</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="6.7716" y="248.845671" transform="rotate(-0 6.7716 248.845671)">Hypothesis workflows</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="6.7716" y="317.445891" transform="rotate(-0 6.7716 317.445891)">Sources: origin files; git log; fintel.db; eon.db. Rust: a ledger written before its outcomes.</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_2">
+    <path d="M 135.432 268.272 
+L 442.4112 268.272 
+L 442.4112 69.552 
+L 135.432 69.552 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <path d="M 168.074585 268.272 
+L 168.074585 69.552 
+" clip-path="url(#p60d70e431e)" style="fill: none; stroke: #e9eded; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2"/>
+     <g id="text_12">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #667174" x="168.074585" y="281.109891" transform="rotate(-0 168.074585 281.109891)">Jun 2025</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_3">
+      <path d="M 252.8064 268.272 
+L 252.8064 69.552 
+" clip-path="url(#p60d70e431e)" style="fill: none; stroke: #e9eded; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4"/>
+     <g id="text_13">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #667174" x="252.8064" y="281.109891" transform="rotate(-0 252.8064 281.109891)">Oct 2025</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_5">
+      <path d="M 338.232738 268.272 
+L 338.232738 69.552 
+" clip-path="url(#p60d70e431e)" style="fill: none; stroke: #e9eded; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6"/>
+     <g id="text_14">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #667174" x="338.232738" y="281.110594" transform="rotate(-0 338.232738 281.110594)">Feb 2026</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_7">
+      <path d="M 421.575508 268.272 
+L 421.575508 69.552 
+" clip-path="url(#p60d70e431e)" style="fill: none; stroke: #e9eded; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8"/>
+     <g id="text_15">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #667174" x="421.575508" y="281.109891" transform="rotate(-0 421.575508 281.109891)">Jun 2026</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2"/>
+   <g id="patch_3">
+    <path d="M 147.933415 107.876571 
+L 170.158154 107.876571 
+L 170.158154 88.004571 
+L 147.933415 88.004571 
+z
+" clip-path="url(#p60d70e431e)" style="fill: #a5472d"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 299.339446 155.190857 
+L 315.313477 155.190857 
+L 315.313477 135.318857 
+L 299.339446 135.318857 
+z
+" clip-path="url(#p60d70e431e)" style="fill: #667174"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 343.0944 202.505143 
+L 352.1232 202.505143 
+L 352.1232 182.633143 
+L 343.0944 182.633143 
+z
+" clip-path="url(#p60d70e431e)" style="fill: #126b70"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 354.901292 202.505143 
+L 356.984862 202.505143 
+L 356.984862 182.633143 
+L 354.901292 182.633143 
+z
+" clip-path="url(#p60d70e431e)" style="fill: #6fa8a8"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 413.241231 249.819429 
+L 423.659077 249.819429 
+L 423.659077 229.947429 
+L 413.241231 229.947429 
+z
+" clip-path="url(#p60d70e431e)" style="fill: #263238"/>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #263238" transform="translate(177.103385 94.574009)">11,741 filing readings in May,</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #263238" transform="translate(177.103385 106.274009)">then scans on 26 May and 4 June</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #263238" x="295.172308" y="147.593099" transform="rotate(-0 295.172308 147.593099)">16 saved chains</text>
+   </g>
+   <g id="text_18">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #126b70" x="338.927262" y="194.907385" transform="rotate(-0 338.927262 194.907385)">6,568 readings in 13 days</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #263238" transform="translate(280.15753 236.516866)">Scores judged by the model,</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #263238" transform="translate(299.895655 248.216866)">totals computed in code</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p60d70e431e">
+   <rect x="135.432" y="69.552" width="306.9792" height="198.72"/>
+  </clipPath>
+ </defs>
+</svg>

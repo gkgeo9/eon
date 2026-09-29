@@ -1,0 +1,20 @@
+version: 1
+figure_width_inches: 6.27
+preview_dpi: 240
+figure_count: 9
+# Figure 3 draws the market-wide batch; quota days start at 08:00 UTC.
+quota_reset_hour_utc: 8
+keys: 25
+requests_per_key_per_day: 20
+# Figure 4 shows vintages with at least this many readings.
+min_vintage_readings: 400
+palette:
+  ink: '#263238'
+  muted: '#667174'
+  light: '#E9EDED'
+  accent: '#126B70'
+  accent_mid: '#6FA8A8'
+  accent_light: '#E3F0EF'
+  warning: '#A5472D'
+  warning_mid: '#D59A86'
+  warning_light: '#F8EEEA'

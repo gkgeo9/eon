@@ -1,0 +1,84 @@
+{
+  "stage": "whitepaper-backtest-evaluation",
+  "timestamp": "2026-09-29T17:42:51.263855+00:00",
+  "config_hash": "4a33bef704453612dcd3a63511297b13445500e9041c8b03a7c7f57bb5599756",
+  "config": {
+    "version": 2,
+    "database": "data/eon.db",
+    "result_type": "SimplifiedAnalysis",
+    "benchmark": "SPY",
+    "price_source": "docs/whitepaper/evaluation/prices/closes.parquet",
+    "price_end": "2026-09-28",
+    "dedupe": "keep_lowest_row_id",
+    "entry_rule": "first_trading_day_after_filing_date",
+    "horizons_trading_days": {
+      "6M": 126,
+      "1Y": 252,
+      "2Y": 504
+    },
+    "long_verdicts": [
+      "STRONG BUY",
+      "BUY"
+    ],
+    "short_verdicts": [
+      "SELL",
+      "STRONG SELL"
+    ],
+    "model": "gemini-2.5-flash",
+    "knowledge_cutoff": "2025-01-31",
+    "primary": [
+      {
+        "id": "historical",
+        "question": "Does the BUY-minus-SELL spread survive a within-vintage, within-industry permutation test?",
+        "horizon": "1Y",
+        "sample": "outcome window ends before knowledge_cutoff"
+      },
+      {
+        "id": "post_cutoff",
+        "question": "Does a spread appear for filings published after the model's knowledge cutoff?",
+        "horizon": "6M",
+        "sample": "filing_date after knowledge_cutoff"
+      },
+      {
+        "id": "post_cutoff_1y",
+        "question": "Does the 1Y spread appear for filings published after the model's knowledge cutoff?",
+        "horizon": "1Y",
+        "sample": "filing_date after knowledge_cutoff"
+      }
+    ],
+    "permutations": 10000,
+    "permutation_seed": 20260929,
+    "industry_source": "all_companies_08022026.csv",
+    "industry_column": "FactSet Ind",
+    "min_block_size": 2,
+    "secondary_statistics": [
+      "rank_within_vintage_industry"
+    ],
+    "anachronism_terms": {
+      "ChatGPT": "2022-11-30",
+      "Inflation Reduction Act": "2022-08-16",
+      "CHIPS and Science Act": "2022-08-09",
+      "collapse of Silicon Valley Bank": "2023-03-10",
+      "Silicon Valley Bank collapse": "2023-03-10",
+      "SVB collapse": "2023-03-10",
+      "DeepSeek": "2025-01-20",
+      "Liberation Day": "2025-04-02"
+    }
+  },
+  "versions": {
+    "python": "3.12.6",
+    "numpy": "2.5.2",
+    "pandas": "2.3.3",
+    "scipy": "1.18.1"
+  },
+  "inputs": {
+    "data/eon.db": "ee27fa5dbe5f29f2253ba95b3dc7bb9b4df5d6176c8bafb085e01413c21a74ee",
+    "all_companies_08022026.csv": "4ee9cedb4b27edeb5ff9069b02c0576d45a5d63580916ff14d37ee57d223a9fc",
+    "docs/whitepaper/evaluation/prices/closes.parquet": "e62c3ab6c24a350729fca385c58331601f660ca0521254e1334466b150a0851d",
+    "evaluate_backtest.py": "9baf9b6add29c8705dc8dc20ea572cabfbaa11ed779faa1722b1588401b2157e"
+  },
+  "outputs": {
+    "results.json": "0d4be2c14e5874e06aaac58c5462ed33343f856006d5c46a551c572a8cf6852f",
+    "trades.csv": "4d656365588308a006e20071be74ccdac552fc31a4db0e26edbcacc9aa1d85f6"
+  }
+}

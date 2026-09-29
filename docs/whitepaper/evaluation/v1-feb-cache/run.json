@@ -1,0 +1,65 @@
+{
+  "stage": "whitepaper-backtest-evaluation",
+  "timestamp": "2026-09-29T17:21:05.207931+00:00",
+  "config_hash": "13994fb8252b7ae20778c466f5b7b68467edc5264110ffcf09d8a69572885977",
+  "config": {
+    "version": 1,
+    "database": "data/eon.db",
+    "price_cache": "data/price_cache",
+    "result_type": "SimplifiedAnalysis",
+    "benchmark": "SPY",
+    "price_end": "2026-02-06",
+    "dedupe": "keep_lowest_row_id",
+    "entry_rule": "first_trading_day_after_filing_date",
+    "horizons_trading_days": {
+      "6M": 126,
+      "1Y": 252,
+      "2Y": 504
+    },
+    "long_verdicts": [
+      "STRONG BUY",
+      "BUY"
+    ],
+    "short_verdicts": [
+      "SELL",
+      "STRONG SELL"
+    ],
+    "model": "gemini-2.5-flash",
+    "knowledge_cutoff": "2025-01-31",
+    "primary": [
+      {
+        "id": "historical",
+        "question": "Does the BUY-minus-SELL spread survive a within-vintage, within-industry permutation test?",
+        "horizon": "1Y",
+        "sample": "outcome window ends before knowledge_cutoff"
+      },
+      {
+        "id": "post_cutoff",
+        "question": "Does a spread appear for filings published after the model's knowledge cutoff?",
+        "horizon": "6M",
+        "sample": "filing_date after knowledge_cutoff"
+      }
+    ],
+    "permutations": 10000,
+    "permutation_seed": 20260929,
+    "industry_source": "all_companies_08022026.csv",
+    "industry_column": "FactSet Ind",
+    "min_block_size": 2
+  },
+  "versions": {
+    "python": "3.12.6",
+    "numpy": "2.5.2",
+    "pandas": "2.3.3",
+    "scipy": "1.18.1"
+  },
+  "inputs": {
+    "data/eon.db": "ee27fa5dbe5f29f2253ba95b3dc7bb9b4df5d6176c8bafb085e01413c21a74ee",
+    "all_companies_08022026.csv": "4ee9cedb4b27edeb5ff9069b02c0576d45a5d63580916ff14d37ee57d223a9fc",
+    "evaluate_backtest.py": "0f4aba2f04e8352e56f4ef0e396f5a45b7abd2f3b5225b3ee15e164ced257fe1",
+    "price_cache_manifest": "3878dbe435c4dafafe644782e0ac61f10542d02a44676afab75214335a92ac9b"
+  },
+  "outputs": {
+    "results.json": "af46f0cd20f32707586fc24687cee6f6337f54e4fdededf56a6b61e195430f15",
+    "trades.csv": "1e250e37e27e46763ebdca2309c19fb2e5a282c16bfaac4095aecb2a766a182c"
+  }
+}

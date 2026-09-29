@@ -1,0 +1,54 @@
+{
+  "stage": "whitepaper-origin-ledger",
+  "timestamp": "2026-09-29T18:00:44.656511+00:00",
+  "config": {
+    "version": 1,
+    "origin_root": "/Users/gkg/PycharmProjects/stock_stuff_06042025/10K_automator",
+    "model": "gemini-2.5-flash-preview-04-17",
+    "knowledge_cutoff": "2025-01-31",
+    "scores": {
+      "compounder": {
+        "source": "company_results/*_comparative_analysis.json",
+        "field": "compounder_potential.score",
+        "reading_dates": "2025-05-10 to 2025-05-13"
+      },
+      "alpha": {
+        "source": "contrarian_evidence_results/*_analysis_*.json",
+        "field": "overall_alpha_score",
+        "reading_dates": "2025-05-26"
+      },
+      "direction": {
+        "source": "options_trading_results/*_options_analysis_*.json",
+        "field": "trade_recommendation",
+        "reading_dates": "2025-06-04",
+        "horizon_trading_days": 126
+      }
+    },
+    "entry_rule": "first_trading_day_after_reading",
+    "horizon_trading_days": 252,
+    "benchmark": "SPY",
+    "price_source": "docs/whitepaper/evaluation/prices/closes.parquet",
+    "extra_price_source": "docs/whitepaper/evaluation/prices/origin-closes.parquet",
+    "price_end": "2026-09-28",
+    "permutations": 10000,
+    "permutation_seed": 20260929,
+    "industry_source": "all_companies_08022026.csv",
+    "industry_column": "FactSet Ind",
+    "min_block_size": 2
+  },
+  "config_sha256": "e867e429fa03a5bb88a6385a3cdf19c280b0a0170ebadc802285d0e890857975",
+  "versions": {
+    "python": "3.12.6",
+    "numpy": "2.5.2",
+    "pandas": "2.3.3"
+  },
+  "inputs": {
+    "price_source": "e62c3ab6c24a350729fca385c58331601f660ca0521254e1334466b150a0851d",
+    "extra_price_source": "5f9d0bddb150564e374e6f3e67b72d9546245516d09641eb595cc173b15dfc01",
+    "industry_source": "4ee9cedb4b27edeb5ff9069b02c0576d45a5d63580916ff14d37ee57d223a9fc"
+  },
+  "outputs": {
+    "results.json": "facdbf9b692c7cb007b81bf85d3428126bea5aba17700aaf38274b39b7fc5a0e",
+    "trades.csv": "aaed25d3a6184da1f94ed2d1ec637f52cf3682a598fd78b3c5bf8e16f3a54bab"
+  }
+}

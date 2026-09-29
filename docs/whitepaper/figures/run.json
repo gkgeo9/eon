@@ -1,0 +1,64 @@
+{
+  "stage": "whitepaper-figures",
+  "timestamp": "2026-09-29T18:06:34.372512+00:00",
+  "config": {
+    "version": 1,
+    "figure_width_inches": 6.27,
+    "preview_dpi": 240,
+    "figure_count": 9,
+    "quota_reset_hour_utc": 8,
+    "keys": 25,
+    "requests_per_key_per_day": 20,
+    "min_vintage_readings": 400,
+    "palette": {
+      "ink": "#263238",
+      "muted": "#667174",
+      "light": "#E9EDED",
+      "accent": "#126B70",
+      "accent_mid": "#6FA8A8",
+      "accent_light": "#E3F0EF",
+      "warning": "#A5472D",
+      "warning_mid": "#D59A86",
+      "warning_light": "#F8EEEA"
+    }
+  },
+  "versions": {
+    "python": "3.12.6",
+    "matplotlib": "3.11.1",
+    "numpy": "2.5.2"
+  },
+  "inputs": {
+    "figure-config.yaml": "9cb6717a140228c7b186809e4a13ec35290f52480072a15fa4f53be28c63d48b",
+    "evidence.json": "9f343d41c847253b95788b775214702d5c0b92cd0091d85e2234498ffcb350da",
+    "render_figures.py": "f43f0233a486d3ffde19667494e9577107a2b750f55c2050c81ca0846ab87029"
+  },
+  "outputs": {
+    "01-one-reading.pdf": "7456fe8e2acc8de78347ae193587125d6677c04bb5efce51238939a012a20645",
+    "01-one-reading.png": "e94033b8121803d2faba6aec99c25d0aef26699e0dd1d913fc8aecab535224b6",
+    "01-one-reading.svg": "a8e9f2471c8fe39f4436e3ba62e2b255602477100d25f4494b0ed507217b818d",
+    "02-quota-clock.pdf": "d6baa9026d230f0b254e90c8f91a33762fb810ef192c5f617ca1dd811fbc5363",
+    "02-quota-clock.png": "67fa800d6a7e43749a6d695e086a4a1e07c0d7d14c88b9456f883810b06bf34a",
+    "02-quota-clock.svg": "75e132103140b65b0b93b62fc943c0d7db150f0e807633f4dd262d79b9215f19",
+    "03-three-designs.pdf": "4dc2ef1154631370123086ae8180956a5b745447ff4cb5dce336f193ea9af252",
+    "03-three-designs.png": "eee3d44354e0390720538721ad4dea590410a8ed30f03544a50b8884dd1debc3",
+    "03-three-designs.svg": "c2652e585726cb01735f30aaef19a3996d9fcace7c6520d4feded77b2e79b581",
+    "04-verdict-mix.pdf": "2bbfe194c293fb3676395bad536fe74cb49f7e839374731a4b8d4f27d9035bb0",
+    "04-verdict-mix.png": "5697d8f846d6835c492373bcc0fc432c5f34a8e1f829148b9afde32d3b6e55e8",
+    "04-verdict-mix.svg": "d24d0442b5d8dec8b9a20a42480dfae7b4dba2537e371fe1f8bae38f267adf92",
+    "05-cutoff-timeline.pdf": "92365c9b283d498f9dc9d14d225a880aa516ea5ee5d8c147d6a9706c2e698530",
+    "05-cutoff-timeline.png": "471e0b0e122fbb63d123ffd9d8ff9a4b78527621d3006c799d8bcabac205e945",
+    "05-cutoff-timeline.svg": "1866715defd54c4b98099823b8dea6aac299a0ccd1b9908ff1e4574125b15f75",
+    "06-horizons.pdf": "d39fbf54cfb004ee7917396d7ac644957dd88f6b1878b3b172b4782e5084da75",
+    "06-horizons.png": "306a76b6086edc7c42f37fbfb5b3bd9d2d06a00cdff6c05bd5e5299dbab020fb",
+    "06-horizons.svg": "1568eadacb27e3dc8d8a7ca6d26ff21e3c8d45753e2dad4e538f070d35a22cdc",
+    "07-decomposition.pdf": "c9e813b85a07aada4f2f8f8f8a2af63a6bb7e0707e0ff20ba460af32ee41b03e",
+    "07-decomposition.png": "3785a7da67c47bc7bbdc73a72ea87c0676793c127496954b2997573d9628a429",
+    "07-decomposition.svg": "892a41917bf5b62fa9261f9700475d9995328886a67669b30481d40563801b99",
+    "08-tails.pdf": "62ce1402e9b6683aaf4f7f856ca9fabe169aa17cc8353c8c5c3e98fd3f030c42",
+    "08-tails.png": "2048f6873d49a560a3ccdf3170cafc6d23194ebd46d49ae064b179a00bbab4b1",
+    "08-tails.svg": "8c0820a8f08a97bc09fa138772674f8d69369b724663679c15f5e4664de3b1ea",
+    "09-forward-tests.pdf": "63a35fc1e3c322c288a3044796e6b0dda408de49d7283aebf8b52eacbeb11286",
+    "09-forward-tests.png": "c9492cd377c58dcba9edaf5b3caf9828ffd8e3876538ffda871d44014448efc7",
+    "09-forward-tests.svg": "6dd81f698f1b6aa65f8e3398de4d17215a190cbc1f45fa9b9f30c153ac55715b"
+  }
+}
