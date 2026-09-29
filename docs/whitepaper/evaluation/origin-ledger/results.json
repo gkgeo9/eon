@@ -60,13 +60,24 @@
         "observed": 0.006179582743522454,
         "null_mean": 0.01417669430836752,
         "null_sd": 0.020636043439748643,
+        "null_p2_5": -0.026958537844943238,
+        "null_p97_5": 0.05344661075655016,
         "p_two_sided": 0.7052294770522948
       },
       "quintile_rank_spread": {
         "observed": -0.002762783792029655,
         "null_mean": 0.010408676953141441,
         "null_sd": 0.01746676841563873,
+        "null_p2_5": -0.024133658007590597,
+        "null_p97_5": 0.04483994846242058,
         "p_two_sided": 0.45115488451154884
+      },
+      "quintile_ties": {
+        "low_threshold": 32.0,
+        "high_threshold": 55.0,
+        "n_low_including_ties": 384,
+        "n_high_including_ties": 445,
+        "table_method": "five_equal_count_groups_after_rank_first_tie_break"
       },
       "quintiles": {
         "Q1": {
@@ -123,13 +134,24 @@
         "observed": -0.14280336115190534,
         "null_mean": -0.029695731014303135,
         "null_sd": 0.021488250874094224,
+        "null_p2_5": -0.07167101144013167,
+        "null_p97_5": 0.01283910006307344,
         "p_two_sided": 9.999000099990002e-05
       },
       "quintile_rank_spread": {
         "observed": -0.111234473077508,
         "null_mean": -0.023394061928948655,
         "null_sd": 0.017554700929581266,
+        "null_p2_5": -0.0577062912239389,
+        "null_p97_5": 0.011068156817257972,
         "p_two_sided": 9.999000099990002e-05
+      },
+      "quintile_ties": {
+        "low_threshold": 55.0,
+        "high_threshold": 78.0,
+        "n_low_including_ties": 405,
+        "n_high_including_ties": 491,
+        "table_method": "five_equal_count_groups_after_rank_first_tie_break"
       },
       "quintiles": {
         "Q1": {
@@ -186,6 +208,8 @@
         "observed": 0.02829476861167013,
         "null_mean": 0.017851046620632888,
         "null_sd": 0.01729133313938213,
+        "null_p2_5": -0.01597225397841596,
+        "null_p97_5": 0.05161208729650633,
         "p_two_sided": 0.5425457454254574
       },
       "n_calls": 352,

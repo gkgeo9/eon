@@ -1,0 +1,46 @@
+# Rules for the narrative figures of Edition 3, fixed before the draw was run.
+# These are descriptive views of existing evaluation outputs. They add no new
+# hypothesis test to the paper's primary results.
+version: 1
+
+trades: evaluation/trades.csv          # Edition 2 evaluation output, unchanged
+knowledge_cutoff: '2025-01-31'
+horizon: 1Y
+
+# Verdict ladder: mean within-vintage percentile rank of one-year excess return
+# for each of the five verdicts, in the historical and post-cutoff samples used
+# by the primary tests. Monotonicity is summarised by the Spearman correlation
+# between verdict level (-2 STRONG SELL ... +2 STRONG BUY) and rank, with
+# verdicts shuffled 10,000 times within fiscal-year groups.
+verdict_levels: {STRONG SELL: -2, SELL: -1, HOLD: 0, BUY: 1, STRONG BUY: 2}
+permutations: 10000
+permutation_seed: 20260930
+
+# Company grid: a seeded random draw, so that no company is chosen for how its
+# story turned out. Eligible: tickers with one-year outcomes in every fiscal
+# year 2020 to 2024 and at least one BUY-type and one SELL-type verdict among
+# them (so the grid shows the verdict changing). Draw 24 without replacement
+# from the sorted eligible tickers.
+grid:
+  fiscal_years: [2020, 2021, 2022, 2023, 2024]
+  draw: 24
+  seed: 20260930
+  names_source: all_companies_08022026.csv
+
+# Named cases quoted in the text, chosen for their role in the argument (the
+# specimen and the largest outlier), not as evidence of performance.
+named_cases: [AAPL, BW]
+
+# Added 30 September 2026, before this test was run: EON's own dated ledger.
+# The Asymmetric Options V4 scan (25-26 February 2026) recorded each verdict
+# before its six-month outcome. Entry: first close after the reading's stored
+# timestamp; horizon 126 trading days; excess over SPY.
+options_ledger:
+  result_type: AsymmetricOptionsV4
+  horizon_trading_days: 126
+  # Q1 (direction): mean percentile rank of excess return, Call Bias minus Put
+  # Bias; permutation test over the ledger.
+  # Q2 (magnitude): Spearman between composite_asymmetry_score and the absolute
+  # excess return, and Straddle Bias versus No Edge on absolute excess return.
+  permutations: 10000
+  seed: 20260930

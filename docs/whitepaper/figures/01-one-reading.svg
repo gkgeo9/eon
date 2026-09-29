@@ -31,52 +31,52 @@ z
    <g id="patch_2">
     <path d="M 132.919653 84.744 
 Q 146.719996 84.744 159.402306 84.744 
-" style="fill: none; stroke: #667174; stroke-linecap: round"/>
+" style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
     <path d="M 155.402306 82.744 
 L 159.402306 84.744 
 L 155.402306 86.744 
 z
-" style="fill: #667174; stroke: #667174; stroke-linecap: round"/>
+" style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
    </g>
    <g id="patch_3">
     <path d="M 290.923653 84.744 
 Q 304.723996 84.744 317.406306 84.744 
-" style="fill: none; stroke: #667174; stroke-linecap: round"/>
+" style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
     <path d="M 313.406306 82.744 
 L 317.406306 84.744 
 L 313.406306 86.744 
 z
-" style="fill: #667174; stroke: #667174; stroke-linecap: round"/>
+" style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
    </g>
    <g id="patch_4">
     <path d="M 78.677004 264.391579 
 Q 113.991518 274.0706 148.227765 283.454088 
-" style="fill: none; stroke: #667174; stroke-linecap: round"/>
+" style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
     <path d="M 144.898702 280.467897 
 L 148.227765 283.454088 
 L 143.841375 284.325624 
 z
-" style="fill: #667174; stroke: #667174; stroke-linecap: round"/>
+" style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
    </g>
    <g id="patch_5">
     <path d="M 225.72 265.860695 
 Q 225.72 274.068718 225.72 281.158706 
-" style="fill: none; stroke: #667174; stroke-linecap: round"/>
+" style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
     <path d="M 227.72 277.158706 
 L 225.72 281.158706 
 L 223.72 277.158706 
 z
-" style="fill: #667174; stroke: #667174; stroke-linecap: round"/>
+" style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
    </g>
    <g id="patch_6">
     <path d="M 372.762996 264.391579 
 Q 337.448482 274.0706 303.212235 283.454088 
-" style="fill: none; stroke: #667174; stroke-linecap: round"/>
+" style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
     <path d="M 307.598625 284.325624 
 L 303.212235 283.454088 
 L 306.541298 280.467897 
 z
-" style="fill: #667174; stroke: #667174; stroke-linecap: round"/>
+" style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
    </g>
    <g id="patch_7">
     <path d="M 6.7716 109.782 
@@ -84,7 +84,7 @@ L 128.6604 109.782
 L 128.6604 59.706 
 L 6.7716 59.706 
 z
-" clip-path="url(#p29213288ec)" style="fill: #e9eded"/>
+" clip-path="url(#p29213288ec)" style="fill: #e8ecef"/>
    </g>
    <g id="patch_8">
     <path d="M 164.7756 109.782 
@@ -92,7 +92,7 @@ L 286.6644 109.782
 L 286.6644 59.706 
 L 164.7756 59.706 
 z
-" clip-path="url(#p29213288ec)" style="fill: #126b70"/>
+" clip-path="url(#p29213288ec)" style="fill: #0f766e"/>
    </g>
    <g id="patch_9">
     <path d="M 322.7796 109.782 
@@ -100,7 +100,7 @@ L 444.6684 109.782
 L 444.6684 59.706 
 L 322.7796 59.706 
 z
-" clip-path="url(#p29213288ec)" style="fill: #e3f0ef"/>
+" clip-path="url(#p29213288ec)" style="fill: #ddf1ee"/>
    </g>
    <g id="patch_10">
     <path d="M 6.7716 261.936 
@@ -132,20 +132,20 @@ L 361.152 319.716
 L 361.152 286.974 
 L 90.288 286.974 
 z
-" clip-path="url(#p29213288ec)" style="fill: #126b70"/>
+" clip-path="url(#p29213288ec)" style="fill: #0f766e"/>
    </g>
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #263238" x="6.7716" y="23.597812" transform="rotate(-0 6.7716 23.597812)">One filing becomes one countable verdict</text>
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597812" transform="rotate(-0 6.7716 23.597812)">One filing becomes one countable verdict</text>
    </g>
    <g id="text_2">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">Specimen: Apple 10-K for fiscal 2025, filed 31 Oct 2025  /  illustrative, not evidence</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">Specimen: Apple 10-K for fiscal 2025, filed 31 Oct 2025  /  illustrative, not evidence</text>
    </g>
    <g id="text_3">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #263238" x="13.5432" y="75.525891" transform="rotate(-0 13.5432 75.525891)">INPUT</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="75.525891" transform="rotate(-0 13.5432 75.525891)">INPUT</text>
    </g>
    <g id="text_4">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #263238" transform="translate(13.5432 90.199772)">The whole 10-K text,</text>
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #263238" transform="translate(13.5432 102.387037)">name and fiscal year</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(13.5432 90.199772)">Extracted 10-K text,</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(13.5432 102.387037)">name and fiscal year</text>
    </g>
    <g id="text_5">
     <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ffffff" x="171.5472" y="75.525891" transform="rotate(-0 171.5472 75.525891)">ONE MODEL CALL</text>
@@ -155,83 +155,83 @@ z
     <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #ffffff" transform="translate(171.5472 102.387037)">a JSON response schema</text>
    </g>
    <g id="text_7">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #126b70" x="329.5512" y="75.525891" transform="rotate(-0 329.5512 75.525891)">35 FIELDS</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="329.5512" y="75.525891" transform="rotate(-0 329.5512 75.525891)">35 FIELDS</text>
    </g>
    <g id="text_8">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #263238" transform="translate(329.5512 90.199772)">Three lenses of eleven,</text>
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #263238" transform="translate(329.5512 102.387037)">synthesis, final verdict</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(329.5512 90.199772)">Three lenses of eleven,</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(329.5512 102.387037)">synthesis, final verdict</text>
    </g>
    <g id="text_9">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #263238" x="13.5432" y="152.566242" transform="rotate(-0 13.5432 152.566242)">BUFFETT  ·  11 fields</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="152.566242" transform="rotate(-0 13.5432 152.566242)">BUFFETT  ·  11 fields</text>
    </g>
    <g id="text_10">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="13.5432" y="171.826242" transform="rotate(-0 13.5432 171.826242)">Moat and moat rating</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="171.826242" transform="rotate(-0 13.5432 171.826242)">Moat and moat rating</text>
    </g>
    <g id="text_11">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="13.5432" y="188.004642" transform="rotate(-0 13.5432 188.004642)">Management, pricing power</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="188.004642" transform="rotate(-0 13.5432 188.004642)">Management, pricing power</text>
    </g>
    <g id="text_12">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="13.5432" y="204.183042" transform="rotate(-0 13.5432 204.183042)">ROIC, free cash flow</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="204.183042" transform="rotate(-0 13.5432 204.183042)">ROIC, free cash flow</text>
    </g>
    <g id="text_13">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="13.5432" y="220.361442" transform="rotate(-0 13.5432 220.361442)">Intrinsic value</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="220.361442" transform="rotate(-0 13.5432 220.361442)">Intrinsic value</text>
    </g>
    <g id="text_14">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #126b70" x="13.5432" y="237.310242" transform="rotate(-0 13.5432 237.310242)">Lens verdict: PASS</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="13.5432" y="237.310242" transform="rotate(-0 13.5432 237.310242)">Lens verdict: PASS</text>
    </g>
    <g id="text_15">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #126b70" x="13.5432" y="252.718242" transform="rotate(-0 13.5432 252.718242)">Action signal: PASS</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="13.5432" y="252.718242" transform="rotate(-0 13.5432 252.718242)">Action signal: PASS</text>
    </g>
    <g id="text_16">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #263238" x="162.5184" y="152.566242" transform="rotate(-0 162.5184 152.566242)">TALEB  ·  11 fields</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="162.5184" y="152.566242" transform="rotate(-0 162.5184 152.566242)">TALEB  ·  11 fields</text>
    </g>
    <g id="text_17">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="162.5184" y="171.826242" transform="rotate(-0 162.5184 171.826242)">Fragility, tail risks</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="171.826242" transform="rotate(-0 162.5184 171.826242)">Fragility, tail risks</text>
    </g>
    <g id="text_18">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="162.5184" y="188.004642" transform="rotate(-0 162.5184 188.004642)">Optionality, skin in the game</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="188.004642" transform="rotate(-0 162.5184 188.004642)">Optionality, skin in the game</text>
    </g>
    <g id="text_19">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="162.5184" y="204.183042" transform="rotate(-0 162.5184 204.183042)">Hidden risks, dependencies</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="204.183042" transform="rotate(-0 162.5184 204.183042)">Hidden risks, dependencies</text>
    </g>
    <g id="text_20">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="162.5184" y="220.361442" transform="rotate(-0 162.5184 220.361442)">Lindy effect, via negativa</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="220.361442" transform="rotate(-0 162.5184 220.361442)">Lindy effect, via negativa</text>
    </g>
    <g id="text_21">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #126b70" x="162.5184" y="237.310242" transform="rotate(-0 162.5184 237.310242)">Lens verdict: NEUTRAL</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="162.5184" y="237.310242" transform="rotate(-0 162.5184 237.310242)">Lens verdict: NEUTRAL</text>
    </g>
    <g id="text_22">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #126b70" x="162.5184" y="252.718242" transform="rotate(-0 162.5184 252.718242)">Action signal: INVESTIGATE</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="162.5184" y="252.718242" transform="rotate(-0 162.5184 252.718242)">Action signal: INVESTIGATE</text>
    </g>
    <g id="text_23">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #263238" x="311.4936" y="152.566242" transform="rotate(-0 311.4936 152.566242)">CONTRARIAN  ·  11 fields</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="311.4936" y="152.566242" transform="rotate(-0 311.4936 152.566242)">CONTRARIAN  ·  11 fields</text>
    </g>
    <g id="text_24">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="311.4936" y="171.826242" transform="rotate(-0 311.4936 171.826242)">Consensus, why it is wrong</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="171.826242" transform="rotate(-0 311.4936 171.826242)">Consensus, why it is wrong</text>
    </g>
    <g id="text_25">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="311.4936" y="188.004642" transform="rotate(-0 311.4936 188.004642)">Hidden strengths and flaws</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="188.004642" transform="rotate(-0 311.4936 188.004642)">Hidden strengths and flaws</text>
    </g>
    <g id="text_26">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="311.4936" y="204.183042" transform="rotate(-0 311.4936 204.183042)">Market pricing, positioning</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="204.183042" transform="rotate(-0 311.4936 204.183042)">Market pricing, positioning</text>
    </g>
    <g id="text_27">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="311.4936" y="220.361442" transform="rotate(-0 311.4936 220.361442)">Catalyst timeline</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="220.361442" transform="rotate(-0 311.4936 220.361442)">Catalyst timeline</text>
    </g>
    <g id="text_28">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #126b70" x="311.4936" y="237.310242" transform="rotate(-0 311.4936 237.310242)">Lens verdict: AVOID</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="311.4936" y="237.310242" transform="rotate(-0 311.4936 237.310242)">Lens verdict: AVOID</text>
    </g>
    <g id="text_29">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #126b70" x="311.4936" y="252.718242" transform="rotate(-0 311.4936 252.718242)">Action signal: PASS</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="311.4936" y="252.718242" transform="rotate(-0 311.4936 252.718242)">Action signal: PASS</text>
    </g>
    <g id="text_30">
     <text style="font-weight: 700; font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #ffffff" x="225.72" y="305.943047" transform="rotate(-0 225.72 305.943047)">FINAL VERDICT   SELL  ·  Conviction: High</text>
    </g>
    <g id="text_31">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #263238" x="225.72" y="341.314242" transform="rotate(-0 225.72 341.314242)">The backtest reads only the first word: STRONG BUY, BUY, HOLD, SELL or STRONG SELL.</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="225.72" y="341.314242" transform="rotate(-0 225.72 341.314242)">Six months later, Apple had trailed SPY by 0.9 points: a draw.</text>
    </g>
    <g id="text_32">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #667174" x="6.7716" y="369.555891" transform="rotate(-0 6.7716 369.555891)">Source: data/eon.db, stored reading 1. Filed after the model's cutoff; no outcome is claimed.</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="369.555891" transform="rotate(-0 6.7716 369.555891)">Source: data/eon.db, reading 1; evaluation/trades.csv. The reading's claims are not audited.</text>
    </g>
   </g>
  </g>

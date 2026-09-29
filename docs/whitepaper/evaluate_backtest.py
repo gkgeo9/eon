@@ -54,6 +54,8 @@ class Reading:
     verdict: str | None
     conviction: str | None
     run_status: str
+    model: str
+    read_at: str
     filing_date: str | None = None
     industry: str | None = None
 
@@ -77,7 +79,8 @@ def load_readings(config: dict[str, Any]) -> tuple[list[Reading], dict[str, int]
     con = sqlite3.connect(uri, uri=True)
     rows = con.execute(
         """
-        SELECT ar.id, ar.ticker, ar.fiscal_year, ar.result_json, COALESCE(r.status, 'unknown')
+        SELECT ar.id, ar.ticker, ar.fiscal_year, ar.result_json, COALESCE(r.status, 'unknown'),
+               r.config_json, ar.created_at
         FROM analysis_results ar LEFT JOIN analysis_runs r ON r.run_id = ar.run_id
         WHERE ar.result_type = ? ORDER BY ar.id
         """,
@@ -95,10 +98,13 @@ def load_readings(config: dict[str, Any]) -> tuple[list[Reading], dict[str, int]
     counts = {"stored": len(rows)}
     seen: set[tuple[str, int]] = set()
     readings: list[Reading] = []
-    for row_id, ticker, year, payload, status in rows:
+    for row_id, ticker, year, payload, status, run_config, read_at in rows:
         if (ticker, year) in seen:  # keep_lowest_row_id: rows are ordered by id
             continue
         seen.add((ticker, year))
+        model = json.loads(run_config or "{}").get("model", "unknown")
+        if model != config["model"]:
+            continue
         verdict_text = str(json.loads(payload).get("final_verdict", "")).upper()
         verdict = VERDICT.search(verdict_text)
         conviction = CONVICTION.search(verdict_text[:300])
@@ -110,9 +116,13 @@ def load_readings(config: dict[str, Any]) -> tuple[list[Reading], dict[str, int]
                 verdict=verdict[1] if verdict else None,
                 conviction=(conviction[1] or conviction[2]) if conviction else None,
                 run_status=status,
+                model=model,
+                read_at=read_at,
                 filing_date=filings.get((ticker, year)),
             )
         )
+    counts["deduped_all_models"] = len(seen)
+    counts["excluded_model_mismatch"] = len(seen) - len(readings)
     counts["unique_company_years"] = len(readings)
     counts["from_completed_runs"] = sum(r.run_status == "completed" for r in readings)
     counts["with_parsed_verdict"] = sum(r.verdict is not None for r in readings)
@@ -195,6 +205,8 @@ def forward_returns(
         entry = int(np.argmax(after))
         record: dict[str, Any] = {
             "ticker": r.ticker,
+            "model": r.model,
+            "read_at": r.read_at,
             "fiscal_year": r.fiscal_year,
             "verdict": r.verdict,
             "conviction": r.conviction,
@@ -258,7 +270,7 @@ def spread_summary(frame: pd.DataFrame, column: str, config: dict[str, Any]) -> 
                 np.sqrt(long_r.var() / len(long_r) + short_r.var() / len(short_r))
             ),
             "naive_welch_p": float(welch.pvalue),
-            "ticker_clustered_p": float(clustered.pvalue),
+            "ticker_averaged_naive_p": float(clustered.pvalue),
             "n_long_tickers": int(len(long_t)),
             "n_short_tickers": int(len(short_t)),
         }
@@ -300,11 +312,15 @@ def permutation_test(
         permuted = np.empty_like(labels)
         permuted[base] = labels[shuffled]
         null[i] = statistic(permuted)
-    extreme = int(np.sum(np.abs(null) >= abs(observed)))
+    centre = float(null.mean())
+    extreme = int(np.sum(np.abs(null - centre) >= abs(observed - centre)))
     return {
         "blocks": blocks,
         "statistic": "rank" if ranks else "mean",
         "n": int(len(data)),
+        "n_long": int(long_mask.sum()),
+        "n_short": int(short_mask.sum()),
+        "p_method": "two_sided_distance_from_permutation_null_mean",
         "n_blocks": int(block.max() + 1),
         "observed_spread": observed,
         "p_two_sided": (1 + extreme) / (1 + len(null)),

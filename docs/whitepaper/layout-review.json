@@ -1,0 +1,79 @@
+{
+  "reviewed_at": "2026-09-29T19:08:19.284212+00:00",
+  "status": "ready_for_author_review",
+  "page_count": 17,
+  "figure_count": 9,
+  "abstract_words": 248,
+  "body_words_including_captions": 4177,
+  "visual_review": {
+    "all_pages_overview": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ],
+    "detail_review": "All nine figure designs and body pages reviewed during revision; final cover, contents, quota chart, conclusion, methods and reproduction pages additionally inspected at reading size.",
+    "corrections": [
+      "Clipped specimen footer shortened",
+      "Quota allowance separated from observed completions",
+      "Full return range shown",
+      "Conclusion kept on one page",
+      "Widow and orphan penalties strengthened"
+    ],
+    "remaining_layout_issues": []
+  },
+  "automated_checks": {
+    "ordered_figure_captions": true,
+    "source_and_figure_manifest_hashes_match": true,
+    "numerical_validation_inputs_match_final_sources": true,
+    "text_outside_page_bounds": 0,
+    "tex_overfull_underfull_or_missing_glyph_warnings": 0,
+    "production_database_matches_pre_revision_hash": true
+  },
+  "page_text_character_counts": [
+    411,
+    454,
+    3511,
+    2134,
+    3186,
+    2492,
+    1595,
+    2154,
+    2148,
+    3068,
+    2270,
+    2350,
+    2305,
+    2593,
+    3202,
+    2872,
+    1932
+  ],
+  "artifacts": {
+    "eon-whitepaper.md": "2c10a5d8d67aa27a0484a808d06febabaaef4d7ec66d555bcde384fed6ba9541",
+    "eon-whitepaper.pdf": "d399328f0b3d2636b3891665c3282159ca74b157c563652c91ee567f5bf8456c",
+    "eon-whitepaper.tex": "8d689249677c7534404fb9c9ef9e71b595e14ebe2a15decab9a1368fd44dddc8",
+    "paper-preamble.tex": "4894c0fc463e271af005797faeee88ba2c9df5b392188fee744c835134870c2f",
+    "build_paper.py": "d1b8642f7ccb8e0c0d4bd4f7ed89216eae9b5a722d0ea78ea237e07bb22ce406",
+    "document-build.json": "16ef7b1e0998444faeb2480eb056fba1cf2da5b31bb99a7fa02d7a09d5f8a767",
+    "validation.json": "89e0da80b8b5b3a5969e8ec477784a9180fbfac4ce224904be2fc7f4ddc0988f",
+    "figures/run.json": "3ebee4a373d7ca981caf546e9b243b9e2e4eb855139afb5342364c4dee0e5e72",
+    "figure-data/run.json": "d4ba73daef52aab06b2b6c426188ce7ef13bb3bc755d54b00cf8c4f81a08c053",
+    "BRIEF.md": "9137c8c4c472efa8ef6bdaf529080f1cf7f20f48b09d705effc75fc413ce487b",
+    "revision-notes.md": "58e4730d16ce6e84789da2f8b187678bd29fcb050390c75386a1c35d6cd776fb"
+  },
+  "author_review_items": "See revision-notes.md: original-file chronology, origin motivation, and historical model usage."
+}

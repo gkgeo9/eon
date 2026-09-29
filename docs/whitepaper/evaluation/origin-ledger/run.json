@@ -1,6 +1,6 @@
 {
   "stage": "whitepaper-origin-ledger",
-  "timestamp": "2026-09-29T18:00:44.656511+00:00",
+  "timestamp": "2026-09-29T18:33:41.794313+00:00",
   "config": {
     "version": 1,
     "origin_root": "/Users/gkg/PycharmProjects/stock_stuff_06042025/10K_automator",
@@ -36,7 +36,7 @@
     "industry_column": "FactSet Ind",
     "min_block_size": 2
   },
-  "config_sha256": "e867e429fa03a5bb88a6385a3cdf19c280b0a0170ebadc802285d0e890857975",
+  "config_sha256": "b2d64214cf066024e38fb255d4504762ff874f42c1e3851505bfbe18f591ba57",
   "versions": {
     "python": "3.12.6",
     "numpy": "2.5.2",
@@ -48,7 +48,7 @@
     "industry_source": "4ee9cedb4b27edeb5ff9069b02c0576d45a5d63580916ff14d37ee57d223a9fc"
   },
   "outputs": {
-    "results.json": "facdbf9b692c7cb007b81bf85d3428126bea5aba17700aaf38274b39b7fc5a0e",
+    "results.json": "7d6adcbf0fbf9925ae4d8d3716bd376fd30e4e699f13759f9aabea090839fde9",
     "trades.csv": "aaed25d3a6184da1f94ed2d1ec637f52cf3682a598fd78b3c5bf8e16f3a54bab"
   }
 }

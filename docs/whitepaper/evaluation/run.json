@@ -1,9 +1,9 @@
 {
   "stage": "whitepaper-backtest-evaluation",
-  "timestamp": "2026-09-29T17:42:51.263855+00:00",
-  "config_hash": "4a33bef704453612dcd3a63511297b13445500e9041c8b03a7c7f57bb5599756",
+  "timestamp": "2026-09-29T18:33:41.069328+00:00",
+  "config_hash": "34495022cf17464eaacf8be0e1c2d308c64b9265d032faf0f3546d7134ab4a30",
   "config": {
-    "version": 2,
+    "version": 3,
     "database": "data/eon.db",
     "result_type": "SimplifiedAnalysis",
     "benchmark": "SPY",
@@ -63,7 +63,9 @@
       "SVB collapse": "2023-03-10",
       "DeepSeek": "2025-01-20",
       "Liberation Day": "2025-04-02"
-    }
+    },
+    "p_value_method": "two_sided_distance_from_permutation_null_mean",
+    "model_filter": "exact_run_config_model"
   },
   "versions": {
     "python": "3.12.6",
@@ -75,10 +77,10 @@
     "data/eon.db": "ee27fa5dbe5f29f2253ba95b3dc7bb9b4df5d6176c8bafb085e01413c21a74ee",
     "all_companies_08022026.csv": "4ee9cedb4b27edeb5ff9069b02c0576d45a5d63580916ff14d37ee57d223a9fc",
     "docs/whitepaper/evaluation/prices/closes.parquet": "e62c3ab6c24a350729fca385c58331601f660ca0521254e1334466b150a0851d",
-    "evaluate_backtest.py": "9baf9b6add29c8705dc8dc20ea572cabfbaa11ed779faa1722b1588401b2157e"
+    "evaluate_backtest.py": "02153e5849e6a90e4daa8ca3a49541cbe0545a098f405b9ee3778dc3af48c67d"
   },
   "outputs": {
-    "results.json": "0d4be2c14e5874e06aaac58c5462ed33343f856006d5c46a551c572a8cf6852f",
-    "trades.csv": "4d656365588308a006e20071be74ccdac552fc31a4db0e26edbcacc9aa1d85f6"
+    "results.json": "f0d97d03f63787c7b9aa1ba9f4e004aea0abea0e4a5792b0744ba0274d68ddf3",
+    "trades.csv": "f46a26d2d5140a8fc83868905a093989d0745ce2b13c65c18249d0dbd3cce96e"
   }
 }

@@ -4,6 +4,7 @@
 !evaluation/trades.csv
 !evaluation/v1-feb-cache/trades.csv
 !evaluation/origin-ledger/trades.csv
+!evaluation/sealed-ledger/ledger.csv
 # Third-party price data stays local; its hash is in evaluation/prices/run.json.
 evaluation/prices/*.parquet
 *.aux

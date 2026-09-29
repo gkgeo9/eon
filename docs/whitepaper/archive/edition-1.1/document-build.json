@@ -1,0 +1,46 @@
+{
+  "markdown_sha256": "7c27914c1f7dd4bae69b4c38cff9d761914c4aa65c0d229be64876f6cba81332",
+  "latex_sha256": "b61048ecd17ae95542dfc4b46e2549fdba3b2bd21035886f8841f49479ff48b5",
+  "preamble_sha256": "0463eddcd478914025e412839f161b0c56536e2315a363823df5d9dba0849d6c",
+  "generator_sha256": "daba5b9c5a1d2f4248790c758d6d6bee18198cfa90166a2b4bf0cd5a6444acc3",
+  "pandoc": "pandoc 3.12",
+  "figures": [
+    {
+      "number": 1,
+      "asset": "figures/01-one-reading.pdf"
+    },
+    {
+      "number": 2,
+      "asset": "figures/02-quota-clock.pdf"
+    },
+    {
+      "number": 3,
+      "asset": "figures/03-three-designs.pdf"
+    },
+    {
+      "number": 4,
+      "asset": "figures/04-verdict-mix.pdf"
+    },
+    {
+      "number": 5,
+      "asset": "figures/05-cutoff-timeline.pdf"
+    },
+    {
+      "number": 6,
+      "asset": "figures/06-horizons.pdf"
+    },
+    {
+      "number": 7,
+      "asset": "figures/07-decomposition.pdf"
+    },
+    {
+      "number": 8,
+      "asset": "figures/08-tails.pdf"
+    },
+    {
+      "number": 9,
+      "asset": "figures/09-forward-tests.pdf"
+    }
+  ],
+  "editorial_source": "eon-whitepaper.md"
+}

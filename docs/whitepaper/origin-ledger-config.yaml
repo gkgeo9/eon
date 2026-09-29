@@ -1,4 +1,4 @@
-# Pre-registered protocol for testing the 2025 origin readings (10K_automator).
+# Locally documented protocol for testing the 2025 origin readings (10K_automator).
 # Written on 29 Sep 2026 before this test was run. One prior look exists and is
 # disclosed: the author's own 14 Jul 2026 check (score_vs_realized_return_*),
 # which found the compounder score inversely related to raw one-year returns.

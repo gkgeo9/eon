@@ -26,8 +26,9 @@
 \usepackage{fancyhdr}
 \usepackage{xurl}
 \usepackage[hidelinks]{hyperref}
-\definecolor{accent}{HTML}{126B70}
-\definecolor{ink}{HTML}{263238}
+\definecolor{accent}{HTML}{0F766E}
+\definecolor{warn}{HTML}{E0605A}
+\definecolor{ink}{HTML}{1F2A37}
 \definecolor{shade}{HTML}{F1F4F4}
 \color{ink}
 \pagestyle{fancy}
@@ -46,9 +47,9 @@
 \setlength{\parskip}{5pt plus 1pt}
 \setlength{\emergencystretch}{3em}
 \raggedbottom
-\clubpenalty=1000
-\widowpenalty=1000
-\displaywidowpenalty=1000
+\clubpenalty=10000
+\widowpenalty=10000
+\displaywidowpenalty=10000
 \renewcommand{\arraystretch}{1.12}
 \renewcommand{\topfraction}{.95}
 \renewcommand{\bottomfraction}{.85}
@@ -71,19 +72,26 @@
 \vspace*{1.5cm}
 {\color{accent}\small EREBUS OBSERVATORY NETWORK / EON\par}
 \vspace{1cm}
-{\Huge\bfseries PAPER_TITLE\par}
+{\fontsize{36}{40}\selectfont\bfseries PAPER_TITLE\par}
 \vspace{.8cm}
 {\Large PAPER_SUBTITLE\par}
 \vspace{1.3cm}
 {\large PAPER_AUTHOR\par}
 \vspace{.5cm}
 {\large Technical white paper\par}
-29 September 2026
+30 September 2026 · Edition 4\par
+\vspace{1.3cm}
+{\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{@{}r@{\hspace{1.2em}}l@{}}
+{\color{warn!80!black}\Large\bfseries 5} & {\small versions, from a folder of scripts to a system}\\
+{\color{accent}\Large\bfseries 29,375} & {\small answers from a language model, each one dated}\\
+{\color{ink!70}\Large\bfseries 1} & {\small question: could it see ahead?}\\
+\end{tabular}\par}
 \vfill
 \noindent\textcolor{accent}{\rule{\textwidth}{1pt}}
 \vspace{.5cm}
-{\small A language model read 6,653 annual reports. This is how to test it honestly.\par
-Research, not investment advice.}
+{\small I built a machine to read every annual report in the market. This is how it was built,\par
+what it read, and whether it had simply read tomorrow's newspaper.}
 \end{titlepage}
 \hypersetup{pageanchor=true}
 \pagenumbering{roman}

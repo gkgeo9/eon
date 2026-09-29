@@ -1,0 +1,10 @@
+{
+  "stage": "whitepaper-origin-price-refresh",
+  "timestamp": "2026-09-29T18:00:09.021314+00:00",
+  "requested_tickers": 710,
+  "returned_tickers": 590,
+  "last_date": "2026-09-29",
+  "outputs": {
+    "origin-closes.parquet": "5f9d0bddb150564e374e6f3e67b72d9546245516d09641eb595cc173b15dfc01"
+  }
+}

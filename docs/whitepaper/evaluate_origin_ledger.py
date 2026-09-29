@@ -132,6 +132,8 @@ def evaluate(frame: pd.DataFrame, kind: str, config: dict[str, Any], rng: np.ran
             "observed": v,
             "null_mean": float(arr.mean()),
             "null_sd": float(arr.std()),
+            "null_p2_5": float(np.percentile(arr, 2.5)),
+            "null_p97_5": float(np.percentile(arr, 97.5)),
             "p_two_sided": (1 + int(np.sum(np.abs(arr - arr.mean()) >= abs(v - arr.mean())))) / (1 + len(arr)),
         }
     if kind == "direction":
@@ -144,6 +146,13 @@ def evaluate(frame: pd.DataFrame, kind: str, config: dict[str, Any], rng: np.ran
         )
     else:
         q = pd.qcut(frame["value"].rank(method="first"), 5, labels=[f"Q{i}" for i in range(1, 6)])
+        result["quintile_ties"] = {
+            "low_threshold": float(np.quantile(values, 0.2)),
+            "high_threshold": float(np.quantile(values, 0.8)),
+            "n_low_including_ties": int((values <= np.quantile(values, 0.2)).sum()),
+            "n_high_including_ties": int((values >= np.quantile(values, 0.8)).sum()),
+            "table_method": "five_equal_count_groups_after_rank_first_tie_break",
+        }
         result["quintiles"] = {
             str(k): {"n": int(len(g)), "mean_excess": float(g["excess"].mean()), "median_excess": float(g["excess"].median()), "score_range": [float(g["value"].min()), float(g["value"].max())]}
             for k, g in frame.groupby(q, observed=True)

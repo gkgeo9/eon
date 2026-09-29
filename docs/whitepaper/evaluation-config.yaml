@@ -2,7 +2,7 @@
 # Version 1 was written before the evaluation was first run; its outputs are kept
 # in evaluation/v1-feb-cache/. Version 2's amendments are listed at the end, with
 # the reason for each. Change nothing else without a note in revision-notes.md.
-version: 2
+version: 3
 
 database: data/eon.db            # opened read-only, immutable
 result_type: SimplifiedAnalysis  # the three-lens multi-perspective schema
@@ -26,7 +26,7 @@ short_verdicts: [SELL, STRONG SELL]
 
 # Gemini 2.5 Flash's published knowledge cutoff. A holding window that ends
 # before it could, in principle, be known to the model. A filing published
-# after it could not have been seen by the model during training.
+# after it is classed post-cutoff conditional on the published information boundary.
 model: gemini-2.5-flash
 knowledge_cutoff: '2025-01-31'
 
@@ -77,3 +77,11 @@ anachronism_terms:
   SVB collapse: '2023-03-10'
   DeepSeek: '2025-01-20'
   Liberation Day: '2025-04-02'
+
+# Edition 2 correction: compare distances from the permutation null mean,
+# because industry blocks can preserve a nonzero spread. Same data and shuffles.
+p_value_method: two_sided_distance_from_permutation_null_mean
+
+# Edition 2: scope each evaluated reading to its recorded model.
+# Two July 2026 Gemini 3.5 Flash readings remain in the descriptive corpus only.
+model_filter: exact_run_config_model

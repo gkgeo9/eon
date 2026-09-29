@@ -1,0 +1,18 @@
+{
+  "stage": "whitepaper-figure-data",
+  "timestamp": "2026-09-29T18:02:16.492757+00:00",
+  "versions": {
+    "python": "3.12.6",
+    "pandas": "2.3.3"
+  },
+  "inputs": {
+    "data/eon.db": "ee27fa5dbe5f29f2253ba95b3dc7bb9b4df5d6176c8bafb085e01413c21a74ee",
+    "data/archive/fintel.db": "a142ff7783795bdd6ce4916cd733b0286170ef9e60fb7aa6f905a4b64acd6dad",
+    "docs/whitepaper/evaluation/results.json": "0d4be2c14e5874e06aaac58c5462ed33343f856006d5c46a551c572a8cf6852f",
+    "docs/whitepaper/evaluation/trades.csv": "4d656365588308a006e20071be74ccdac552fc31a4db0e26edbcacc9aa1d85f6",
+    "docs/whitepaper/prepare_figure_data.py": "9ac034afa57f7a05c3bce2f3e285f5c55a4ea726fdd91a125bf67690121f1725"
+  },
+  "outputs": {
+    "evidence.json": "9f343d41c847253b95788b775214702d5c0b92cd0091d85e2234498ffcb350da"
+  }
+}

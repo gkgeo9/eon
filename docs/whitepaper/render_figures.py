@@ -1,6 +1,6 @@
 # ruff: noqa: RUF001
 # Mathematical signs and typographic dashes below are intentional figure text.
-"""Render the paper's eight figures from the frozen evidence snapshot.
+"""Render the paper's seventeen figures from the frozen evidence snapshot.
 
 No database, model, or network access: everything comes from figure-data/.
 SVG for Markdown, PDF for LaTeX, PNG for review. Run from anywhere:
@@ -38,6 +38,12 @@ CFG = yaml.safe_load(CONFIG_PATH.read_text())
 C = CFG["palette"]
 E = json.loads((HERE / "figure-data/evidence.json").read_text())
 B = E["backtest"]
+ST = E["stories"]
+LONG_SET, SHORT_SET = {"BUY", "STRONG BUY"}, {"SELL", "STRONG SELL"}
+VERDICT_FACE = {
+    "STRONG BUY": C["accent"], "BUY": C["accent_mid"], "HOLD": C["light"],
+    "SELL": C["warning_mid"], "STRONG SELL": C["warning"],
+}
 OUT = HERE / "figures"
 plt.rcParams.update(
     {
@@ -137,7 +143,7 @@ def one_reading() -> None:
     )
     # Input and call.
     for x, w, face, head, body, ink in [
-        (0.015, 0.27, C["light"], "INPUT", "The whole 10-K text,\nname and fiscal year", C["ink"]),
+        (0.015, 0.27, C["light"], "INPUT", "Extracted 10-K text,\nname and fiscal year", C["ink"]),
         (0.365, 0.27, C["accent"], "ONE MODEL CALL", "Gemini 2.5 Flash with\na JSON response schema", "white"),
         (0.715, 0.27, C["accent_light"], f"{s['total_fields']} FIELDS", "Three lenses of eleven,\nsynthesis, final verdict", C["ink"]),
     ]:
@@ -166,8 +172,9 @@ def one_reading() -> None:
     # Final verdict.
     box(ax, 0.2, 0.17, 0.6, 0.085, C["accent"])
     text(ax, 0.5, 0.2125, f"FINAL VERDICT   {s['final_verdict_opening'].replace('. ', '  ·  ')}", ha="center", color="white", weight="bold", size=10)
-    text(ax, 0.5, 0.12, "The backtest reads only the first word: STRONG BUY, BUY, HOLD, SELL or STRONG SELL.", ha="center")
-    footer(ax, "Source: data/eon.db, stored reading 1. Filed after the model's cutoff; no outcome is claimed.")
+    apple = [r for r in ST["named"]["AAPL"] if r["fiscal_year"] == 2025][0]
+    text(ax, 0.5, 0.12, f"Six months later, Apple had trailed SPY by {abs(apple['excess_6M']) * 100:.1f} points: a draw.", ha="center", weight="bold")
+    footer(ax, "Source: data/eon.db, reading 1; evaluation/trades.csv. The reading's claims are not audited.")
     save(fig, "01-one-reading")
 
 
@@ -177,7 +184,7 @@ def three_designs() -> None:
     fig, ax = canvas(
         4.6,
         "Fix the question, then read everything",
-        "Four designs, May 2025 to June 2026  /  dates from files, git history and batch records",
+        "Four stages, May 2025 to June 2026  /  dates from files, git history and batch records",
     )
     chart = fig.add_axes((0.3, 0.19, 0.68, 0.6))
     start, end = date(2025, 4, 15), date(2026, 7, 1)
@@ -216,8 +223,8 @@ def three_designs() -> None:
     span(0, m["cspp_split_into_four_calls"], m["anchored_scores_in_code"], C["ink"])
     chart.text(m["cspp_split_into_four_calls"] - timedelta(days=6), 0, "Scores judged by the model,\ntotals computed in code", va="center", ha="right", size=9, linespacing=1.3)
     cutoff = date.fromisoformat(B["knowledge_cutoff"])
-    footer(ax, "Sources: origin files; git log; fintel.db; eon.db. Rust: a ledger written before its outcomes.")
-    save(fig, "03-three-designs")
+    footer(ax, "Sources: origin files; git log; fintel.db; eon.db. The rust bar's scores predate their outcomes.")
+    save(fig, "10-four-stages")
 
 
 def quota_clock() -> None:
@@ -248,16 +255,16 @@ def quota_clock() -> None:
     chart.grid(axis="y", color=C["light"], lw=0.7)
     text(ax, 0.07, 0.745, "Readings per quota day (above the bars)", color=C["muted"])
     ceiling = CFG["keys"] * CFG["requests_per_key_per_day"]
-    text(ax, 0.015, 0.125, f"{CFG['keys']} keys × {CFG['requests_per_key_per_day']} requests = {ceiling} readings a day.", weight="bold", color=C["accent"])
+    text(ax, 0.015, 0.125, f"Nominal allowance: {ceiling} requests/day.", weight="bold", color=C["accent"])
     text(ax, 0.55, 0.125, "Dotted lines: quota reset, midnight Pacific.", color=C["warning"])
     footer(ax, f"Source: data/eon.db, batch {mb['name']}. The last quota day is partial.")
-    save(fig, "02-quota-clock")
+    save(fig, "06-quota-clock")
 
 
 def verdict_mix() -> None:
     order = ["STRONG BUY", "BUY", "HOLD", "SELL", "STRONG SELL"]
     faces = [C["accent"], C["accent_mid"], C["light"], C["warning_mid"], C["warning"]]
-    hatches = ["", "", "", "", ""]
+    hatches = ["///", "", "", "", "///"]
     data = {
         y: d for y, d in B["verdicts_by_vintage"].items() if sum(d.values()) >= CFG["min_vintage_readings"]
     }
@@ -292,56 +299,36 @@ def verdict_mix() -> None:
 
 
 def cutoff_timeline() -> None:
-    cutoff = date.fromisoformat(B["knowledge_cutoff"])
-    price_end = date.fromisoformat(B["price_end"])
     fig, ax = canvas(
-        4.4,
-        "Most outcomes predate the model's cutoff",
-        "One-year windows by vintage, from median entry  /  whiskers: 10th to 90th percentile entry",
+        4.8,
+        "Three dates decide what a test can prove",
+        "When the filing appeared, where the model's knowledge ends, and when the verdict was written",
     )
-    chart = fig.add_axes((0.12, 0.25, 0.78, 0.5))
-    lo, hi = date(2021, 1, 1), date(2027, 3, 1)
-    chart.axvspan(lo, cutoff, color=C["light"], lw=0)
-    chart.axvline(cutoff, color=C["warning"], lw=1.4)
-    chart.axvline(price_end, color=C["muted"], lw=1, ls="--")
-    windows = [w for w in B["entry_windows"] if 2020 <= w["fiscal_year"] <= 2025]
-    for i, w in enumerate(windows):
-        entry = date.fromisoformat(w["entry_median"])
-        exit_ = entry + timedelta(days=365)
-        before = exit_ < cutoff
-        after = entry > cutoff
-        face = C["muted"] if before else C["accent"] if after else C["warning_mid"]
-        seen = min(exit_, price_end)
-        chart.barh(i, (seen - entry).days, left=entry, height=0.5, color=face, lw=0, hatch="" if before or after else "///")
-        if exit_ > price_end:
-            chart.barh(i, (exit_ - price_end).days, left=price_end, height=0.5, color="white", edgecolor=face, lw=0.8, ls="--")
-        chart.plot([date.fromisoformat(w["entry_p10"]), date.fromisoformat(w["entry_p90"])], [i, i], color=C["ink"], lw=1)
-    chart.set_yticks(range(len(windows)), [f"FY{w['fiscal_year']}" for w in windows])
-    chart.invert_yaxis()
-    chart.set_xlim(lo, hi)
-    chart.xaxis.set_major_locator(mdates.YearLocator())
-    chart.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
-    chart.tick_params(length=0, pad=5)
-    chart.text(cutoff - timedelta(days=20), -0.9, "Knowledge cutoff, Jan 2025", ha="right", size=9, color=C["warning"], weight="bold")
-    chart.text(price_end + timedelta(days=15), -0.9, "Prices end", size=9, color=C["muted"])
-    chart.set_ylim(len(windows) - 0.4, -1.3)
-    legend = [
-        (C["muted"], "", "Outcome may be in training data"),
-        (C["warning_mid"], "///", "Straddles the cutoff"),
-        (C["accent"], "", "Filed after the cutoff"),
+    rows = [
+        (0.73, "WITH HINDSIGHT", ["Filing", "Outcome", "Model cutoff", "Reading"],
+         "The model may already know how the story ended.", C["muted"]),
+        (0.49, "AFTER THE CUTOFF", ["Model cutoff", "Filing", "Outcome begins", "Reading"],
+         "The model cannot have read the filing, but the verdict came late.", C["accent"]),
+        (0.25, "WRITTEN IN ADVANCE", ["Filing", "Reading", "Record frozen", "Outcome"],
+         "The verdict exists before anything it predicts. Only this is a forecast.", C["warning"]),
     ]
-    for (face, hatch, label), x in zip(legend, [0.12, 0.49, 0.72], strict=True):
-        ax.add_patch(Rectangle((x, 0.13), 0.022, 0.035, facecolor=face, hatch=hatch, edgecolor="white", lw=0))
-        text(ax, x + 0.03, 0.148, label)
-    footer(ax, "Source: evaluation/trades.csv. Dashed outline: part of the window not yet observed.")
-    save(fig, "05-cutoff-timeline")
+    xs = [0.12, 0.365, 0.61, 0.855]
+    for y, label, events, note, face in rows:
+        text(ax, 0.015, y + 0.1, label, weight="bold", color=face)
+        ax.plot([xs[0], xs[-1]], [y, y], color=face, lw=1.2)
+        for x, event in zip(xs, events, strict=True):
+            ax.scatter([x], [y], s=28, color=face, zorder=3)
+            text(ax, x, y + 0.035, event, ha="center", va="bottom")
+        text(ax, 0.015, y - 0.07, note, color=C["muted"])
+    footer(ax, "Event order is schematic; spacing is not elapsed time. Source: the evaluation protocols.")
+    save(fig, "09-three-clocks")
 
 
 def horizons() -> None:
     fig, ax = canvas(
         4.6,
         "After the cutoff: same sign, wider intervals",
-        "BUY minus SELL, excess over SPY  /  95% intervals  /  cutoff 31 January 2025",
+        "BUY minus SELL  /  descriptive ±1.96 SE bars  /  January 2025 cutoff",
     )
     labels = ["6M", "1Y", "2Y"]
     panels = [
@@ -379,15 +366,15 @@ def horizons() -> None:
     text(ax, 0.095, 0.135, "Window closed before the cutoff")
     ax.scatter([0.49], [0.135], marker="o", s=30, color=C["accent"])
     text(ax, 0.51, 0.135, "Filed after the cutoff")
-    footer(ax, "Source: evaluation/results.json. Intervals: 1.96 Welch standard errors.")
+    footer(ax, "Source: evaluation/results.json. Bars assume independent readings; not clustered intervals.")
     save(fig, "06-horizons")
 
 
 def decomposition() -> None:
     fig, ax = canvas(
         3.9,
-        "The cutoff removed the industry tilt, not the rest",
-        "One-year rank spread, split by a within-industry permutation test  /  percentile points",
+        "After the cutoff, the industry bet disappeared",
+        "One-year BUY-minus-SELL rank spread, split in two  /  percentile points",
     )
     chart = fig.add_axes((0.3, 0.28, 0.62, 0.42))
     rows = [("historical", "Closed before the cutoff"), ("post_cutoff_1y", "Filed after the cutoff")]
@@ -403,7 +390,7 @@ def decomposition() -> None:
             chart.text(tilt / 2, i, f"{tilt:.1f}", ha="center", va="center", size=9, color=C["ink"], weight="bold")
     labels = []
     for key, label in rows:
-        n = B["primary"][key]["summary"]
+        n = B["primary"][key]["rank_within_vintage_industry"]
         labels.append(f"{label}\n{n['n_long']:,} BUY, {n['n_short']:,} SELL")
     chart.set_ylim(1.6, -0.6)
     chart.set_xlim(0, 16)
@@ -415,11 +402,11 @@ def decomposition() -> None:
     chart.tick_params(length=0, pad=5)
     chart.grid(axis="x", color=C["light"], lw=0.7)
     box(ax, 0.3, 0.13, 0.022, 0.035, C["light"], edgecolor=C["muted"], hatch="///", lw=0.6)
-    text(ax, 0.33, 0.148, "Industry tilt (null mean)")
+    text(ax, 0.33, 0.148, "Which industries it favoured")
     box(ax, 0.64, 0.13, 0.022, 0.035, C["accent"])
-    text(ax, 0.67, 0.148, "Within industry")
-    footer(ax, "Source: evaluation/results.json. Rank statistic added after seeing the tails.")
-    save(fig, "07-decomposition")
+    text(ax, 0.67, 0.148, "Which companies within them")
+    footer(ax, "Source: evaluation/results.json. Exploratory; decomposition does not identify a cause.")
+    save(fig, "06-decomposition")
 
 
 def tails() -> None:
@@ -428,7 +415,7 @@ def tails() -> None:
     fig, ax = canvas(
         4.0,
         "One stock can decide a mean",
-        "Filed after the cutoff  /  one-year excess return over SPY per reading, symmetric log scale",
+        "Post-cutoff filings  /  one-year excess over SPY, percentage points  /  symmetric log axis",
     )
     chart = fig.add_axes((0.12, 0.25, 0.85, 0.47))
     rng = np.random.default_rng(20260929)
@@ -438,70 +425,218 @@ def tails() -> None:
         mean, median = v.mean(), np.median(v)
         chart.plot([mean, mean], [i - 0.3, i + 0.3], color=C["ink"], lw=1.6)
         chart.plot([median, median], [i - 0.3, i + 0.3], color=C["ink"], lw=1.2, ls=":")
-        chart.text(-100, i - 0.36, f"{label}  n = {len(v)}   mean {mean:+.1f}%   median {median:+.1f}%".replace("-", "−"), size=9, va="center", color=face, weight="bold")
+        chart.text(-100, i - 0.36, f"{label}  n = {len(v)}   mean {mean:+.1f}   median {median:+.1f}".replace("-", "−"), size=9, va="center", color=face, weight="bold")
     chart.set_xscale("symlog", linthresh=100)
-    chart.set_xlim(-100, 5000)
-    chart.set_xticks([-100, -50, 0, 50, 100, 1000, 3000], ["−100%", "−50%", "0", "+50%", "+100%", "+1,000%", "+3,000%"])
+    chart.set_xlim(min(-150, min(values["long"] + values["short"]) * 100 - 5), 5000)
+    chart.set_xticks([-100, 0, 100, 1000, 3000], ["−100", "0", "+100", "+1,000", "+3,000"])
     chart.set_ylim(1.55, -0.95)
     chart.set_yticks([])
     chart.tick_params(length=0, pad=5)
     chart.grid(axis="x", color=C["light"], lw=0.7)
     chart.annotate(
-        f"{top['ticker']}  +{top['excess_1Y'] * 100:,.0f}%\nalone adds about {top['excess_1Y'] * 100 / len(values['long']):.0f} points\nto the BUY mean",
+        f"Babcock & Wilcox, \\$0.46 to \\$15.72\n+{top['excess_1Y'] * 100:,.0f} points, checked twice\nadds {top['excess_1Y'] * 100 / len(values['long']):.0f} points to the BUY mean",
         xy=(top["excess_1Y"] * 100, 0),
-        xytext=(150, -0.62),
+        xytext=(70, -0.66),
         size=9,
         color=C["warning"],
         arrowprops={"arrowstyle": "-|>", "color": C["warning"], "lw": 1},
     )
-    text(ax, 0.12, 0.13, "Solid line: mean.  Dotted line: median.  Linear between −100% and +100%.", color=C["muted"])
-    footer(ax, "Source: evaluation/trades.csv. Filed after 31 Jan 2025; outcome by 28 Sep 2026.")
-    save(fig, "08-tails")
+    text(ax, 0.12, 0.13, "Solid line: mean.  Dotted line: median.  Linear between −100 and +100 points.", color=C["muted"])
+    footer(ax, "Source: evaluation/trades.csv; BW checked against Nasdaq closes. Filed after 31 Jan 2025.")
+    save(fig, "12-tails")
 
 
 def forward_tests() -> None:
-    o = E["origin"]["ledger"]["scores"]
-    post = B["primary"]["post_cutoff_1y"]["rank_within_vintage_industry"]
+    scores = E["origin"]["ledger"]["scores"]
     rows = [
-        ("EON verdict", "BUY − SELL; filed after cutoff", post["observed_spread"], post["null_mean"], post["null_sd"], post["p_two_sided"], C["accent"]),
-        ("2025 compounder score", "Top − bottom fifth; 10–13 May 2025", o["compounder"]["quintile_rank_spread"]["observed"], o["compounder"]["quintile_rank_spread"]["null_mean"], o["compounder"]["quintile_rank_spread"]["null_sd"], o["compounder"]["quintile_rank_spread"]["p_two_sided"], C["warning"]),
-        ("2025 contrarian alpha", "Top − bottom fifth; 26 May 2025", o["alpha"]["quintile_rank_spread"]["observed"], o["alpha"]["quintile_rank_spread"]["null_mean"], o["alpha"]["quintile_rank_spread"]["null_sd"], o["alpha"]["quintile_rank_spread"]["p_two_sided"], C["muted"]),
-        ("2025 options direction", "Calls − puts; 4 June 2025, 6 months", o["direction"]["spread"]["observed"], o["direction"]["spread"]["null_mean"], o["direction"]["spread"]["null_sd"], o["direction"]["spread"]["p_two_sided"], C["muted"]),
+        ("Compounder resemblance", "May 2025 · 1 year · n = 1,766", scores["compounder"]["quintile_rank_spread"], C["warning"]),
+        ("Contrarian score", "May 2025 · 1 year · n = 1,780", scores["alpha"]["quintile_rank_spread"], C["muted"]),
+        ("Options direction", "June 2025 · 6 months · n = 849", scores["direction"]["spread"], C["muted"]),
     ]
     fig, ax = canvas(
-        4.3,
-        "The clean tests do not agree",
-        "Tests the model could not pass from memory  /  percentile points of excess return",
+        4.2,
+        "Looking like a great company was a bad sign",
+        "Scores written down in 2025, before their outcomes  /  top minus bottom, return percentile",
     )
-    chart = fig.add_axes((0.44, 0.2, 0.53, 0.56))
+    chart = fig.add_axes((0.44, 0.24, 0.53, 0.50))
     chart.axvline(0, color=C["ink"], lw=0.8)
-    for i, (label, when, obs, mean, sd, p, face) in enumerate(rows):
-        lo, hi = (mean - 1.96 * sd) * 100, (mean + 1.96 * sd) * 100
-        chart.barh(i, hi - lo, left=lo, height=0.42, color=C["light"], lw=0)
-        chart.scatter([obs * 100], [i], s=46, color=face, zorder=3, edgecolor="white", lw=0.6)
-        value = f"{obs * 100:+.1f}  (p = {p:.2g})".replace("-", "−")
-        if obs * 100 < lo:
-            chart.text(obs * 100 - 0.9, i, value, ha="right", va="center", size=9, color=face)
+    for i, (label, detail, t, face) in enumerate(rows):
+        obs, lo, hi = [t[k] * 100 for k in ("observed", "null_p2_5", "null_p97_5")]
+        chart.plot([lo, hi], [i, i], color=C["light"], lw=12, solid_capstyle="butt")
+        chart.scatter([obs], [i], marker=["D", "o", "s"][i], s=43, color=face, zorder=3, edgecolor="white", lw=0.7)
+        value = f"{obs:+.1f}  p = {t['p_two_sided']:.2g}".replace("-", "−")
+        if obs < lo:
+            chart.text(obs - 0.8, i, value, ha="right", va="center", size=9, color=face)
         else:
-            chart.text(max(obs * 100, hi) + 0.9, i, value, ha="left", va="center", size=9, color=face)
-        yy = 0.2 + 0.56 * (3.6 - i - 0.1) / 4.2
-        text(ax, 0.015, yy + 0.022, label, weight="bold", size=9)
-        text(ax, 0.015, yy - 0.022, when, color=C["muted"])
-    chart.set_ylim(3.6, -0.6)
+            chart.text(max(obs, hi) + 0.8, i, value, ha="left", va="center", size=9, color=face)
+        yy = 0.24 + 0.50 * (2.6 - i) / 3.2
+        text(ax, 0.015, yy + 0.02, label, weight="bold")
+        text(ax, 0.015, yy - 0.025, detail, color=C["muted"])
+    chart.set_ylim(2.6, -0.6)
     chart.set_yticks([])
-    chart.set_xlim(-27, 25)
+    chart.set_xlim(-27, 16)
     chart.set_xticks([-10, 0, 10])
     chart.tick_params(length=0, pad=5)
     chart.grid(axis="x", color=C["light"], lw=0.7)
-    box(ax, 0.44, 0.105, 0.022, 0.035, C["light"])
-    text(ax, 0.47, 0.122, "95% of within-industry shuffles")
-    footer(ax, "Sources: evaluation/results.json; evaluation/origin-ledger/results.json. One year unless stated.")
-    save(fig, "09-forward-tests")
+    text(ax, 0.015, 0.13, "Band: middle 95% of industry shuffles, not a confidence interval.", color=C["muted"])
+    footer(ax, "Source: evaluation/origin-ledger/results.json. Top/bottom score groups include threshold ties.")
+    save(fig, "14-dated-ledger")
+
+
+def staircase() -> None:
+    hist = B["primary"]["historical"]["rank_within_vintage_industry"]
+    post = B["primary"]["post_cutoff_1y"]["rank_within_vintage_industry"]
+    comp = E["origin"]["ledger"]["scores"]["compounder"]["quintile_rank_spread"]
+    fig, ax = canvas(
+        4.9,
+        "The stricter the test, the weaker the signal",
+        "How far the model's favourites out-ranked its rejects  /  one year, percentile points",
+    )
+    chart = fig.add_axes((0.06, 0.3, 0.9, 0.44))
+    steps = [
+        (hist["observed_spread"], "Graded with hindsight", "Outcomes the model may\nalready have read about", C["muted"], hist["p_two_sided"], "BUY vs SELL"),
+        (post["observed_spread"], "Graded on filings it\ncould not have read", "Filed after its cutoff;\nstatistic chosen late", C["accent"], post["p_two_sided"], "BUY vs SELL"),
+        (comp["observed"], "Graded against scores\nwritten in advance", "May 2025 resemblance to\n39 great companies", C["warning"], comp["p_two_sided"], "top vs bottom fifth"),
+    ]
+    for i, (value, head, sub, face, pv, contrast) in enumerate(steps):
+        v = value * 100
+        chart.bar(i, v, width=0.56, color=face, lw=0)
+        chart.text(i, v + (0.8 if v >= 0 else -0.8), f"{v:+.1f}".replace("-", "−"), ha="center", va="bottom" if v >= 0 else "top", size=17, weight="bold", color=face)
+        x = 0.06 + 0.9 * (i + 0.5) / 3
+        text(ax, x, 0.215, head, ha="center", weight="bold", linespacing=1.3)
+        text(ax, x, 0.125, sub, ha="center", color=C["muted"], linespacing=1.3)
+    chart.axhline(0, color=C["ink"], lw=0.9)
+    chart.set_xlim(-0.5, 2.5)
+    chart.set_ylim(-16, 16)
+    chart.set_xticks([])
+    chart.set_yticks([-10, 0, 10], ["−10", "0", "+10"])
+    chart.tick_params(length=0, pad=4)
+    chart.grid(axis="y", color=C["light"], lw=0.7)
+    footer(ax, "Sources: evaluation/results.json; origin-ledger/results.json. The third bar tests a different score.")
+    save(fig, "01-staircase")
+
+
+def verdict_ladder() -> None:
+    order = ["STRONG SELL", "SELL", "HOLD", "BUY", "STRONG BUY"]
+    short = ["Str. sell", "Sell", "Hold", "Buy", "Str. buy"]
+    fig, ax = canvas(
+        4.5,
+        "After the cutoff, the SELL calls stop working",
+        "Average one-year return percentile by verdict  /  0.5 is the middle of the pack",
+    )
+    panels = [("historical", "BEFORE THE CUTOFF", C["muted"]), ("post_cutoff", "AFTER THE CUTOFF", C["accent"])]
+    for p, (key, label, face) in enumerate(panels):
+        lad = ST["ladder"][key]
+        left = 0.08 + p * 0.47
+        chart = fig.add_axes((left, 0.27, 0.4, 0.46))
+        text(ax, left, 0.79, label, weight="bold", color=face)
+        chart.axhline(0.5, color=C["ink"], lw=0.8, ls=":")
+        xs, ys = [], []
+        for i, verdict in enumerate(order):
+            r = lad["verdicts"][verdict]
+            y, se = r["mean_rank"], r["rank_se"] or 0
+            chart.plot([i, i], [y - 1.96 * se, y + 1.96 * se], color=VERDICT_FACE[verdict] if verdict != "HOLD" else C["muted"], lw=1.3)
+            small = r["n"] < 60
+            chart.scatter([i], [y], s=44, zorder=3, color="white" if small else (VERDICT_FACE[verdict] if verdict != "HOLD" else C["muted"]), edgecolor=VERDICT_FACE[verdict] if verdict != "HOLD" else C["muted"], lw=1.4)
+            xs.append(i)
+            ys.append(y)
+        chart.plot(xs, ys, color=face, lw=1, alpha=0.6, zorder=2)
+        chart.set_xlim(-0.5, 4.5)
+        chart.set_ylim(0.35, 0.68)
+        chart.set_xticks(range(5), [f"{lab}\n{lad['verdicts'][v]['n']:,}" for lab, v in zip(short, order, strict=True)])
+        chart.set_yticks([0.4, 0.5, 0.6] if p == 0 else [])
+        chart.tick_params(length=0, pad=4)
+        chart.grid(axis="y", color=C["light"], lw=0.7)
+        text(ax, left, 0.11, f"Spearman {lad['spearman_level_vs_rank']:.3f},  p = {lad['p_two_sided']:.2g}".replace("-", "−"), color=face)
+    footer(ax, "Source: evaluation/stories.json. Numbers: readings. Bars: ±1.96 SE. Hollow: fewer than 60.")
+    save(fig, "11-verdict-ladder")
+
+
+def fading_edge() -> None:
+    vint = B["vintages"]
+    years = [y for y in sorted(vint) if "1Y" in vint[y] and 2020 <= int(y) <= 2025]
+    fig, ax = canvas(
+        4.2,
+        "The edge shrank as the cutoff approached",
+        "One-year BUY-minus-SELL rank spread by fiscal year  /  percentile points  /  ±1.96 SE",
+    )
+    chart = fig.add_axes((0.1, 0.24, 0.86, 0.5))
+    chart.axhline(0, color=C["ink"], lw=0.8)
+    chart.axvspan(3.5, 5.5, color=C["accent_light"], lw=0)
+    chart.axvline(3.5, color=C["warning"], lw=1.3)
+    chart.text(3.55, 30, "Model's knowledge cutoff", color=C["warning"], size=9, weight="bold", va="top")
+    for i, y in enumerate(years):
+        r = vint[y]["1Y"]
+        v, se = r["rank_spread"] * 100, 1.96 * r["rank_spread_se"] * 100
+        small = r["n_long"] + r["n_short"] < 200
+        face = C["accent"] if int(y) >= 2024 else C["muted"]
+        chart.plot([i, i], [v - se, v + se], color=face, lw=1.4)
+        chart.scatter([i], [v], s=50, zorder=3, color="white" if small else face, edgecolor=face, lw=1.5)
+        chart.text(i + 0.12, v, f"{v:.1f}", va="center", size=9, color=face)
+        chart.text(i, -13.5, f"{r['n_long']}/{r['n_short']}", ha="center", size=9, color=C["muted"])
+    chart.set_xlim(-0.5, len(years) - 0.5)
+    chart.set_ylim(-15, 31)
+    chart.set_xticks(range(len(years)), [f"FY{y}\nfiled {int(y) + 1}" for y in years])
+    chart.set_yticks([0, 10, 20])
+    chart.tick_params(length=0, pad=5)
+    chart.grid(axis="y", color=C["light"], lw=0.7)
+    text(ax, 0.1, 0.12, "Numbers below the axis: BUY / SELL readings. Hollow: fewer than 200 readings.", color=C["muted"])
+    footer(ax, "Source: evaluation/results.json. FY2023's window straddles the cutoff; FY2024 is mostly after it.")
+    save(fig, "05-fading-edge")
+
+
+def company_grid() -> None:
+    g = ST["grid"]
+    rows = g["drawn"]
+    years = [str(y) for y in ST["config"]["grid"]["fiscal_years"]]
+    height = 8.6
+    fig, ax = canvas(
+        height,
+        "Company by company, the edge is thin",
+        f"{len(rows)} companies drawn at random, seed {ST['config']['grid']['seed']}  /  one-year excess return over SPY, points",
+    )
+    top, bottom = 0.855, 0.125
+    row_h = (top - bottom) / len(rows)
+    x0, col_w = 0.36, 0.122
+    for j, y in enumerate(years):
+        text(ax, x0 + j * col_w + col_w / 2, top + 0.025, f"FY{y}", ha="center", weight="bold")
+    cut_x = x0 + 4 * col_w - 0.004
+    ax.plot([cut_x, cut_x], [bottom, top + 0.045], color=C["warning"], lw=1.2, ls="--")
+    text(ax, cut_x + 0.005, top + 0.058, "cutoff", color=C["warning"], size=9, weight="bold")
+    for i, row in enumerate(rows):
+        y = top - (i + 1) * row_h
+        ax.add_patch(FancyBboxPatch((0.015, y + row_h * 0.16), 0.075, row_h * 0.68, boxstyle="round,pad=0,rounding_size=0.006", facecolor=C["ink"], edgecolor="none"))
+        text(ax, 0.0525, y + row_h / 2, row["ticker"], ha="center", color="white", weight="bold", size=8.5)
+        name = row["name"]
+        for suffix in (", Inc.", " Inc.", " Incorporated", " Corporation", " Enterprises", " L.P.", ", Inc"):
+            name = name.replace(suffix, "")
+        name = name if len(name) <= 23 else name[:22].rstrip() + "…"
+        text(ax, 0.1, y + row_h / 2, name, color=C["muted"], size=8.5)
+        for j, yr in enumerate(years):
+            cell = row["cells"][yr]
+            verdict, excess = cell["verdict"], cell["excess"] * 100
+            face = VERDICT_FACE[verdict]
+            ax.add_patch(FancyBboxPatch((x0 + j * col_w + 0.004, y + row_h * 0.1), col_w - 0.008, row_h * 0.8, boxstyle="round,pad=0,rounding_size=0.006", facecolor=face, edgecolor="none"))
+            dark = verdict in ("STRONG BUY", "STRONG SELL")
+            mark = ""
+            if verdict in LONG_SET | SHORT_SET:
+                right = (verdict in LONG_SET and excess > 0) or (verdict in SHORT_SET and excess < 0)
+                mark = " ✓" if right else " ✗"
+            label = f"{excess:+,.0f}{mark}".replace("-", "−")
+            text(ax, x0 + j * col_w + col_w / 2, y + row_h / 2, label, ha="center", size=8.5, color="white" if dark else C["ink"], weight="bold" if mark else "normal")
+    legend = [("STRONG BUY", "Strong buy"), ("BUY", "Buy"), ("HOLD", "Hold"), ("SELL", "Sell"), ("STRONG SELL", "Strong sell")]
+    for k, (verdict, label) in enumerate(legend):
+        lx = 0.015 + k * 0.155
+        ax.add_patch(FancyBboxPatch((lx, 0.083), 0.022, 0.016, boxstyle="round,pad=0,rounding_size=0.003", facecolor=VERDICT_FACE[verdict], edgecolor=C["muted"] if verdict == "HOLD" else "none", lw=0.5))
+        text(ax, lx + 0.03, 0.091, label)
+    text(ax, 0.79, 0.091, f"✓ {g['directional_agree']} of {g['directional_cells']} calls", weight="bold", color=C["accent"])
+    footer(ax, f"Source: evaluation/stories.json. Pool: {g['eligible']} companies read every year, with a BUY and a SELL.")
+    save(fig, "13-company-grid")
 
 
 def main() -> None:
     OUT.mkdir(exist_ok=True)
-    sources = [CONFIG_PATH, HERE / "figure-data/evidence.json", Path(__file__)]
+    sources = [CONFIG_PATH, HERE / "figure-data/evidence.json", Path(__file__), HERE / "render_diagrams.py"]
     run: dict[str, Any] = {
         "stage": "whitepaper-figures",
         "timestamp": datetime.now(UTC).isoformat(),
@@ -514,7 +649,16 @@ def main() -> None:
         "inputs": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},
     }
     (OUT / "run.json").write_text(json.dumps(run, indent=2) + "\n")
-    renders = [one_reading, quota_clock, three_designs, verdict_mix, cutoff_timeline, horizons, decomposition, tails, forward_tests]
+    for stale in OUT.glob("*.*"):
+        if stale.suffix in {".svg", ".pdf", ".png"}:
+            stale.unlink()
+    import render_diagrams as d
+
+    renders = [
+        one_reading, d.lineage, d.architecture, d.life_of_filing, d.execution, quota_clock,
+        d.database, d.catalogue, cutoff_timeline, d.before_after, verdict_ladder, tails,
+        company_grid, forward_tests, d.options_ledger, d.shortcomings, d.sealed_bet,
+    ]
     assert len(renders) == CFG["figure_count"]
     for render in renders:
         render()

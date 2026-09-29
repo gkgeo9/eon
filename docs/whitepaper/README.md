@@ -1,46 +1,64 @@
 # EON white paper
 
-*Tomorrow's Newspaper: testing a language-model analyst on filings it could not
-have read.*
+**[Read the PDF](eon-whitepaper.pdf)** · [Markdown edition](eon-whitepaper.md)
 
-**Start with [BRIEF.md](BRIEF.md).** It sets the standard this paper is written
-to: what we are arguing, the evidence rules, the prose and visual style, and the
-definition of done. Then read the paper,
-[eon-whitepaper.md](eon-whitepaper.md), or its PDF.
+*Tomorrow's Newspaper: the making of EON, a machine that reads annual reports,
+and an honest test of what it could see.* Gabriel George. Edition 4,
+30 September 2026.
 
-| File | What it is |
+The paper has three parts. Part I tells how EON was built across five versions,
+from 2025 scripts to a quota-bound system, and why each component exists.
+Part II describes everything the model was asked and tests its answers. Part
+III covers how the model failed, why the project was worth doing, and a sealed
+bet to be graded in October 2027. It is the project's only long-form record.
+
+Read **[BRIEF.md](BRIEF.md)** before revising.
+
+| File | Purpose |
 |---|---|
-| `BRIEF.md` | The editorial standard. Read first. |
-| `eon-whitepaper.md` | The paper. The editorial source. |
-| `eon-whitepaper.tex`, `.pdf` | Generated from the Markdown. Do not edit the `.tex`. |
-| `figures.md` | Each figure's argument, evidence, limits, and figures deliberately omitted. |
-| `revision-notes.md` | What changed, corrections, and **what the author must confirm**. |
-| `evaluation-config.yaml` | The pre-registered test and its disclosed amendments. |
-| `origin-ledger-config.yaml` | The pre-registered test of the 2025 origin scores. |
-| `evaluation/` | Results, per-reading trades, run records; `v1-feb-cache/` is the first run; `origin-ledger/` the 2025 ledger. |
-| `figure-data/` | The frozen snapshot every figure is drawn from. |
-| `figures/` | SVG, PDF and PNG for all nine figures. |
+| `eon-whitepaper.md` | Canonical editorial source |
+| `eon-whitepaper.pdf`, `.tex` | Generated publication editions |
+| `BRIEF.md` | Editorial standard and definition of excellence |
+| `figures.md` | Every figure's claim, source and limitation |
+| `graphics.md` | Briefs for commissioned illustrations |
+| `revision-notes.md` | Corrections, measured changes and author-review questions |
+| `evaluation-config.yaml`, `origin-ledger-config.yaml` | Main and 2025-ledger protocols |
+| `stories-config.yaml` | Verdict ladder, company draw, February 2026 options test |
+| `sealed-ledger-config.yaml` | The bet, frozen at publication |
+| `evaluation/` | Results, per-reading records, verification, pipeline measurements, sealed ledger |
+| `figure-data/` | Frozen plotting evidence |
+| `figures/` | Seventeen figures in SVG, PDF and PNG |
+| `render_figures.py`, `render_diagrams.py` | Figure code |
+| `validate_paper.py`, `validation.json` | Independent arithmetic and method checks |
+| `archive/edition-1.1/` | Preserved earlier edition |
 
-## Rebuild
+## Rebuild without new model calls
 
-From the eon root. The database is only ever opened read-only, and every
-output stays in this folder.
+From the EON root, with NumPy, pandas, SciPy, PyYAML, Matplotlib and a Parquet
+reader installed:
 
 ```sh
-python docs/whitepaper/refresh_prices.py        # network; needs yfinance
-python docs/whitepaper/evaluate_backtest.py     # offline, ~30 s
-python docs/whitepaper/refresh_prices.py --origin   # network; 2025 ledger tickers
-python docs/whitepaper/evaluate_origin_ledger.py    # reads the origin project read-only
+python docs/whitepaper/evaluate_backtest.py
+python docs/whitepaper/evaluate_origin_ledger.py
+python docs/whitepaper/evaluate_stories.py
+.venv/bin/python docs/whitepaper/measure_pipeline.py   # needs PyPDF2 (EON's env)
 python docs/whitepaper/prepare_figure_data.py
 python docs/whitepaper/render_figures.py
-python docs/whitepaper/build_paper.py --pandoc /path/to/pandoc   # Pandoc 3.x
-cd docs/whitepaper && tectonic -X compile eon-whitepaper.tex
+python docs/whitepaper/validate_paper.py
+python docs/whitepaper/build_paper.py --pandoc /path/to/pandoc
+cd docs/whitepaper
+tectonic -X compile --keep-logs eon-whitepaper.tex
 ```
 
-The analysis steps need NumPy, pandas, SciPy, Matplotlib and PyYAML. EON's own
-virtual environment lacks Matplotlib and SciPy; this edition was run with a
-separate Python 3.12 environment rather than changing EON's.
+Pandoc 3.x and Tectonic are needed for the PDF. Databases and original project
+files are read-only inputs.
 
-Changing a number means rerunning from the step that produces it, then
-re-reading every sentence that quotes it. Captions and prose are never updated
-automatically.
+`make_sealed_ledger.py` has already run and refuses to run again: the ledger
+it wrote is the paper's forecast. Commit it, or publish its SHA-256
+(`b5a03624…`, full value in `evaluation/sealed-ledger/ledger.json`), somewhere
+timestamped before its outcomes arrive. Grade it after October 2027 with the
+test fixed in `sealed-ledger-config.yaml`.
+
+`refresh_prices.py` is a network operation. A fresh download can change
+historical adjusted prices; freeze and record a new snapshot before evaluating
+a new horizon.

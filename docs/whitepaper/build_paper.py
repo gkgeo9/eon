@@ -32,7 +32,7 @@ def main() -> None:
     if author_match is None:
         raise ValueError("The Markdown title block must include an Author line")
     body = source[source.index("## Abstract") :]
-    body = re.sub(r"## Contents\n.*?(?=## 1\. The question)", "", body, flags=re.S)
+    body = re.sub(r"## Contents\n.*?(?=## 1\. )", "", body, flags=re.S)
     # Article body starts at section level; numbers are editorial text in both formats.
     body = re.sub(r"^#{2,}", lambda m: m.group()[1:], body, flags=re.M)
     # Literal code stays literal; TeX listings is configured to wrap long records.
@@ -73,7 +73,9 @@ def main() -> None:
             # These are presentation widths only; all cells stay in source order.
             headers = json.dumps(block["c"][3])
             count = len(block["c"][2])
-            if "Sample" in headers:
+            if "Answers" in headers:
+                widths = [0.22, 0.2, 0.11, 0.47]
+            elif "Sample" in headers:
                 widths = [0.19, 0.22, 0.35, 0.24]
             elif "Vintage" in headers:
                 widths = [0.14, 0.24, 0.18, 0.18, 0.26]
@@ -121,7 +123,7 @@ def main() -> None:
             continue
         out.append(block)
         i += 1
-    assert len(figures) == 9
+    assert len(figures) == 17
     ast["blocks"] = out
     result = subprocess.run(
         [
@@ -160,12 +162,13 @@ def main() -> None:
     result = result.replace("\\begin{figure}", "\\begin{figure}[!htbp]")
     # Figures may drift past a heading onto the next page; flafter keeps them
     # after their first mention. Barriers only where a new part of the argument starts.
-    for heading in ("7. The February backtest, and the problem of memory", "10. What the work taught me", "Appendix A: reproduction"):
+    for heading in ("Part I · Building the reader", "Part II · What it read", "Part III · What it taught", "Appendix A: methods"):
         result = result.replace(r"\section{" + heading, r"\FloatBarrier" + "\n" + r"\section{" + heading)
     for heading in (
-        "1. The question",
-        "Appendix B: glossary",
-        "Appendix C: figures at a glance",
+        "Part I · Building the reader",
+        "Part II · What it read",
+        "Part III · What it taught",
+        "Appendix A: methods",
     ):
         result = result.replace(
             r"\section{" + heading + "}", r"\clearpage" + "\n" + r"\section{" + heading + "}"
@@ -229,7 +232,7 @@ def main() -> None:
         "editorial_source": f"{STEM}.md",
     }
     (HERE / "document-build.json").write_text(json.dumps(report, indent=2) + "\n")
-    print("Generated matching LaTeX with nine figures and all three appendices.")
+    print("Generated matching LaTeX with seventeen figures and all three appendices.")
 
 
 if __name__ == "__main__":

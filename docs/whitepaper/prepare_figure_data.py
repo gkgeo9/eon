@@ -74,7 +74,18 @@ def corpus(con: sqlite3.Connection) -> dict[str, Any]:
         "AND status = 'completed'"
     ):
         models[json.loads(config or "{}").get("model", "unknown")] += 1
+    first_models = Counter()
+    seen = set()
+    for ticker, year, config in con.execute(
+        "SELECT ar.ticker, ar.fiscal_year, r.config_json FROM analysis_results ar "
+        "LEFT JOIN analysis_runs r ON r.run_id = ar.run_id "
+        "WHERE ar.result_type = 'SimplifiedAnalysis' ORDER BY ar.id"
+    ):
+        if (ticker, year) not in seen:
+            seen.add((ticker, year))
+            first_models[json.loads(config or "{}").get("model", "unknown")] += 1
     return {
+        "first_readings_by_model": dict(first_models),
         "stored_readings": len(rows),
         "unique_company_years": len(unique),
         "tickers": len({t for t, _ in unique}),
@@ -271,9 +282,54 @@ def origin() -> dict[str, Any]:
     }
 
 
+def inventory(con: sqlite3.Connection) -> dict[str, Any]:
+    """Every stored model answer across the project's lineage, by source."""
+    counts = {
+        "origin_filing_readings": len(list(ORIGIN.glob("analyzed_10k/*/*.json"))),
+        "origin_comparisons": len(list(ORIGIN.glob("company_results/*.json"))),
+        "origin_contrarian": len(list(ORIGIN.glob("contrarian_evidence_results/*.json"))),
+        "origin_options": len(list(ORIGIN.glob("options_trading_results/*.json"))),
+        "origin_factor_syntheses": len(list(ORIGIN.glob("excellent_company_factors/*.json")))
+        + len(list(ORIGIN.glob("random_company_factors/*.json"))),
+        "fintel_archive": connect(ARCHIVE).execute("SELECT COUNT(*) FROM analysis_results").fetchone()[0],
+        "eon_mac": connect(ROOT / "data/eon_mac.db").execute("SELECT COUNT(*) FROM analysis_results").fetchone()[0],
+    }
+    for result_type, n in con.execute("SELECT result_type, COUNT(*) FROM analysis_results GROUP BY 1"):
+        counts[f"eon_{result_type}"] = n
+    counts["total"] = sum(counts.values())
+    sizes = [len(r[0]) for r in con.execute(
+        "SELECT result_json FROM analysis_results WHERE result_type = 'SimplifiedAnalysis'"
+    )]
+    reading_chars_median = int(pd.Series(sizes).median())
+    meta = json.loads((ORIGIN / "top_50_meta_analysis.json").read_text())
+    return {
+        "counts": counts,
+        "reading_chars_median": reading_chars_median,
+        "success_factors": [
+            {"factor": f.get("factor"), "prevalence": f.get("prevalence")}
+            for f in meta["universal_success_factors"]
+        ],
+    }
+
+
+def score_clustering() -> dict[str, Any]:
+    ledger = pd.read_csv(EVALUATION / "origin-ledger/trades.csv")
+    out = {}
+    for kind in ("compounder", "alpha"):
+        v = ledger.loc[ledger["score"] == kind, "value"]
+        top = v.value_counts().head(3)
+        out[kind] = {
+            "n": int(len(v)),
+            "distinct": int(v.nunique()),
+            "top_values": {str(int(k)): int(c) for k, c in top.items()},
+            "top3_share": float(top.sum() / len(v)),
+        }
+    return out
+
+
 def main() -> None:
     OUT.mkdir(exist_ok=True)
-    sources = [DB, ARCHIVE, EVALUATION / "results.json", EVALUATION / "trades.csv"]
+    sources = [DB, ARCHIVE, EVALUATION / "results.json", EVALUATION / "trades.csv", EVALUATION / "origin-ledger/results.json", EVALUATION / "stories.json", EVALUATION / "verification/bw-price-check.json", HERE / "evaluation-config.yaml", HERE / "origin-ledger-config.yaml", HERE / "stories-config.yaml"]
     run: dict[str, Any] = {
         "stage": "whitepaper-figure-data",
         "timestamp": datetime.now(UTC).isoformat(),
@@ -291,6 +347,17 @@ def main() -> None:
         "archive": archive(),
         "backtest": backtest(),
         "origin": origin(),
+        # Edition 3 narrative views: verdict ladder, seeded company grid, named cases.
+        "stories": {
+            k: v
+            for k, v in json.loads((EVALUATION / "stories.json").read_text()).items()
+            if k in ("ladder", "grid", "named", "config", "options_ledger")
+        },
+        "bw_check": json.loads((EVALUATION / "verification/bw-price-check.json").read_text()),
+        "pipeline": json.loads((EVALUATION / "pipeline-measurements.json").read_text()),
+        "sealed": json.loads((EVALUATION / "sealed-ledger/ledger.json").read_text()),
+        "inventory": inventory(con),
+        "score_clustering": score_clustering(),
         "february_report": {
             "source": "experimental/backtester/BACKTEST_REPORT.md",
             "kind": "reported",
