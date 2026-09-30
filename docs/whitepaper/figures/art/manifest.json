@@ -4,7 +4,7 @@
   "assets": [
     {
       "asset": "figures/art/art-cover.png",
-      "source_path": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-b99283ba-cf7e-4fbd-804a-7ccb5e428e65.png",
+      "source_path": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-316666c8-4f3f-4364-8323-b5fa15518056.png",
       "prompt": "Use case: illustration-story. Create a finished editorial book-cover illustration for Tomorrow's Newspaper, a thoughtful technical essay about building a machine to read annual reports, then discovering the danger of hindsight. Portrait A4-like ratio, at least 1600 px tall. A quiet tall reading room at night, seen in elegant slightly isometric cutaway perspective. In the lower two thirds: a long desk, a non-humanoid optical reading instrument part telescope part reading lamp, with a large teal glass lens, aimed at an open dense annual report. Two thick stacks of bound annual reports nearby; a distinctly folded newspaper lies beside the report. The instrument's translucent lens subtly reflects the newspaper rather than just the report, an ambiguous suggestion of knowledge leaking from another time. Tall indigo windows, amber desk lamp pool, calm thoughtful atmosphere, precise ink outlines with sophisticated flat color and fine risograph paper grain. Limited palette ink #1F2A37, teal #0F766E and #5FB3AB, indigo #4C5FD5, amber #E8A33D, pale cool paper #F7F8FA. NO brown or sepia cast. Top 38 percent almost entirely pale paper with very faint architectural contours, quiet negative space for separate dark title typography. Bottom 8 percent quiet pale paper for author credit. Full bleed composition, deliberate spaciousness, not a generic fintech advertisement. NO text, letters, numbers, logos, stock chart, humanoid robot, trophy, magical glowing brain, bull or bear. Newspaper and annual report typography should be abstract fine rules only. Artwork must read at printed A4 scale. No border.",
       "edit_prompt": null,
       "initial_source": null,
@@ -12,11 +12,18 @@
         1054,
         1492
       ],
-      "sha256": "59663651db7a5bf2075333d87bd7bff0ff3ac9dd600ac7ff8041c44a3f339588"
+      "sha256": "4f7ef0029cfb3dcae56aeea1d61a9f27e8542687c069705b66a23dd9ca956b09",
+      "revision_history": [
+        {
+          "source_path": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-b99283ba-cf7e-4fbd-804a-7ccb5e428e65.png",
+          "sha256": "59663651db7a5bf2075333d87bd7bff0ff3ac9dd600ac7ff8041c44a3f339588"
+        }
+      ],
+      "latest_edit_prompt": "Use case: precise-object-edit. Edit target: supplied EON whitepaper cover illustration. Remove ONLY the entire telescope/magnifying-glass hybrid on the desk, including its lens, barrel, arm, stand and base. Seamlessly reconstruct the desk, bookshelves and background where it stood. Preserve all other content, exact portrait composition, paper-white negative space above and below, arched windows, nighttime blue city, books, open book, newspaper, existing lamps, teal/indigo/amber palette, fine printed texture and illustration style. Do not add any substitute device, new objects, lettering or text. The rest of this image is already approved; minimal surgical removal."
     },
     {
       "asset": "figures/art/art-part1-workshop.png",
-      "source_path": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-87d6410f-e315-4c50-9afa-aaed5956c541.png",
+      "source_path": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-898edcc7-4582-40f9-a8b4-cfcc22e4c9d2.png",
       "prompt": "Use case: illustration-story. A finished, wide landscape editorial illustration for a literary technical white paper, ratio approximately 16:9. Match the attached reference's precise ink drawing, sophisticated flat color, subtle printed paper grain and teal optical instrument. Palette #1F2A37 ink, #0F766E teal, #4C5FD5 indigo, #E8A33D amber and cool pale #F7F8FA paper. No brown or sepia wash. Deliberate elegant composition, readable at 6.27 inches wide, not photorealistic or a 3D render. No logos, invented data, words, letters or numbers. Keep a 4% safe margin. Subject: a modest nocturnal print workshop in an architectural cutaway. From left to right, envelopes arrive at a door, three indigo browser-like printing presses turn filings into paper, and a teal optical reading instrument at a desk reads a report. At back a tidy pegboard has exactly five rows of five key hooks (keys are a motif, no numeric labels), some occupied some empty, beside a clerk's open ledger with tidy folders. A tiny phone on a shelf has a single amber notification dot. One simplified human artisan clears paper from one stalled press. The dominant high wall clock has plain tick marks and hands showing a few minutes before midnight; this is a factory that must wait. Architecture compact and humane, not a giant industrial plant. Pale cool walls, amber lamps, teal instrument, indigo machinery. No numerical claims in image. Entire scene visible, no title space needed.",
       "edit_prompt": "Edit only two details in this finished workshop illustration. Keep all composition, press machinery, person, optical reading instrument, architecture, colors and drawing style unchanged. On the key pegboard at right, replace the current 4 rows of 5 hooks with EXACTLY 5 rows of 5 hooks, 25 hooks total, aligned in a clearly visible regular rectangular grid. Some hooks may be empty; total hooks exactly 25. Make board slightly taller downward if needed without disturbing the reading instrument. The wall clock must have exactly two hands showing 11:57: short hour hand just to the left of 12 at the very top, long minute hand pointing between 11 and 12 closer to 11. No third hand, no numerals, no text. It should clearly feel like a few minutes before midnight, not 11 o'clock. No other changes.",
       "initial_source": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-4d5d0ed2-e2cb-40a8-9467-bc8416f1e459.png",
@@ -24,7 +31,19 @@
         1672,
         941
       ],
-      "sha256": "033af85424edbd20461225960f3b653eceb81dc3b42d3c8af3b855f8dd67ac2c"
+      "sha256": "5d1090d9b5b313d508fa5b67dac55158536044931a1e71464f566a1441671f05",
+      "revision_history": [
+        {
+          "source_path": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-87d6410f-e315-4c50-9afa-aaed5956c541.png",
+          "sha256": "033af85424edbd20461225960f3b653eceb81dc3b42d3c8af3b855f8dd67ac2c"
+        },
+        {
+          "source_path": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-3875d484-8ff7-4976-96cd-2d0a0f0afa65.png",
+          "sha256": "98d597fd6887421648c2418fde7ebe6d2c34f0bc891326efdddba2fe3f98e1cc",
+          "edit_prompt": "Use case: precise-object-edit. Edit target: supplied EON workshop illustration. Remove ONLY the entire telescope/magnifying-glass hybrid on the foreground desk, including round teal lens, barrel, supporting arm, vertical stand and base. Seamlessly reconstruct desk and bookshelves behind it. Preserve every other element: three printing presses, worker and pose, clock hands, exactly 25 keys in 5x5 arrangement, open door, nighttime windows and city, all papers, open ledger, lamps, chair, framing, proportions, indigo/teal/amber palette and finely textured editorial style. No replacement device or new objects. The rest is approved, make only this surgical removal."
+        }
+      ],
+      "latest_edit_prompt": "Use case: precise-object-edit. Edit the supplied workshop illustration. Remove the single human worker completely: head, torso, arms, hands, legs, clothing and any human shadow. Reconstruct the printing press, shelves and floor naturally behind him. Preserve all other objects, exact wide composition, three presses, paper stacks, desk and ledger, 25 keys in 5x5 grid, clock, lamps, nighttime blue windows, city, fine printed texture and teal/indigo/amber palette. The scene must contain NO people, faces, silhouettes, human figures, portraits or human reflections anywhere. Do not introduce new objects or optical devices. Minimal surgical edit; everything else is approved."
     },
     {
       "asset": "figures/art/art-part2-three-dates.png",
@@ -40,7 +59,7 @@
     },
     {
       "asset": "figures/art/art-part3-narrator.png",
-      "source_path": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-8091b59b-2e03-42eb-85b9-41343b85d0e3.png",
+      "source_path": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-8d4a1aa3-5ce3-4865-afd4-3ff02e1cc153.png",
       "prompt": "Use case: illustration-story. A finished, wide landscape editorial illustration for a literary technical white paper, ratio approximately 16:9. Match the attached reference's precise ink drawing, sophisticated flat color, subtle printed paper grain and teal optical instrument. Palette #1F2A37 ink, #0F766E teal, #4C5FD5 indigo, #E8A33D amber and cool pale #F7F8FA paper. No brown or sepia wash. Deliberate elegant composition, readable at 6.27 inches wide, not photorealistic or a 3D render. No logos, invented data, words, letters or numbers. Keep a 4% safe margin. Subject: a sympathetic articulate narrator in a modest indigo jacket, waist-up at a simple lectern, palm open in a confident explanatory gesture, the face simplified and thoughtful rather than caricatured. Around the narrator, subtle tells: a wall calendar with an old leaf curled over an unmarked grid; an orderly stack of nearly identical report cards with identical teal circular marks; a pair of binoculars on a side table pointed toward a small window containing a single coral storm cloud while another window has clear morning light. These symbolize stale dates, repetitive answers and selective attention. No words, numbers, dates, logos, trophy or robot. Don't imply a real person; no likeness. The narrator is good at sounding right, warmly drawn, never villainous. Restrained sparse theatrical space, pale background, teal accent, indigo jacket, tiny coral cloud. No infographic text.",
       "edit_prompt": null,
       "initial_source": null,
@@ -48,7 +67,15 @@
         1672,
         941
       ],
-      "sha256": "9af393d52c1b67eb051d75508c7a8a71c1bd9f26334f979997526033280be558"
+      "sha256": "bb0f3dc1e36780345212235219757f382b1486f2dfa109286fded62dc2fbc924",
+      "revision_history": [
+        {
+          "source_path": "/Users/gkg/.codex/generated_images/01a0ee5f-e931-78f3-a2ab-2f0b42cfaea1/exec-8091b59b-2e03-42eb-85b9-41343b85d0e3.png",
+          "sha256": "9af393d52c1b67eb051d75508c7a8a71c1bd9f26334f979997526033280be558",
+          "edit_prompt": null
+        }
+      ],
+      "latest_edit_prompt": "Use case: precise-object-edit. Edit the supplied editorial illustration. Remove the central man COMPLETELY, including his head, body, arms, both hands, clothes and any human shadow. Reconstruct the pale architectural wall and window behind him seamlessly. Keep the empty dark indigo lectern in its original position: an unattended lectern in a quiet observatory study. Preserve all other objects, calendar, stacks of report cards, lamp, plants, windows, blue skyline, orange cloud, binoculars, exact landscape framing, elegant ink lines and printed grain, teal/indigo/amber palette and lighting. NO people, faces, silhouettes, human figures, portraits or human reflections anywhere, and no new objects or lettering. Everything else is approved; change only the removal of the person."
     },
     {
       "asset": "figures/art/art-spot-compass.png",
@@ -74,5 +101,6 @@
       ],
       "sha256": "8406151587ecfcfe8de7c74a84fdb2dfe0dcd1ae4569291496ec4dc409924e9c"
     }
-  ]
+  ],
+  "current_art_direction": "No people in any current illustration. Historical prompts below are retained for provenance."
 }

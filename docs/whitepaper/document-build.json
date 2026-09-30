@@ -1,8 +1,8 @@
 {
-  "markdown_sha256": "925598493408899ad3191d1c2f7c5bf8a3f6833c4a1903bfad223d62b113510d",
-  "latex_sha256": "213b53b6391c6c410af30e98b676c9d0641960141b150a0cb3005d5aefe0d76f",
-  "preamble_sha256": "e1fddb85350c35e4b112429b175b368d5a7f8bd7e3aab2b9358664fb24eb7c99",
-  "generator_sha256": "008775aee6beb3ce40fa1864807ccced441fc84e21b34fd0980ee01f984a5267",
+  "markdown_sha256": "23b47d02b79bb9eaaf36a33e68aa7cc13acabd1ab5c90d354b343954677cdee9",
+  "latex_sha256": "31d075a730a256e55827c22ee4de5767dbc2c63973ed7d5ce1e208998bed080b",
+  "preamble_sha256": "a59d5ce20d36dde289fc781f901a3d848353ab1b93ca2720c32b7d8756931c99",
+  "generator_sha256": "a5e731af16c3640d6d1d292e9e0f738ba4538ad839df289b1fa772871a40bde1",
   "pandoc": "pandoc 3.6.4",
   "figures": [
     {
@@ -77,8 +77,8 @@
   "illustrations": [
     {
       "asset": "figures/art/art-part1-workshop.png",
-      "alt": "A small night workshop turns filings into printed pages, reads them through a teal optical instrument, and records the work beneath a clock approaching midnight.",
-      "sha256": "033af85424edbd20461225960f3b653eceb81dc3b42d3c8af3b855f8dd67ac2c"
+      "alt": "A small night workshop turns filings into printed pages, records the work in a ledger beneath a clock approaching midnight.",
+      "sha256": "5d1090d9b5b313d508fa5b67dac55158536044931a1e71464f566a1441671f05"
     },
     {
       "asset": "figures/art/art-part2-three-dates.png",
@@ -92,8 +92,8 @@
     },
     {
       "asset": "figures/art/art-part3-narrator.png",
-      "alt": "A confident speaker stands beside a curled calendar, repetitive report cards and binoculars turned toward a storm cloud.",
-      "sha256": "9af393d52c1b67eb051d75508c7a8a71c1bd9f26334f979997526033280be558"
+      "alt": "An empty lectern stands beside a curled calendar, repetitive report cards and binoculars turned toward a storm cloud.",
+      "sha256": "bb0f3dc1e36780345212235219757f382b1486f2dfa109286fded62dc2fbc924"
     },
     {
       "asset": "figures/art/art-closing-bet.png",
@@ -103,7 +103,7 @@
   ],
   "cover": {
     "asset": "figures/art/art-cover.png",
-    "sha256": "59663651db7a5bf2075333d87bd7bff0ff3ac9dd600ac7ff8041c44a3f339588"
+    "sha256": "4f7ef0029cfb3dcae56aeea1d61a9f27e8542687c069705b66a23dd9ca956b09"
   },
   "editorial_source": "eon-whitepaper.md"
 }

@@ -1,0 +1,53 @@
+{
+  "purpose": "Independent check of the BW price series behind the paper's largest one-year excess return.",
+  "source": "https://api.nasdaq.com/api/quote/BW/historical (unadjusted daily closes)",
+  "fetched": "2026-09-29T19:21:07.368933+00:00",
+  "response_sha256": "12ddba8233935ca81ab907a33e15bb11559d26161ff5bed3f8d242cf641ebd46",
+  "rows": [
+    {
+      "date": "04/02/2026",
+      "close": "$15.72",
+      "volume": "3,139,885",
+      "open": "$14.26",
+      "high": "$15.93",
+      "low": "$14.20"
+    },
+    {
+      "date": "04/01/2026",
+      "close": "$14.97",
+      "volume": "2,863,753",
+      "open": "$14.91",
+      "high": "$15.612",
+      "low": "$14.69"
+    },
+    {
+      "date": "03/31/2026",
+      "close": "$14.69",
+      "volume": "2,320,021",
+      "open": "$13.81",
+      "high": "$14.72",
+      "low": "$13.633"
+    },
+    {
+      "date": "04/01/2025",
+      "close": "$0.4577",
+      "volume": "4,584,748",
+      "open": "$0.7033",
+      "high": "$0.73",
+      "low": "$0.45"
+    },
+    {
+      "date": "03/31/2025",
+      "close": "$0.6724",
+      "volume": "1,082,567",
+      "open": "$0.6913",
+      "high": "$0.6998",
+      "low": "$0.6409"
+    }
+  ],
+  "yahoo_adjusted_closes": {
+    "2025-04-01": 0.458,
+    "2026-04-02": 15.72
+  },
+  "conclusion": "Entry and exit closes agree to the cent; no split in the window. The 34-fold rise is real, not a data error."
+}

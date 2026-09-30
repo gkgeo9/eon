@@ -1,0 +1,21 @@
+{
+  "edition": "4.1",
+  "status": "reviewed; author contact and disclosures pending",
+  "pages": 32,
+  "numbered_figures": 17,
+  "illustrations": 6,
+  "tables": 3,
+  "visual_review": "All 32 pages inspected in contact sheets; detail inspection of edited cover/workshop, chart labels, tables, contents and conclusion. No clipped text or TeX overflow. Some whitespace remains at part boundaries and around the full-page company grid.",
+  "evidence_unchanged": true,
+  "unchanged_other_artworks": 4,
+  "inputs": {
+    "eon-whitepaper.md": "05d1188d2d818b089760d81b47a0b5d8a866945729acf83e42ba3685718f04c5",
+    "eon-whitepaper.pdf": "3b58be9fa42a5b96556812a642351776145fb0f846098e4b09f19c0627d158cd",
+    "eon-whitepaper.tex": "bf516cebbcf3c66f295c4eacd77f3efc40ce9d28bda1d4ad6c223a75903bbd7e",
+    "build_paper.py": "a5e731af16c3640d6d1d292e9e0f738ba4538ad839df289b1fa772871a40bde1",
+    "paper-preamble.tex": "a59d5ce20d36dde289fc781f901a3d848353ab1b93ca2720c32b7d8756931c99",
+    "figures/art/manifest.json": "1da91080307884e97cdf63071850d2495c7a8d8c8165fc9e5e265f964305e0e8",
+    "render_figures.py": "f2c71ab9f2044270e4a28fcba2da76a630a9a86944f226a6bd9758e76985c485",
+    "render_diagrams.py": "710349ea9a98f23efee02016b148d61662efffdb7f39073dc434d72874fe6b42"
+  }
+}

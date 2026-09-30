@@ -1,0 +1,51 @@
+# Locally documented protocol for testing the 2025 origin readings (10K_automator).
+# Written on 29 Sep 2026 before this test was run. One prior look exists and is
+# disclosed: the author's own 14 Jul 2026 check (score_vs_realized_return_*),
+# which found the compounder score inversely related to raw one-year returns.
+version: 1
+
+origin_root: /Users/gkg/PycharmProjects/stock_stuff_06042025/10K_automator
+# Read-only. Nothing in the origin project is written or moved.
+
+model: gemini-2.5-flash-preview-04-17   # from the origin scripts
+knowledge_cutoff: '2025-01-31'
+
+# Two scores, each produced once, in a single batch, after the cutoff.
+scores:
+  compounder:
+    source: company_results/*_comparative_analysis.json
+    field: compounder_potential.score        # the model's headline 0-100 score
+    reading_dates: '2025-05-10 to 2025-05-13' # file modification times
+  alpha:
+    source: contrarian_evidence_results/*_analysis_*.json
+    field: overall_alpha_score               # 0-100, six dimensions
+    reading_dates: '2025-05-26'              # timestamp in each file name
+  direction:
+    source: options_trading_results/*_options_analysis_*.json
+    field: trade_recommendation              # BUY_CALLS = +1, BUY_PUTS = -1, NO_TRADE excluded
+    reading_dates: '2025-06-04'
+    horizon_trading_days: 126                # the readings' own 3-6 month timeframe
+    # Tests the stock's direction only. Option prices were not recorded, so no
+    # option profit or loss is computed.
+
+# Entry is the first trading day after the reading's own date (file mtime for
+# compounder, file-name timestamp for alpha). The model's self-reported
+# analysis_date is not used: it says 2024 for 1,916 of 1,919 readings.
+entry_rule: first_trading_day_after_reading
+horizon_trading_days: 252
+benchmark: SPY
+price_source: docs/whitepaper/evaluation/prices/closes.parquet
+extra_price_source: docs/whitepaper/evaluation/prices/origin-closes.parquet
+price_end: '2026-09-28'
+
+# For direction, the primary statistic is the mean excess return of BUY_CALLS
+# names minus BUY_PUTS names, tested the same way.
+# Primary statistic for each score: Spearman rank correlation between score
+# and one-year excess return. Secondary: top-quintile minus bottom-quintile
+# mean percentile rank of excess return. Both tested by 10,000 permutations
+# within FactSet industry blocks (the same snapshot as the main evaluation).
+permutations: 10000
+permutation_seed: 20260929
+industry_source: all_companies_08022026.csv
+industry_column: FactSet Ind
+min_block_size: 2

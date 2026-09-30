@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-09-29T21:51:49.002935+00:00",
+  "status": "ready_for_author_review",
+  "pages": 30,
+  "numbered_figures": 17,
+  "illustrations": 6,
+  "art_review": "All six selected artworks viewed; workshop and closing card each revised once.",
+  "layout_review": {
+    "overview": "All 30 pages reviewed as rendered contact sheets.",
+    "detail_pages": [
+      1,
+      5,
+      8,
+      11,
+      13,
+      16,
+      24,
+      25,
+      26,
+      28
+    ],
+    "checks": [
+      "cover typography fits its quiet area",
+      "part openers readable at final size",
+      "diagrams and captions agree",
+      "no detached illustration captions",
+      "all figure references resolve",
+      "conclusion remains with its closing artwork",
+      "no TeX box or missing-glyph warnings"
+    ]
+  },
+  "validation": "Seven numerical groups and all publication checks passed.",
+  "scope": "Publication only; no new prices, model analyses or production database writes.",
+  "inputs": {
+    "eon-whitepaper.md": "925598493408899ad3191d1c2f7c5bf8a3f6833c4a1903bfad223d62b113510d",
+    "eon-whitepaper.pdf": "efcb433e8ec2177490a9d72ced668fb98f5582ea02eae89c6347faef7ab7db5c",
+    "eon-whitepaper.tex": "213b53b6391c6c410af30e98b676c9d0641960141b150a0cb3005d5aefe0d76f",
+    "paper-preamble.tex": "e1fddb85350c35e4b112429b175b368d5a7f8bd7e3aab2b9358664fb24eb7c99",
+    "build_paper.py": "008775aee6beb3ce40fa1864807ccced441fc84e21b34fd0980ee01f984a5267",
+    "document-build.json": "7483c93d3cae4cd3ba4b35c8bbc3d49a072bcaf9c82c12e33e7c663861b312d9",
+    "figures/run.json": "783e1f0276db2a36cac1fe6971204d398fafec4f955c0a0aa80ae1c4126278c0",
+    "figures/art/manifest.json": "16d4bcd15c72f275b313dccd3ab4a048869a4e2d7a6b35233022c7b3ca233f5a",
+    "validation.json": "35d00d68be80722ad6fa7e453966fe846d0b01d100bfb8f9687b0ca92991105f",
+    "publication-validation.json": "78534b10a0ee64bcb7f8d7363310049fee2e63a727c6bce242d77a1bcdc13eec",
+    "graphics.md": "31541e116ceafc72c32affc413ebbcae26cbe84fe2376fd51f2d485363c16a51",
+    "figures.md": "628efa3c17ae0c21bf606a97c95159f93740f4f081ecc57979cab845a465c7b6",
+    "BRIEF.md": "d5e9cfb40785f80754db6580e49334b5684891418e80a9631d50c5b4feb341a6",
+    "revision-notes.md": "94155cb7ec1336e624d6fa9e248c7fb08ed614e0e188a1d0ddc23618193bfad1"
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-29T21:48:14.769170+00:00",
+  "timestamp": "2026-09-30T09:56:31.998179+00:00",
   "status": "passed",
   "checks": {
     "evaluation_scope": {
@@ -38,7 +38,7 @@
     }
   },
   "inputs": {
-    "eon-whitepaper.md": "925598493408899ad3191d1c2f7c5bf8a3f6833c4a1903bfad223d62b113510d",
+    "eon-whitepaper.md": "23b47d02b79bb9eaaf36a33e68aa7cc13acabd1ab5c90d354b343954677cdee9",
     "evaluate_backtest.py": "02153e5849e6a90e4daa8ca3a49541cbe0545a098f405b9ee3778dc3af48c67d",
     "evaluate_origin_ledger.py": "2a43009823e8166a788a339d76e34ec99a414900137d9c226d6d4a11063455a6",
     "evaluation/results.json": "f0d97d03f63787c7b9aa1ba9f4e004aea0abea0e4a5792b0744ba0274d68ddf3",

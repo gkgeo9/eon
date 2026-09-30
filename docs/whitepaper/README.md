@@ -3,8 +3,8 @@
 **[Read the PDF](eon-whitepaper.pdf)** · [Markdown edition](eon-whitepaper.md)
 
 *Tomorrow's Newspaper: the making of EON, a machine that reads annual reports,
-and an honest test of what it could see.* Gabriel George. Edition 4,
-30 September 2026. Illustrated revision: **30 pages, 17 evidence figures,
+and an honest test of what it could see.* Gabriel George. Edition 4.1,
+30 September 2026. Reviewed revision: **32 pages, 17 evidence figures,
 6 illustrations**.
 
 The paper has three parts. Part I tells how EON was built across five versions,
@@ -23,6 +23,7 @@ Read **[BRIEF.md](BRIEF.md)** before revising.
 | `figures.md` | Every figure's claim, source and limitation |
 | `graphics.md` | Delivered artwork, placements and retained optional briefs |
 | `revision-notes.md` | Corrections, measured changes and author-review questions |
+| `criticism-response.md` | Review dispositions, changes and author-only details still pending |
 | `criticisms.md` | Independent reviews of the illustrated Edition 4, with a ranked fix list |
 | `evaluation-config.yaml`, `origin-ledger-config.yaml` | Main and 2025-ledger protocols |
 | `stories-config.yaml` | Verdict ladder, company draw, February 2026 options test |
@@ -82,3 +83,26 @@ python docs/whitepaper/validate_publication.py
 ```
 
 The optional `--pdf` flag additionally inspects the compiled PDF with PyMuPDF.
+
+### Edition 4.1
+
+The review response is in `criticism-response.md`. The primary post-cutoff
+result now leads the abstract and conclusion. Tables, sample reconciliation,
+figure sources and the formal navigation have been revised. Exactly two
+illustrations were edited to remove their optical devices; the other four
+are unchanged. The previous illustrated edition is preserved under
+`archive/edition-4-before-review-fixes/`.
+
+This build uses Times New Roman and Arial (installed on the build machine),
+with DejaVu Sans for missing figure symbols. Install those fonts when
+reproducing this layout; the renderer does not download them. Text is at least
+8.2 pt in figures at their native 6.27-inch width. A4 PDF figures can be zoomed
+on a phone; this is not a responsive mobile layout.
+
+Author contact, funding and financial-interest disclosures remain pending
+and must be supplied by the author before external publication. No absence
+of funding or conflicts is inferred from the repository.
+
+The current artwork contains no people. The workshop and Part III scene were
+updated on 30 September 2026; their prior versions are retained in
+`archive/edition-4.1-before-people-removal/`.

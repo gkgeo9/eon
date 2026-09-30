@@ -1,0 +1,24 @@
+{
+  "stage": "whitepaper-figure-data",
+  "timestamp": "2026-09-29T21:24:23.210710+00:00",
+  "versions": {
+    "python": "3.12.6",
+    "pandas": "2.3.3"
+  },
+  "inputs": {
+    "data/eon.db": "ee27fa5dbe5f29f2253ba95b3dc7bb9b4df5d6176c8bafb085e01413c21a74ee",
+    "data/archive/fintel.db": "a142ff7783795bdd6ce4916cd733b0286170ef9e60fb7aa6f905a4b64acd6dad",
+    "docs/whitepaper/evaluation/results.json": "f0d97d03f63787c7b9aa1ba9f4e004aea0abea0e4a5792b0744ba0274d68ddf3",
+    "docs/whitepaper/evaluation/trades.csv": "f46a26d2d5140a8fc83868905a093989d0745ce2b13c65c18249d0dbd3cce96e",
+    "docs/whitepaper/evaluation/origin-ledger/results.json": "7d6adcbf0fbf9925ae4d8d3716bd376fd30e4e699f13759f9aabea090839fde9",
+    "docs/whitepaper/evaluation/stories.json": "134b3285722229c83a95456653a188335e4dab7c0a3c01362e3c09a095a9a3ad",
+    "docs/whitepaper/evaluation/verification/bw-price-check.json": "20aa25f3123b8386b26842dfc9cb9a00d5eb94f0f2aa3fc9bdadc00a5380520f",
+    "docs/whitepaper/evaluation-config.yaml": "c896dbae51f1ff66031d55a484649e70020a0ca5c2967ca4e1593c5ac6021412",
+    "docs/whitepaper/origin-ledger-config.yaml": "b2d64214cf066024e38fb255d4504762ff874f42c1e3851505bfbe18f591ba57",
+    "docs/whitepaper/stories-config.yaml": "8cad903e7fea7aa071619b67acbaac8961de7629203318f6f53d9decafc7c819",
+    "docs/whitepaper/prepare_figure_data.py": "3151f6eb2f439b0a2c9c7d6cea8f0c5f3fca852b9840fdff64c6a0755613767c"
+  },
+  "outputs": {
+    "evidence.json": "87ec1244d0d0a3b6037b2c88ee69c6f4223870fe832d1a0fc35948bdc1ec6a7f"
+  }
+}

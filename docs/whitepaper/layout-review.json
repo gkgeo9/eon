@@ -1,50 +1,22 @@
 {
-  "timestamp": "2026-09-29T21:51:49.002935+00:00",
-  "status": "ready_for_author_review",
-  "pages": 30,
+  "edition": "4.1",
+  "status": "reviewed; author contact and disclosures pending",
+  "pages": 32,
   "numbered_figures": 17,
   "illustrations": 6,
-  "art_review": "All six selected artworks viewed; workshop and closing card each revised once.",
-  "layout_review": {
-    "overview": "All 30 pages reviewed as rendered contact sheets.",
-    "detail_pages": [
-      1,
-      5,
-      8,
-      11,
-      13,
-      16,
-      24,
-      25,
-      26,
-      28
-    ],
-    "checks": [
-      "cover typography fits its quiet area",
-      "part openers readable at final size",
-      "diagrams and captions agree",
-      "no detached illustration captions",
-      "all figure references resolve",
-      "conclusion remains with its closing artwork",
-      "no TeX box or missing-glyph warnings"
-    ]
-  },
-  "validation": "Seven numerical groups and all publication checks passed.",
-  "scope": "Publication only; no new prices, model analyses or production database writes.",
+  "tables": 3,
+  "visual_review": "All 32 pages inspected in contact sheets; detail inspection of edited cover/workshop, chart labels, tables, contents and conclusion. No clipped text or TeX overflow. Some whitespace remains at part boundaries and around the full-page company grid.",
+  "evidence_unchanged": true,
+  "unchanged_other_artworks": 4,
   "inputs": {
-    "eon-whitepaper.md": "925598493408899ad3191d1c2f7c5bf8a3f6833c4a1903bfad223d62b113510d",
-    "eon-whitepaper.pdf": "efcb433e8ec2177490a9d72ced668fb98f5582ea02eae89c6347faef7ab7db5c",
-    "eon-whitepaper.tex": "213b53b6391c6c410af30e98b676c9d0641960141b150a0cb3005d5aefe0d76f",
-    "paper-preamble.tex": "e1fddb85350c35e4b112429b175b368d5a7f8bd7e3aab2b9358664fb24eb7c99",
-    "build_paper.py": "008775aee6beb3ce40fa1864807ccced441fc84e21b34fd0980ee01f984a5267",
-    "document-build.json": "7483c93d3cae4cd3ba4b35c8bbc3d49a072bcaf9c82c12e33e7c663861b312d9",
-    "figures/run.json": "783e1f0276db2a36cac1fe6971204d398fafec4f955c0a0aa80ae1c4126278c0",
-    "figures/art/manifest.json": "16d4bcd15c72f275b313dccd3ab4a048869a4e2d7a6b35233022c7b3ca233f5a",
-    "validation.json": "35d00d68be80722ad6fa7e453966fe846d0b01d100bfb8f9687b0ca92991105f",
-    "publication-validation.json": "78534b10a0ee64bcb7f8d7363310049fee2e63a727c6bce242d77a1bcdc13eec",
-    "graphics.md": "31541e116ceafc72c32affc413ebbcae26cbe84fe2376fd51f2d485363c16a51",
-    "figures.md": "628efa3c17ae0c21bf606a97c95159f93740f4f081ecc57979cab845a465c7b6",
-    "BRIEF.md": "d5e9cfb40785f80754db6580e49334b5684891418e80a9631d50c5b4feb341a6",
-    "revision-notes.md": "94155cb7ec1336e624d6fa9e248c7fb08ed614e0e188a1d0ddc23618193bfad1"
-  }
+    "eon-whitepaper.md": "23b47d02b79bb9eaaf36a33e68aa7cc13acabd1ab5c90d354b343954677cdee9",
+    "eon-whitepaper.pdf": "c4fe8406da0892f1dd083a614dc64161e24eb28f6307461dab54f84be04205af",
+    "eon-whitepaper.tex": "31d075a730a256e55827c22ee4de5767dbc2c63973ed7d5ce1e208998bed080b",
+    "build_paper.py": "a5e731af16c3640d6d1d292e9e0f738ba4538ad839df289b1fa772871a40bde1",
+    "paper-preamble.tex": "a59d5ce20d36dde289fc781f901a3d848353ab1b93ca2720c32b7d8756931c99",
+    "figures/art/manifest.json": "a0c2946a2b914beb2ea1e1f672ce96fef2d034cff2b9950b04910b5865faffef",
+    "render_figures.py": "f2c71ab9f2044270e4a28fcba2da76a630a9a86944f226a6bd9758e76985c485",
+    "render_diagrams.py": "710349ea9a98f23efee02016b148d61662efffdb7f39073dc434d72874fe6b42"
+  },
+  "people_removal_review": "All six current illustrations inspected; worker and speaker removed. Updated PDF pages 7 and 26 checked. Other four art assets unchanged."
 }

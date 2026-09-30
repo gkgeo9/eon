@@ -1,3 +1,25 @@
+## People-free artwork update — 30 September 2026
+
+The author requested no people in any illustration. The speaker and the
+workshop worker were removed using the built-in image generation tool;
+all other artwork remains unchanged. The Part III caption and alt text now
+describe an unattended lectern. Exact edit prompts and asset provenance are
+in `figures/art/manifest.json`. Earlier briefs and revision notes are historical;
+they do not override the current no-people requirement.
+
+# Edition 4.1 — response to criticisms
+
+Applied the statistical, editorial, typographic and figure corrections in
+`criticism-response.md`. Preserved the author's preferred six illustrations,
+editing only the cover and workshop to remove the optical devices. Added
+formal front matter, a detailed contents page, a list of figures, three
+numbered tables and a sample-reconciliation table. The rebuilt PDF has 32
+pages, 17 evidence figures and six illustrations. Source numerical results
+and evaluation protocols are unchanged. Public contact and author disclosure
+information remain pending; historical quota approval is not established.
+
+Previous edition: `archive/edition-4-before-review-fixes/`.
+
 # Revision notes
 
 ## Edition 4 — illustrated revision (30 September 2026)

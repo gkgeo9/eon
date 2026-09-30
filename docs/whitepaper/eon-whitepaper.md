@@ -5,35 +5,32 @@
 **Author:** Gabriel George
 
 **Technical white paper. Erebus Observatory Network (EON)**
-30 September 2026 · Edition 4 · Illustrated revision
+30 September 2026 · Edition 4.1 · Reviewed revision
 
 ---
 
 ## Abstract
 
-Over seventeen months I built five versions of the same idea: a machine that
-reads company annual reports the way a patient analyst would, and writes down
-what it thinks. It began in May 2025 as a folder of scripts studying thirty
-years of great companies. It became EON: a system of downloaders, headless
-browsers, key rotation, file locks, leases, heartbeats, a SQLite database, a
-command line, a web interface and a Discord alarm, all built around one
-constraint, a daily quota of model requests. Together the versions stored
-29,375 answers from a language model, including 6,973 three-lens readings of
-10-K filings, each ending in a single verdict.
+The pre-specified post-cutoff test did not establish a BUY-minus-SELL
+return spread: the six-month difference was 4.6 percentage points
+(p = 0.094). A later, post-hoc rank test found a small association, but it
+does not replace the failed primary test. An options scan also showed an
+association with subsequent absolute excess returns; without a volatility
+baseline, that remains an exploratory finding rather than demonstrated skill.
 
-This paper is mostly about how that machine was built and why it needed every
-part. It is also about what the machine read, and whether it was right. Graded
-naively, its BUY calls beat its SELL calls by 13 percentage points a year. But
-the model had been trained on the years it was being graded on: it may have
-read tomorrow's newspaper. Tested on filings after the stated training cutoff, the
-rank spread shrinks; its SELL calls stop working; a score written down in advance
-pointed the wrong way; and an options scan turned out to see how far a stock
-would move, but not which way.
+These results came from seventeen months of building EON, a system that reads
+annual reports and records structured judgements. Five versions produced
+29,375 stored answers, including 6,973 three-lens readings in the main EON
+database. The engineering problem was to make scarce model requests useful:
+acquire readable filings, coordinate parallel workers, validate answers, and
+retain progress through interruptions.
 
-It was never going to rival Citadel, Point72 or the Medallion Fund. It was
-worth building anyway, as a finance project, an AI project and a systems
-project at once. The paper ends with a sealed bet: 1,257 verdicts frozen at
-publication, to be graded in October 2027.
+The paper follows that construction, evaluates the resulting archive, and
+examines the model's failures. Historical performance weakened when the tests
+separated what the model might already know from what remained uncertain.
+The durable contribution is a working research system and an auditable account
+of its limits. A frozen ledger of 1,257 verdicts defines a prospective test
+for October 2027.
 
 *Research, not investment advice.*
 
@@ -54,11 +51,11 @@ publication, to be graded in October 2027.
 - [Part III · What it taught](#part-iii-what-it-taught)
 9. [How the model went wrong](#9-how-the-model-went-wrong)
 10. [Why it was worth doing](#10-why-it-was-worth-doing)
-11. [The bet](#11-the-bet)
+11. [The prospective ledger](#11-the-prospective-ledger)
 12. [Conclusion](#12-conclusion)
-- [Appendix A: methods](#appendix-a-methods)
-- [Appendix B: related work and references](#appendix-b-related-work-and-references)
-- [Appendix C: reproduction](#appendix-c-reproduction)
+- [Appendix A: Methods](#appendix-a-methods)
+- [References](#references)
+- [Appendix B: Reproduction](#appendix-b-reproduction)
 
 ---
 
@@ -78,7 +75,7 @@ everything around that minute.
 
 ![An Apple 10-K enters one Gemini 2.5 Flash call and returns 35 structured fields: three lenses of eleven, a synthesis, and a final verdict of SELL with high conviction.](figures/01-one-reading.svg)
 
-*Figure 1. One filing becomes one countable verdict. EON's first stored reading: Apple's 10-K for fiscal 2025, filed 31 October 2025. The model reads the filing as Warren Buffett, Nassim Taleb and a contrarian would, then gives one verdict. Six months later Apple had trailed the S&P 500 by 0.9 points: a draw. Sources: data/eon.db; evaluation/trades.csv.*
+*Figure 1. EON's first stored reading: Apple's 10-K for fiscal 2025, filed 31 October 2025. The model reads the filing as Warren Buffett, Nassim Taleb and a contrarian would, then gives one verdict. Six months later Apple had trailed the S&P 500 by 0.9 points: a draw.*
 
 Figure 1 is what the finished machine produces. Its verdict on Apple reads:
 "SELL. Conviction: High. Apple is an undeniably excellent company, but a high
@@ -95,7 +92,7 @@ doing.
 
 ## Part I · Building the reader
 
-![A small night workshop turns filings into printed pages, reads them through a teal optical instrument, and records the work beneath a clock approaching midnight.](figures/art/art-part1-workshop.png){.illustration}
+![A small night workshop turns filings into printed pages, records the work in a ledger beneath a clock approaching midnight.](figures/art/art-part1-workshop.png){.illustration}
 
 *Illustration — The workshop. A metaphor for the system in Figure 3: the machinery matters because the reader cannot run alone.*
 
@@ -104,7 +101,7 @@ kept what worked (Figure 2).
 
 ![Five stacked stages from May 2025 to June 2026: 10K_automator, standardized_sec_ai, Fintel, EON and custom workflows, each with what it carried forward.](figures/02-lineage.svg)
 
-*Figure 2. Five versions, one idea carried forward. From scripts studying great companies to an application that reads every filing. Dates come from the origin project's files and the repository's git history. Sources: the origin project; git history; data/archive/fintel.db; data/eon.db.*
+*Figure 2. From scripts studying great companies to an application that reads every filing. Dates come from the origin project's files and the repository's git history.*
 
 ## 2. The workshop: learning from great companies
 
@@ -198,19 +195,19 @@ became a panel, the same measurement taken across 1,358 companies and six
 fiscal years. Everything in Part II depends on that.
 
 Asking one question of every filing is easy to say. Figure 3 follows the
-request from two front doors through a shared service to a stored answer.
+request from the two interfaces through a shared service to a stored answer.
 
 ![The CLI and web interface share services. A filing passes from EDGAR through PDF conversion and extraction to a model request, validation, storage and review; locks, quotas and recovery support that path.](figures/03-architecture.svg)
 
-*Figure 3. One reading, supported by a whole system. The CLI and web interface use shared services. Arrows trace the filing through acquisition, model reading and durable storage. The SEC queue, key locks, leases, backups and alerts support execution around that path. This is a schematic of responsibilities, not a literal call graph. Source: the eon/ package.*
+*Figure 3. The CLI and web interface use shared services. Arrows trace the filing through acquisition, model reading and durable storage. The SEC queue, key locks, leases, backups and alerts support execution around that path. This is a schematic of responsibilities, not a literal call graph.*
 
 Each supporting component answers an operational constraint. The rest of this
 section takes them in turn.
 
 ### 5.1 Getting the words: why a PDF, and not XML?
 
-The SEC publishes every filing on EDGAR, free, as HTML. EON fetches them with
-`sec-edgar-downloader` through its own queue, which keeps well inside the SEC's
+The SEC publishes every filing on EDGAR, free, as HTML. The downloader
+is `sec-edgar-downloader`. EON routes requests through a shared queue, below the SEC's
 fair-access limit of ten requests a second: two seconds between requests, at
 most five at once, with a file lock so that parallel workers on one machine
 share the budget. Each filing is cached by ticker and year and never fetched
@@ -221,7 +218,7 @@ measurements answer both (Figure 4).
 
 ![A logarithmic bar chart of characters at each stage: 5.3 million in the EDGAR HTML, 620,000 visible, 394,000 sent to the model, 30,000 in the reading, and 4 in the verdict.](figures/04-life-of-a-filing.svg)
 
-*Figure 4. A 141-page filing becomes one word. Characters at each stage for the median 10-K: raw EDGAR HTML across 17 sampled filings, their visible text, the text EON extracts from its PDF (40 sampled filings), the stored reading, and the verdict. Sources: evaluation/pipeline-measurements.json; data/eon.db.*
+*Figure 4. Characters at each stage for the median 10-K: raw EDGAR HTML across 17 sampled filings, their visible text, the text EON extracts from its PDF (40 sampled filings), the stored reading, and the verdict.*
 
 Raw EDGAR HTML is 5.6 to 19.6 times larger than the text a person would read.
 Most of the difference is markup, and much of that is inline XBRL: between
@@ -269,9 +266,16 @@ readings, the model's input came to roughly 0.7 billion tokens.
 ### 5.3 Twenty requests a day
 
 The binding constraint was not compute, storage or money. It was requests. The
-February configuration rotated 25 API keys, each allowed 20 requests a day,
+February configuration rotated 25 API keys, each assigned a local budget of 20 requests a day,
 with a mandatory 65-second pause between requests on any one key. That is 500
-filings a day, at most.
+filings a day in the local scheduler.
+
+This describes the implementation, not an entitlement to multiply provider
+quota. Google's rate-limit documentation applies limits per project, not
+per API key (Google, 2026). The retained records do not establish the keys'
+project allocation or whether the historical arrangement was permitted.
+The paper therefore makes no claim of provider approval; a new deployment
+must use its project's actual quota.
 
 Every other design decision in EON follows from that number, and getting it
 right took three attempts.
@@ -293,12 +297,12 @@ seven of its callers, so each key reached its limit of 20 after 10 real
 requests. For a while the machine had been running at half speed and reporting
 itself full.
 
-Parallelism is what turned 25 keys into 500 readings a day. Figure 5 shows the
+Parallelism allowed the scheduler to use its configured daily budget. Figure 5 shows the
 difference between the two ways the command line runs.
 
 ![Two schematic timelines: a single company analysed year by year in one line, and a batch of five workers running staggered in parallel lanes until the daily quota is spent, then waiting for midnight Pacific.](figures/05-execution.svg)
 
-*Figure 5. One company runs in a line; a batch runs in lanes. A single analysis downloads, prints, extracts, asks and saves one fiscal year after another. A batch starts up to 25 workers with staggered starts; each leases one company, reserves one key, and renews its lease with a heartbeat. When every key is spent, all workers wait for the reset at midnight Pacific. Schematic. Sources: eon/cli; eon/ui/services/batch_queue.py; eon/ai/request_queue.py.*
+*Figure 5. A single analysis downloads, prints, extracts, asks and saves one fiscal year after another. A batch starts up to 25 workers with staggered starts; each leases one company, reserves one key, and renews its lease with a heartbeat. When every key is spent, all workers wait for the reset at midnight Pacific. Schematic.*
 
 The market-wide batch ran from 8 to 21 February 2026 and read 6,568 filings
 from 1,327 companies (Figure 6). At its busiest it finished 189 readings in an
@@ -308,7 +312,7 @@ the machine was waiting for midnight.
 
 ![Hourly readings over fourteen days show a burst after each daily quota reset and near silence in between.](figures/06-quota-clock.svg)
 
-*Figure 6. The quota is the clock. Readings per hour during the February batch, with approximate quota-day totals of 472 to 506 above the bars. The reset boundary is reconstructed, so a day can slightly exceed 500. Source: data/eon.db, frozen in figure-data/evidence.json.*
+*Figure 6. Readings per hour during the February batch, with approximate quota-day totals of 472 to 506 above the bars. The reset boundary is reconstructed, so a day can slightly exceed 500.*
 
 Of the 1,410 companies attempted, 83 failed: 61 because no filing could be
 retrieved, and 22 after the model call failed repeatedly.
@@ -321,7 +325,7 @@ left off, preserving completed years and reducing repeated work (Figure 7).
 
 ![Three panels separate an atomic work claim from serialized SQLite writes and the two table families that store queue state and analysis results.](figures/07-database.svg)
 
-*Figure 7. Many workers, one writer. A conditional update claims a pending company; heartbeats maintain its lease. SQLite serializes short write transactions while WAL allows readers to overlap the writer. Batch tables remember progress; analysis tables preserve readings. Checkpoints and uniqueness constraints reduce repeated work but do not promise exactly-once model calls. Sources: eon/ui/database/repository.py and migrations; eon/ui/services/batch_queue.py.*
+*Figure 7. A conditional update claims a pending company; heartbeats maintain its lease. SQLite serializes short write transactions while WAL allows readers to overlap the writer. Batch tables remember progress; analysis tables preserve readings. Checkpoints and uniqueness constraints reduce repeated work but do not promise exactly-once model calls.*
 
 EON uses SQLite, a single file, because the whole system runs on one machine
 and a server database would add a service to install, configure and keep
@@ -357,7 +361,7 @@ run twice and applied automatically at start-up. One earlier file in the
 repository's history is named `fintel.db.corrupted`: a reminder of why the
 rest exists.
 
-### 5.5 Two front doors and a doorbell
+### 5.5 Interfaces and alerting
 
 EON has a command line and a web interface, and they do different jobs.
 
@@ -374,13 +378,13 @@ apart. On 6 February both were rebuilt on one shared service layer, so a batch
 started from either behaves the same way, and a batch started from the command
 line can be watched from the browser.
 
-The doorbell is Discord. A batch that runs overnight for two weeks needs a way
+Discord provides alerts. A batch that runs overnight for two weeks needs a way
 to say something while its owner is asleep or away. EON posts to a Discord
 webhook when a batch completes or fails, when every key is spent and it is
 waiting for the reset, and when disk space runs low: the 27.5 GB of PDFs are a
 real risk. Before starting, it checks that there is room.
 
-### 5.6 Two machines
+### 5.6 Cross-platform execution
 
 EON ran on two computers. The February batch ran on Windows; the database
 still stores its paths with backslashes. Development happened on a Mac, which
@@ -444,15 +448,17 @@ reliably in one piece. And let the model judge while code does the counting.
 
 ![An archive box, an annual report and a sealed verdict sit on a desk; a distant newspaper suggests an outcome still to come.](figures/art/art-part2-three-dates.png){.illustration}
 
-*Illustration — Three records, different clocks. The illustration introduces the question; Figure 9 specifies the event order that each test requires.*
+*Illustration — The reading desk. An archive, a report and a recorded judgement.*
 
 ## 7. Every question it was asked
 
 Across five versions, the model gave 29,375 stored answers (Figure 8).
 
-![A bubble timeline from May 2025 to June 2026 showing the answer counts of each kind of analysis: the excellence study, contrarian and options scans, three-lens verdicts, and frameworks.](figures/08-catalogue.svg)
+![A horizontal bar chart with exact counts and dates for seven families of stored answers.](figures/08-catalogue.svg)
 
-*Figure 8. 29,375 answers in seventeen months. Every stored model answer, grouped by the question it answered. Bubble area is the number of answers. Sources: the origin project's files; data/archive/fintel.db; data/eon_mac.db; data/eon.db.*
+*Figure 8. Stored answers by analysis family; bar length represents count, with exact totals beside each bar.*
+
+Table: Stored answers by analysis family.
 
 | Analysis | When | Answers | Asked |
 |---|---|---:|---|
@@ -491,10 +497,10 @@ the readings against stock returns. BUY-rated filings had beaten SELL-rated
 ones by 14.1 percentage points over two years. The report concluded that the
 model had genuine stock-picking skill.
 
-It had skipped a question. The model was being graded on years it had already
-read about. Gemini 2.5 Flash's training data ends in January 2025, according to
+It had skipped a question. The model was being graded on years its training data could already
+cover. Gemini 2.5 Flash's training data ends in January 2025, according to
 Google, and this paper uses 31 January 2025 as the line. Show it a 2021 annual
-report and ask whether to buy: the report ends in 2021, but the model knows how
+report and ask whether to buy: the report ends in 2021, but the model may know how
 2022 went. A backtest like that is a trader handed tomorrow's newspaper. Their
 record would be extraordinary, and it would say nothing about their judgement.
 
@@ -504,7 +510,7 @@ what a test can prove (Figure 9).
 
 ![Three timelines: with hindsight, after the cutoff, and written in advance, showing the order of filing, cutoff, reading and outcome in each.](figures/09-three-clocks.svg)
 
-*Figure 9. Three dates decide what a test can prove. Only the third arrangement, a verdict recorded before anything it predicts, is a forecast in the ordinary sense. Event order is schematic. Source: the evaluation protocols.*
+*Figure 9. Only the third arrangement, a verdict recorded before anything it predicts, is a forecast in the ordinary sense. Event order is schematic.*
 
 Every test below uses one reading per company and year; entry at the first
 close after the filing (or, for the ledgers, after the reading); returns in
@@ -514,10 +520,15 @@ has the details.
 
 ### 8.2 With hindsight, and after the cutoff
 
+The primary post-cutoff test was the six-month mean spread, specified before
+the evaluation: 4.6 points, p = 0.094. It did not pass the conventional 5%
+threshold. The one-year horizon was added in a later amendment; the rank
+statistic was added after inspecting the outlier and is a robustness check.
+The comparisons below explain the findings without replacing that primary test.
+
 For one-year windows that closed before the cutoff, 1,099 BUY readings beat
 SPY by 2.2 points and 657 SELL readings trailed it by 10.9: a spread of 13.1
-percentage points (p = 0.0001). About 42% of it came from favouring the right
-industries.
+percentage points (p ≤ 0.0001).
 
 For the 1,443 filings published after the stated cutoff, the same test gives a different picture (Figure 10). Ranked by where each
 stock finished within its year, the spread halves, from 11.1 to 6.2 percentile
@@ -526,10 +537,10 @@ is ±23 points.
 
 ![Two dumbbell rows compare mean and rank spreads before and after the cutoff: the mean is similar but far less certain after; the rank spread halves.](figures/10-before-after.svg)
 
-*Figure 10. After the cutoff, ranks halve; averages turn to noise. The same one-year BUY-minus-SELL comparison on both sides of the model's knowledge cutoff, with 95% intervals from independent-reading standard errors. The permutation tests in the text are the formal results. Source: evaluation/results.json.*
+*Figure 10. One-year BUY-minus-SELL mean and rank spreads on aligned zero axes, with descriptive 95% intervals; the post-cutoff one-year test was added after the primary six-month test.*
 
 Where the edge lived also changed (Figure 11). Before the cutoff, the five
-verdicts formed a perfect staircase: STRONG SELL companies finished at the
+verdicts were broadly ordered: STRONG SELL companies finished at the
 43rd percentile of their year, SELL at the 43rd, HOLD at the 50th, BUY at the
 54th, STRONG BUY at the 60th. After it, BUY still finished above the middle,
 but SELL rose to the 49th percentile, level with HOLD. The SELL calls, which
@@ -537,19 +548,25 @@ had carried most of the historical spread, stopped working.
 
 ![Two panels show average return percentile by verdict: a steady climb before the cutoff; after it, SELL and HOLD sit together below the middle while BUY stays above.](figures/11-verdict-ladder.svg)
 
-*Figure 11. After the cutoff, the SELL calls stop working. Average within-year percentile of one-year excess return by verdict, ±1.96 standard errors; hollow points have fewer than 60 readings. The verdict order still correlates with outcomes after the cutoff (Spearman 0.094, p = 0.0012), driven by BUY rather than SELL. Descriptive. Source: evaluation/stories.json.*
+*Figure 11. Average within-year percentile of one-year excess return by verdict, ±1.96 standard errors; hollow points have fewer than 60 readings. The verdict order still correlates with outcomes after the cutoff (Spearman 0.094, p = 0.0012), driven by BUY rather than SELL. Descriptive.*
 
 A model that remembered which companies collapsed would look like this. So
 would a model whose caution suited 2021 to 2024 and not 2025. The data cannot
-choose between them.
+choose between them. Survivorship also matters: selecting companies still
+listed in 2026 omits failures and can lift the measured returns of SELL-rated
+companies. That biases this comparison toward the apparent loss of SELL
+performance; it cannot be attributed solely to the model.
 
 The post-cutoff sample retains a small rank association. By rank, BUY readings beat SELL
-readings by **5.9 percentile points (p = 0.0059)** within industries. That
+readings by **5.9 percentile points (p = 0.0059)** in the sample eligible
+for within-industry shuffling. Figure 10's 6.2-point spread uses all eligible
+one-year readings; the 5.9-point statistic drops singleton industry-year
+blocks and recomputes the within-year ranks. That
 statistic was chosen after the next figure was seen, and it rests largely on
 one filing season. By average, the result is inconclusive: 4.6 points at six
 months (p = 0.094) and 14.9 at a year (p = 0.215).
 
-### 8.3 One stock, and twenty-four
+### 8.3 Outlier sensitivity and company-level outcomes
 
 The average fails because of one company (Figure 12). Babcock & Wilcox filed
 its 10-K on 31 March 2025, closed at $0.46 the next day, and stood at $15.72 a
@@ -563,17 +580,18 @@ a late reading into a forecast.
 
 ![Strip plot of one-year excess returns after the cutoff: one BUY-rated stock, Babcock & Wilcox, sits far right at +3,314 points, dragging the BUY mean above its median.](figures/12-tails.svg)
 
-*Figure 12. One stock can decide a mean. Every post-cutoff BUY and SELL reading with a one-year outcome. Solid lines are means, dotted lines medians; the axis is linear to ±100 points and logarithmic beyond. Sources: evaluation/trades.csv; evaluation/verification/bw-price-check.json.*
+*Figure 12. Every post-cutoff BUY and SELL reading with a one-year outcome. Solid lines are means, dotted lines medians; the axis is linear to ±100 points and logarithmic beyond.*
 
 Averages also hide what the verdicts look like one company at a time. Figure
 13 shows 24 companies drawn at random, with a published seed, from the 195 that
 EON read in every year from 2020 to 2024 and rated both BUY and SELL at least
-once. Of their 70 BUY and SELL calls, 40 went the right way: 57%. Read row by
-row, the grid looks less like foresight than a slightly loaded coin.
+once. Of their 70 BUY and SELL calls, 40 went the right way: 57%.
+This combines hindsight-exposed and post-cutoff windows; it is a descriptive
+illustration, not a forward hit rate.
 
 ![A grid of 24 randomly drawn companies by five fiscal years, each cell coloured by verdict and labelled with the one-year excess return, with ticks and crosses for right and wrong calls.](figures/13-company-grid.svg)
 
-*Figure 13. Company by company, the edge is thin. Colour is the verdict; the number is the one-year return over SPY in percentage points; a tick marks a BUY that beat SPY or a SELL that trailed it. The rule selects on verdicts, never outcomes. Because the median stock trailed SPY in these years, SELL ticks come cheaply. Source: evaluation/stories.json.*
+*Figure 13. Colour is the verdict; the number is the one-year return over SPY in percentage points; a tick marks a BUY that beat SPY or a SELL that trailed it. The rule selects on verdicts, never outcomes. Because the median stock trailed SPY in these years, SELL ticks come cheaply. Mixed hindsight and post-cutoff windows; descriptive only.*
 
 ### 8.4 A ledger written in 2025
 
@@ -585,19 +603,21 @@ archive, and I had looked at the first result before writing the test.
 
 **Resemblance to great companies pointed the wrong way.** Across 1,766
 companies, the higher the 2025 compounder score, the worse the next year:
-Spearman −0.14, p = 0.0001. The top fifth trailed SPY by 17.8 points on
+Spearman −0.14, p ≤ 0.0001. The top fifth trailed SPY by 17.8 points on
 average; the bottom fifth beat it by 18.6. A sensible idea, carefully applied,
 failed its first year. One plausible reason, untested, is that looking like a
 past winner was already in the price. The original ambition was about decades,
 which one year cannot settle.
 
 **The contrarian score and the options calls showed nothing.** Spearman +0.01
-(p = 0.71) for the contrarian score; calls minus puts +2.8 percentile points
+(p = 0.71) for the contrarian score. This correlation differs from Figure 14's
+−0.3-point top-minus-bottom quintile rank spread; both are near zero. The
+options direction contrast was calls minus puts +2.8 percentile points
 (p = 0.54) over six months for the options ideas.
 
 ![Three 2025 scores against their industry-shuffle bands: compounder resemblance far below its band; contrarian and options scores inside theirs.](figures/14-dated-ledger.svg)
 
-*Figure 14. Looking like a great company was a bad sign. Top fifth minus bottom fifth of each 2025 score (calls minus puts for options), in percentile points of return, against the middle 95% of 10,000 industry-preserving shuffles. Source: evaluation/origin-ledger/results.json.*
+*Figure 14. Top fifth minus bottom fifth of each 2025 score (calls minus puts for options), in percentile points of return, against the middle 95% of 10,000 industry-preserving shuffles.*
 
 These are not EON's verdicts. Across 1,054 companies scored by both, the
 compounder score and EON's verdict are almost unrelated (Spearman 0.05).
@@ -607,34 +627,36 @@ compounder score and EON's verdict are almost unrelated (Spearman 0.05).
 EON left a ledger of its own. The Asymmetric Options V4 scan of 25–26 February
 2026 recorded, for 1,415 companies, a directional bias and an asymmetry score,
 six months before the outcomes it would be graded on. I wrote the test before
-running it (Figure 15).
+running it (Figure 15). Of the 1,415 scanned companies, 1,365 had usable
+six-month outcomes. The 873 put-bias names in the full scan become 847 in
+this graded subset.
 
 ![Two panels of dot plots by options bias: average return percentile, which barely differs, and average size-of-move percentile, which is higher for straddle and call-bias names.](figures/15-options-ledger.svg)
 
-*Figure 15. It saw how far a stock would move, not which way. Six-month outcomes for 1,365 companies, by the bias the scan recorded in February 2026. Left: direction, as the average percentile of excess return. Right: magnitude, as the average percentile of the absolute excess return. Source: evaluation/stories.json.*
+*Figure 15. Six-month return and absolute-return percentiles for 1,365 companies; the magnitude association has no trailing-volatility baseline.*
 
-On direction, the scan had no skill. Stocks marked for calls did no better
+The directional test found no evidence of skill. Stocks marked for calls did no better
 than stocks marked for puts (−2.9 percentile points, p = 0.62); put-bias
-stocks in fact beat SPY slightly more often than the rest. On magnitude, it
-did. Its asymmetry score correlated with the size of the move, up or down
-(Spearman 0.12, p = 0.0001), and stocks marked "straddle", the model's way of
+stocks in fact beat SPY slightly more often than the rest. Its asymmetry score correlated with the size of the move, up or down
+(Spearman 0.12, p ≤ 0.0001), and stocks marked "straddle", the scan's way of
 saying something big will happen, moved more than those marked "no edge"
 (p = 0.031).
 
-The useful distinction is magnitude versus direction: the recorder and
-unsettled compass in the illustration. Perhaps filings expose fragile balance
-sheets or binary risks; that explanation was not tested. The association
-concerns absolute excess returns, not realised volatility, and establishes
-neither profitable options trades nor an advantage over options prices.
+This is an association with absolute excess returns, not a test of realised
+volatility or profitable options trading. Trailing volatility, company size
+and sector could explain it; no baseline using those variables was fitted.
+The scan therefore has not demonstrated incremental predictive skill. The
+hypothesis that filings expose binary risks remains open.
 
 ![A mechanical recorder traces swings while a compass needle appears unsettled. This is an editorial metaphor, not a data plot.](figures/art/art-spot-compass.png){.illustration width=42%}
 
-*Illustration — How far, not which way. Read alongside the measured outcomes in Figure 15.*
+*Illustration — A recorder and a compass.*
 
 ### 8.6 What the tests say together
 
-Graded with hindsight, the model looked like an analyst. Tested on later filings and dated readings, it looked like a careful reader
-with a small rank association, one bad idea and one modest talent. The evidence has limits that apply
+The primary post-cutoff test was inconclusive. The later rank association,
+the failed compounder score and the unbenchmarked magnitude association
+describe different tests; none substitutes for a prospective trading record. The evidence has limits that apply
 throughout: the later tests cover roughly the same eighteen months;
 the universe was drawn from companies still listed in 2026; industry is
 controlled but size, value, quality and momentum are not; extraction and the
@@ -643,9 +665,9 @@ the paper does about that.
 
 ## Part III · What it taught
 
-![A confident speaker stands beside a curled calendar, repetitive report cards and binoculars turned toward a storm cloud.](figures/art/art-part3-narrator.png){.illustration}
+![An empty lectern stands beside a curled calendar, repetitive report cards and binoculars turned toward a storm cloud.](figures/art/art-part3-narrator.png){.illustration}
 
-*Illustration — The confident narrator. Stale dates, repeated answers and selective attention can hide behind fluent prose; Figure 16 records the observed patterns.*
+*Illustration — The unattended lectern. A calendar, repeated reports and a selective view.*
 
 ## 9. How the model went wrong
 
@@ -655,7 +677,7 @@ times (Figure 16).
 
 ![Eight cards, each with a large number: 99.8% of analyses misdated, 91 expired option dates, 24% of scores exactly 68, 62% put bias, 51% HOLD, about 130 spellings, 462 mislabelled verdicts, and 100% innovation.](figures/16-shortcomings.svg)
 
-*Figure 16. Eight ways a fluent model went wrong. Each number is measured in the project's own stored outputs. Sources: the origin files; evaluation outputs; data/eon.db; the flattening script's notes.*
+*Figure 16. Each number is measured in the project's own stored outputs.*
 
 **It did not know what day it was.** Run in May 2025, the model dated 1,916 of
 1,919 analyses 2024, a year behind, and proposed 91 option expiries that had
@@ -699,30 +721,27 @@ from memory, which is exactly the channel through which hindsight can leak.
 
 ## 10. Why it was worth doing
 
-EON was never going to rival Citadel, Point72 or the Medallion Fund. Those
-firms buy data nobody else has, trade in milliseconds, employ hundreds of
-researchers, and move capital at scale. Medallion is famous for short-horizon
-statistical patterns, not opinions about annual reports. A 10-K is the most
-public document a company produces. Thousands of professionals read the
-important ones on the day they are filed; whatever it says is in the price
-within hours. A machine reading the same text a year later, on free quotas,
-was not going to find money lying on the pavement.
+EON tested what one builder could learn from public filings with a language
+model and a constrained request budget. Competing with institutional trading
+systems was never its practical objective. The value was in making the
+question precise enough to expose a disappointing answer.
 
-It was worth doing anyway, because it was three projects at once.
+It was three projects at once.
 
 **As a finance project,** it turned a vague question (can reading annual
 reports well tell you anything?) into a measurable one, and taught the
 details that make such measurements honest: excess returns and their
 benchmark, industry composition, survivorship, the difference between an
 average and a rank, one stock deciding a mean, and above all look-ahead. The
-answer was humbling in the right way: what a filing says is largely known, and
-what it signals most reliably is risk, not direction.
+primary test was inconclusive, and the remaining associations need stronger
+controls. Learning to distinguish those statements was part of the result.
 
 **As an AI project,** it measured a language model at scale, on the same task,
 thousands of times, and caught it misdating its work, drifting in format,
 clustering its scores, leaning bearish when asked about risk, and possibly
-remembering the future. Those are not failures of a particular prompt. They
-are properties of fluent models, and they only show up in volume.
+remembering the future. These are observed failures of this model and these prompts. Repeated
+measurement made them visible; it does not establish their prevalence across
+all language models.
 
 **As a systems project,** it forced real engineering under a hard constraint:
 cross-process locks, key rotation, leases and heartbeats, crash recovery, a
@@ -733,7 +752,7 @@ planned. Every piece answers a failure that happened.
 And it left something no one else has: 29,375 answers written down with their
 dates, a method for testing them honestly, and a bet.
 
-## 11. The bet
+## 11. The prospective ledger
 
 Every lesson in this paper points to one practice: write the verdict down, with
 its date, before the future arrives. So the paper makes a forecast of its own
@@ -741,11 +760,13 @@ its date, before the future arrives. So the paper makes a forecast of its own
 
 ![Ticker tiles for all 30 STRONG BUY and 19 STRONG SELL verdicts frozen on 28 September 2026.](figures/17-sealed-bet.svg)
 
-*Figure 17. The bet: 49 calls to check in October 2027. EON's latest verdict on each of 1,257 companies, frozen on 28 September 2026 with their prices, and graded one year after publication. The tiles are every STRONG BUY and STRONG SELL, not a selection. Source: evaluation/sealed-ledger/.*
+*Figure 17. All 49 strongest verdicts are shown; the pre-specified test covers all 371 BUY-type against all 252 SELL-type calls in the 1,257-company ledger.*
 
 The ledger holds EON's most recent verdict for each of 1,257 companies: 634
 HOLD, 341 BUY, 233 SELL, 30 STRONG BUY and 19 STRONG SELL. The whole file is
-fixed by its SHA-256 fingerprint, which begins b5a03624d885c0c9. The test was chosen in
+identified by its SHA-256 fingerprint, which begins b5a03624d885c0c9.
+A hash detects a changed file; it does not independently establish when the
+file was frozen. Public timestamped release is still needed for that. The test was chosen in
 advance: BUY-type minus SELL-type percentile rank of one-year return over SPY,
 from the first close after 30 September 2026. Many of these verdicts are
 already a year old, since they read filings from early 2025; that is part of
@@ -765,31 +786,50 @@ months, and most of the work was not reading at all. It was waiting for
 midnight, printing web pages, keeping two dozen workers from colliding, and
 making sure nothing was lost when something broke.
 
-The reader works. It is specific, tireless and consistent enough to be counted.
-Counting it produced a result that looked like foresight, and arranging the
-evidence by what the model could have known took most of that away. What
-remains is worth testing again: a small rank association in BUY calls, an
-association with the size of later moves, and a clear view of how a fluent
-model goes wrong.
+The system produced structured readings at scale. The primary post-cutoff
+six-month test did not establish a return spread (4.6 points, p = 0.094).
+The positive rank result was post hoc; the options magnitude association lacks
+a volatility baseline. Neither establishes a tradable advantage.
 
-The model's documented newspaper ends in January 2025. A forecast earns its
-name only when it is recorded before the events it predicts.
+The project nevertheless leaves a reproducible system, a record of model
+failures, and a sharper experimental question. A forecast earns its name
+when it is recorded before the events it predicts. The frozen ledger makes
+that next test explicit.
 
-![A closed envelope with a teal wax seal rests in morning light beside a card reading Open October 2027.](figures/art/art-closing-bet.png){.illustration width=86%}
+![A closed envelope with a teal wax seal rests in morning light beside a card reading Open October 2027.](figures/art/art-closing-bet.png){.illustration width=50%}
 
-*Illustration — Open October 2027. Ledger fingerprint: `b5a03624`. This seal is a metaphor; the hash identifies the file, while independent timestamped publication would establish when it was fixed.*
+*Illustration — Open October 2027. The next evaluation date.*
 
-**Write the question once. Keep the answer with its date. Let the next year
-answer back.**
+
 
 ---
 
-## Appendix A: methods
+## Appendix A: Methods
 
 **Scope.** One reading per ticker and fiscal year, the first stored. Of 6,653
 such readings, 6,651 were made with Gemini 2.5 Flash; two made with Gemini 3.5
 Flash are excluded. A usable observation needs a parsed verdict, a filing date
 and prices: 6,203 readings of 1,309 companies.
+
+**Sample reconciliation.** The following populations answer different questions;
+archive totals and batch subsets are not successive exclusions from one funnel.
+
+Table: Sample populations and evaluation filters.
+
+| Population | Readings | Companies | Meaning |
+|---|---:|---:|---|
+| Main EON three-lens archive | 6,973 | 1,358 | Stored answers, including repeated company-years |
+| Main archive plus Mac archive | 8,157 | — | 6,973 + 1,184; archive count, not deduplicated |
+| February market-wide batch | 6,568 | 1,327 | One batch within the main archive |
+| First stored company-year, all models | 6,653 | — | Repeated company-years removed |
+| Gemini 2.5 Flash only | 6,651 | — | Two other-model readings excluded |
+| Parsed verdict and filing date | 6,411 | — | Both fields present; no price requirement |
+| Usable entry-price sample | 6,203 | 1,309 | Parsed verdict, date and entry price; exit availability varies by horizon |
+| Prospective ledger | 1,257 | 1,257 | One latest eligible verdict per company under the separate ledger protocol |
+
+A dash means the company count is not reported for that stage. The parser
+alone accepts 6,519 readings and the date check alone accepts 6,543; their
+intersection is 6,411. Horizon-specific samples are smaller still.
 
 **Returns.** Entry at the first close strictly after the filing date. Excess
 return is the change in adjusted close over 126, 252 or 504 trading sessions
@@ -830,35 +870,49 @@ timestamp.
 from 40 randomly sampled cached 10-K PDFs; markup ratios and XBRL counts from
 17 raw EDGAR 10-K files. Tokens are estimated at four characters each.
 
-## Appendix B: related work and references
+## References
 
-Sarkar and Vafa show that pretrained language models carry information about
+Sarkar and Vafa (2024) show that pretrained language models carry information about
 periods after their nominal analysis date, and test for it with events that
 should be unpredictable; the anachronism search in Section 9 is a simple
-instance. Glasserman and Lin measure look-ahead bias in model-scored news
-sentiment and reduce it by removing company names. Lopez-Lira and Tang find
+instance. Glasserman and Lin (2023) measure look-ahead bias in model-scored news
+sentiment and reduce it by removing company names. Lopez-Lira and Tang (2023) find
 that model readings of headlines predict next-day returns; EON reads a
 different document over a longer horizon, and its results are not a
 replication.
 
+Loughran and McDonald (2011) show why financial text needs domain-specific
+measurement: many words classed as negative by a general dictionary are
+neutral in financial disclosures. EON's richer readings still need the same
+comparison against simpler, explicit baselines.
+
+- Loughran, T. and McDonald, B. (2011). *When Is a Liability Not a Liability?
+  Textual Analysis, Dictionaries, and 10-Ks.* Journal of Finance 66(1), 35–65.
+  [doi:10.1111/j.1540-6261.2010.01625.x](https://doi.org/10.1111/j.1540-6261.2010.01625.x).
+- Google (2026). *Gemini API rate limits.*
+  [Provider documentation](https://ai.google.dev/gemini-api/docs/rate-limits), accessed 29 September 2026.
 - Glasserman, P. and Lin, C. (2023). *Assessing Look-Ahead Bias in Stock
   Return Predictions Generated by GPT Sentiment Analysis.* arXiv:2309.17322.
-- Google. *Gemini 2.5 Flash model documentation*, knowledge cutoff January
-  2025. ai.google.dev/gemini-api/docs/models/gemini-2.5-flash.
+- Google (2026). *Gemini 2.5 Flash model documentation*, knowledge cutoff January
+  2025. [Model documentation](https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash).
 - Lopez-Lira, A. and Tang, Y. (2023). *Can ChatGPT Forecast Stock Price
   Movements? Return Predictability and Large Language Models.*
   arXiv:2304.07619.
 - Sarkar, S. K. and Vafa, K. (2024). *Lookahead Bias in Pretrained Language
   Models.* SSRN 4754678.
-- US Securities and Exchange Commission. *EDGAR fair access policy*: no more
+- US Securities and Exchange Commission (2026). *EDGAR fair access policy*: no more
   than ten requests per second.
 
-## Appendix C: reproduction
+## Appendix B: Reproduction
 
-The Markdown is the editorial source; LaTeX and PDF are generated from it.
-`BRIEF.md` sets the editorial standard, `figures.md` documents every figure,
-`graphics.md` records the illustration brief and delivered artwork, and `revision-notes.md`
-records every change and open question.
+**Data availability.** Evaluation tables, frozen prices, protocols, figure
+inputs and rendering scripts are retained in this repository's
+`docs/whitepaper/` directory. The source databases and origin archive are local
+project inputs; this edition does not assert that they have been publicly
+released. SEC filings remain available through EDGAR. Appendix B maps the
+inputs needed to reproduce the results.
+
+Table: Reproduction inputs and implementation entry points.
 
 | Path | Role |
 |---|---|
@@ -885,11 +939,6 @@ python docs/whitepaper/build_paper.py --pandoc /path/to/pandoc
 cd docs/whitepaper && tectonic -X compile eon-whitepaper.tex
 ```
 
-Six editorial illustrations were made with the built-in image generation
-tool and selected for this edition. They depict metaphors, not observations;
-the seventeen numbered figures remain code-generated. Their prompts, asset
-hashes and placement notes are in `figures/art/manifest.json` and `graphics.md`.
-
 The evaluators open databases read-only and use saved prices; the origin
 evaluator reads `stock_stuff_06042025/10K_automator` without changing it. The
 sealed ledger's script refuses to run twice.
@@ -899,3 +948,23 @@ sealed ledger's script refuses to run twice.
 *Prepared from the EON repository and its predecessors, their databases and
 files, and a frozen price snapshot. Negative and inconclusive results are
 retained. Research, not investment advice.*
+
+### Figure source index
+
+- Figure 1: data/eon.db; evaluation/trades.csv.
+- Figure 2: the origin project; git history; data/archive/fintel.db; data/eon.db.
+- Figure 3: the eon/ package.
+- Figure 4: evaluation/pipeline-measurements.json; data/eon.db.
+- Figure 5: eon/cli; eon/ui/services/batch_queue.py; eon/ai/request_queue.py.
+- Figure 6: data/eon.db, frozen in figure-data/evidence.json.
+- Figure 7: eon/ui/database/repository.py and migrations; eon/ui/services/batch_queue.py.
+- Figure 8: the origin project's files; data/archive/fintel.db; data/eon_mac.db; data/eon.db.
+- Figure 9: the evaluation protocols.
+- Figure 10: evaluation/results.json.
+- Figure 11: evaluation/stories.json.
+- Figure 12: evaluation/trades.csv; evaluation/verification/bw-price-check.json.
+- Figure 13: evaluation/stories.json.
+- Figure 14: evaluation/origin-ledger/results.json.
+- Figure 15: evaluation/stories.json.
+- Figure 16: the origin files; evaluation outputs; data/eon.db; the flattening script's notes.
+- Figure 17: evaluation/sealed-ledger/.

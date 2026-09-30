@@ -1,0 +1,159 @@
+{
+  "stage": "whitepaper-pipeline-measurements",
+  "timestamp": "2026-09-29T21:11:15.887956+00:00",
+  "python": "3.12.6",
+  "seed": 20260930,
+  "pdf_10k_files": 4603,
+  "pdf_total_gb": 27.5,
+  "pdf_mb_median": 5.01,
+  "pdf_mb_p90": 9.98,
+  "sample": 40,
+  "pages_median": 141.0,
+  "pages_max": 354,
+  "chars_median": 394180,
+  "chars_p90": 608970,
+  "chars_max": 1374775,
+  "tokens_median_est": 98545,
+  "tokens_p90_est": 152242,
+  "tokens_max_est": 343693,
+  "extract_seconds_median": 6.4,
+  "html_10k_samples": [
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/AAPL/10-K/0000320193-25-000079/primary-document.html",
+      "html_chars": 1520208,
+      "visible_chars": 233150,
+      "markup_ratio": 6.52,
+      "inline_xbrl_tags": 1170,
+      "hidden_xbrl_header_chars": 85617
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/GOOGL/10-K/0001652044-25-000014/primary-document.html",
+      "html_chars": 2528344,
+      "visible_chars": 396388,
+      "markup_ratio": 6.38,
+      "inline_xbrl_tags": 1818,
+      "hidden_xbrl_header_chars": 175612
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KALU/10-K/0000950170-24-018958/primary-document.html",
+      "html_chars": 4382384,
+      "visible_chars": 437366,
+      "markup_ratio": 10.02,
+      "inline_xbrl_tags": 1710,
+      "hidden_xbrl_header_chars": 208764
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KALU/10-K/0000950170-25-024313/primary-document.html",
+      "html_chars": 5586697,
+      "visible_chars": 428920,
+      "markup_ratio": 13.03,
+      "inline_xbrl_tags": 1832,
+      "hidden_xbrl_header_chars": 206093
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KHC/10-K/0001637459-20-000027/primary-document.html",
+      "html_chars": 6436088,
+      "visible_chars": 619170,
+      "markup_ratio": 10.39,
+      "inline_xbrl_tags": 3888,
+      "hidden_xbrl_header_chars": 603058
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KHC/10-K/0001637459-21-000009/primary-document.html",
+      "html_chars": 5286601,
+      "visible_chars": 631028,
+      "markup_ratio": 8.38,
+      "inline_xbrl_tags": 3051,
+      "hidden_xbrl_header_chars": 593362
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KHC/10-K/0001637459-22-000018/primary-document.html",
+      "html_chars": 5255175,
+      "visible_chars": 641761,
+      "markup_ratio": 8.19,
+      "inline_xbrl_tags": 3170,
+      "hidden_xbrl_header_chars": 645155
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KHC/10-K/0001637459-23-000009/primary-document.html",
+      "html_chars": 5053819,
+      "visible_chars": 597803,
+      "markup_ratio": 8.45,
+      "inline_xbrl_tags": 3046,
+      "hidden_xbrl_header_chars": 566310
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KHC/10-K/0001637459-24-000018/primary-document.html",
+      "html_chars": 3849234,
+      "visible_chars": 590287,
+      "markup_ratio": 6.52,
+      "inline_xbrl_tags": 2875,
+      "hidden_xbrl_header_chars": 466285
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KHC/10-K/0001637459-25-000011/primary-document.html",
+      "html_chars": 4105984,
+      "visible_chars": 619627,
+      "markup_ratio": 6.63,
+      "inline_xbrl_tags": 2896,
+      "hidden_xbrl_header_chars": 449018
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KO/10-K/0000021344-20-000006/primary-document.html",
+      "html_chars": 5715176,
+      "visible_chars": 772645,
+      "markup_ratio": 7.4,
+      "inline_xbrl_tags": 3347,
+      "hidden_xbrl_header_chars": 590091
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KO/10-K/0000021344-21-000008/primary-document.html",
+      "html_chars": 5469179,
+      "visible_chars": 753579,
+      "markup_ratio": 7.26,
+      "inline_xbrl_tags": 3299,
+      "hidden_xbrl_header_chars": 487764
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KO/10-K/0000021344-22-000009/primary-document.html",
+      "html_chars": 5502538,
+      "visible_chars": 724177,
+      "markup_ratio": 7.6,
+      "inline_xbrl_tags": 3249,
+      "hidden_xbrl_header_chars": 474877
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KO/10-K/0000021344-23-000011/primary-document.html",
+      "html_chars": 5390545,
+      "visible_chars": 718525,
+      "markup_ratio": 7.5,
+      "inline_xbrl_tags": 3248,
+      "hidden_xbrl_header_chars": 471708
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KO/10-K/0000021344-24-000009/primary-document.html",
+      "html_chars": 4161309,
+      "visible_chars": 711703,
+      "markup_ratio": 5.85,
+      "inline_xbrl_tags": 3223,
+      "hidden_xbrl_header_chars": 412607
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/KO/10-K/0000021344-25-000011/primary-document.html",
+      "html_chars": 3930907,
+      "visible_chars": 697189,
+      "markup_ratio": 5.64,
+      "inline_xbrl_tags": 2906,
+      "hidden_xbrl_header_chars": 344309
+    },
+    {
+      "file": "data/raw/sec_filings/sec-edgar-filings/MSFT/10-K/0000950170-25-100235/primary-document.html",
+      "html_chars": 8158067,
+      "visible_chars": 416703,
+      "markup_ratio": 19.58,
+      "inline_xbrl_tags": 1889,
+      "hidden_xbrl_header_chars": 218212
+    }
+  ],
+  "sample_files_sha256": "c722db83886f0d321b1c0a695d5c82c3f9fab9d6a3d7a994edca3a35fa4f3ee5"
+}

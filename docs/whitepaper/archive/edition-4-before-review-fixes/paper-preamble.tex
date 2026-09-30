@@ -1,0 +1,86 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else
+  \usepackage{fontspec}
+\fi
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{eso-pic}
+\makeatletter
+\define@key{Gin}{alt}{}
+\makeatother
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{flafter}
+\usepackage[font=small,labelfont=bf,justification=raggedright,singlelinecheck=false]{caption}
+\usepackage{booktabs,longtable,array,calc}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\definecolor{accent}{HTML}{0F766E}
+\definecolor{warn}{HTML}{E0605A}
+\definecolor{ink}{HTML}{1F2A37}
+\definecolor{shade}{HTML}{F1F4F4}
+\color{ink}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize PAPER_RUNNING_TITLE}
+\fancyhead[R]{\footnotesize\thepage}
+\setlength{\headheight}{14pt}
+\renewcommand{\headrulewidth}{0.3pt}
+\titleformat{\section}{\normalfont\Large\bfseries\color{accent}}{}{0em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{}{0em}{}
+\titlespacing*{\section}{0pt}{2.5ex plus 1ex}{1.4ex}
+\titlespacing*{\subsection}{0pt}{2ex plus 1ex}{1ex}
+\setcounter{secnumdepth}{-1}
+\setcounter{tocdepth}{1}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 1pt}
+\setlength{\emergencystretch}{3em}
+\raggedbottom
+\clubpenalty=10000
+\widowpenalty=10000
+\displaywidowpenalty=10000
+\renewcommand{\arraystretch}{1.12}
+\renewcommand{\topfraction}{.95}
+\renewcommand{\bottomfraction}{.85}
+\renewcommand{\textfraction}{.05}
+\renewcommand{\floatpagefraction}{.65}
+\setlength{\textfloatsep}{14pt plus 2pt minus 2pt}
+\setlength{\intextsep}{12pt plus 2pt minus 2pt}
+\setlist{nosep,leftmargin=*}
+\newcommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\newcommand{\passthrough}[1]{#1}
+\newcommand{\pandocbounded}[1]{#1}
+\lstset{basicstyle=\ttfamily\footnotesize,backgroundcolor=\color{shade},
+  frame=none,framesep=6pt,breaklines=true,columns=fullflexible,
+  keepspaces=true,showstringspaces=false,breakatwhitespace=false}
+\begin{document}
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+\AddToShipoutPictureBG*{\AtPageLowerLeft{\includegraphics[width=\paperwidth,height=\paperheight,keepaspectratio]{figures/art/art-cover.png}}}
+\AddToShipoutPictureFG*{\AtPageLowerLeft{\put(72,23){\parbox{\textwidth}{\small\textbf{PAPER_AUTHOR}\hfill Technical white paper · Edition 4\\[2pt]\footnotesize 30 September 2026 · Illustrated revision}}}}
+\raggedright
+\hyphenpenalty=10000
+\vspace*{-10mm}
+{\color{accent}\small EREBUS OBSERVATORY NETWORK / EON\par}
+\vspace{6mm}
+{\fontsize{36}{40}\selectfont\bfseries PAPER_TITLE\par}
+\vspace{5mm}
+{\fontsize{16}{20}\selectfont PAPER_SUBTITLE\par}
+\end{titlepage}
+\hypersetup{pageanchor=true}
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}

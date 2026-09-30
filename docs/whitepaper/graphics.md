@@ -1,3 +1,27 @@
+## People-free artwork update — 30 September 2026
+
+The author requested no people in any illustration. The speaker and the
+workshop worker were removed using the built-in image generation tool;
+all other artwork remains unchanged. The Part III caption and alt text now
+describe an unattended lectern. Exact edit prompts and asset provenance are
+in `figures/art/manifest.json`. Earlier briefs and revision notes are historical;
+they do not override the current no-people requirement.
+
+# Edition 4.1: two object-removal edits
+
+The author approved all six illustrations and asked to remove the magnifying
+devices from only the cover and workshop. Those two PNGs were edited with the
+built-in image generation tool, inspected, and integrated under their existing
+asset names. The other four image bytes are unchanged. Both full optical
+assemblies (lens, barrel, arm and base) are gone; the approved reading rooms,
+books, lighting, presses, worker, clock and key board are preserved.
+
+Exact edit prompts and native output provenance are recorded as
+`latest_edit_prompt` and `revision_history` in `figures/art/manifest.json`.
+The original prompts and briefs below describe earlier states, not an
+instruction to restore the devices. The closing image is now smaller and
+appears after the conclusion; revised captions keep art distinct from evidence.
+
 # Graphics and illustrations: *Tomorrow's Newspaper*
 
 ## Delivered illustrated revision

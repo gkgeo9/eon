@@ -1,0 +1,109 @@
+{
+  "markdown_sha256": "925598493408899ad3191d1c2f7c5bf8a3f6833c4a1903bfad223d62b113510d",
+  "latex_sha256": "213b53b6391c6c410af30e98b676c9d0641960141b150a0cb3005d5aefe0d76f",
+  "preamble_sha256": "e1fddb85350c35e4b112429b175b368d5a7f8bd7e3aab2b9358664fb24eb7c99",
+  "generator_sha256": "008775aee6beb3ce40fa1864807ccced441fc84e21b34fd0980ee01f984a5267",
+  "pandoc": "pandoc 3.6.4",
+  "figures": [
+    {
+      "number": 1,
+      "asset": "figures/01-one-reading.pdf"
+    },
+    {
+      "number": 2,
+      "asset": "figures/02-lineage.pdf"
+    },
+    {
+      "number": 3,
+      "asset": "figures/03-architecture.pdf"
+    },
+    {
+      "number": 4,
+      "asset": "figures/04-life-of-a-filing.pdf"
+    },
+    {
+      "number": 5,
+      "asset": "figures/05-execution.pdf"
+    },
+    {
+      "number": 6,
+      "asset": "figures/06-quota-clock.pdf"
+    },
+    {
+      "number": 7,
+      "asset": "figures/07-database.pdf"
+    },
+    {
+      "number": 8,
+      "asset": "figures/08-catalogue.pdf"
+    },
+    {
+      "number": 9,
+      "asset": "figures/09-three-clocks.pdf"
+    },
+    {
+      "number": 10,
+      "asset": "figures/10-before-after.pdf"
+    },
+    {
+      "number": 11,
+      "asset": "figures/11-verdict-ladder.pdf"
+    },
+    {
+      "number": 12,
+      "asset": "figures/12-tails.pdf"
+    },
+    {
+      "number": 13,
+      "asset": "figures/13-company-grid.pdf"
+    },
+    {
+      "number": 14,
+      "asset": "figures/14-dated-ledger.pdf"
+    },
+    {
+      "number": 15,
+      "asset": "figures/15-options-ledger.pdf"
+    },
+    {
+      "number": 16,
+      "asset": "figures/16-shortcomings.pdf"
+    },
+    {
+      "number": 17,
+      "asset": "figures/17-sealed-bet.pdf"
+    }
+  ],
+  "illustrations": [
+    {
+      "asset": "figures/art/art-part1-workshop.png",
+      "alt": "A small night workshop turns filings into printed pages, reads them through a teal optical instrument, and records the work beneath a clock approaching midnight.",
+      "sha256": "033af85424edbd20461225960f3b653eceb81dc3b42d3c8af3b855f8dd67ac2c"
+    },
+    {
+      "asset": "figures/art/art-part2-three-dates.png",
+      "alt": "An archive box, an annual report and a sealed verdict sit on a desk; a distant newspaper suggests an outcome still to come.",
+      "sha256": "7a14cb32819bb008f71f9dee503357278bc9c117aba336b79f53a3f90eeb03d8"
+    },
+    {
+      "asset": "figures/art/art-spot-compass.png",
+      "alt": "A mechanical recorder traces swings while a compass needle appears unsettled. This is an editorial metaphor, not a data plot.",
+      "sha256": "354e0d0c8c6262b139da3c830ddf4d2a5bae12dbe901f5b8d3cb06f0c08f6639"
+    },
+    {
+      "asset": "figures/art/art-part3-narrator.png",
+      "alt": "A confident speaker stands beside a curled calendar, repetitive report cards and binoculars turned toward a storm cloud.",
+      "sha256": "9af393d52c1b67eb051d75508c7a8a71c1bd9f26334f979997526033280be558"
+    },
+    {
+      "asset": "figures/art/art-closing-bet.png",
+      "alt": "A closed envelope with a teal wax seal rests in morning light beside a card reading Open October 2027.",
+      "sha256": "8406151587ecfcfe8de7c74a84fdb2dfe0dcd1ae4569291496ec4dc409924e9c"
+    }
+  ],
+  "cover": {
+    "asset": "figures/art/art-cover.png",
+    "sha256": "59663651db7a5bf2075333d87bd7bff0ff3ac9dd600ac7ff8041c44a3f339588"
+  },
+  "editorial_source": "eon-whitepaper.md"
+}
