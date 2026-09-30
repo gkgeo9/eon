@@ -29,22 +29,22 @@ z
   </g>
   <g id="axes_1">
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 14px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.152383" transform="rotate(-0 6.7716 23.152383)">After the cutoff, the SELL calls stop working</text>
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597813" transform="rotate(-0 6.7716 23.597813)">After the cutoff, the SELL calls stop working</text>
    </g>
    <g id="text_2">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="41.832246" transform="rotate(-0 6.7716 41.832246)">Average one-year return percentile by verdict  /  0.5 is the middle of the pack</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">Average one-year return percentile by verdict  /  0.5 is the middle of the pack</text>
    </g>
    <g id="text_3">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="36.1152" y="70.369102" transform="rotate(-0 36.1152 70.369102)">BEFORE THE CUTOFF</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="36.1152" y="70.377891" transform="rotate(-0 36.1152 70.377891)">BEFORE THE CUTOFF</text>
    </g>
    <g id="text_4">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="36.1152" y="290.689102" transform="rotate(-0 36.1152 290.689102)">Spearman 0.135,  p ≤ 0.0001</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="36.1152" y="290.697891" transform="rotate(-0 36.1152 290.697891)">Spearman 0.135,  p ≤ 0.0001</text>
    </g>
    <g id="text_5">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="248.292" y="70.369102" transform="rotate(-0 248.292 70.369102)">AFTER THE CUTOFF</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="248.292" y="70.377891" transform="rotate(-0 248.292 70.377891)">AFTER THE CUTOFF</text>
    </g>
    <g id="text_6">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="248.292" y="290.689102" transform="rotate(-0 248.292 290.689102)">Spearman 0.094,  p = 0.0012</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="248.292" y="290.697891" transform="rotate(-0 248.292 290.697891)">Spearman 0.094,  p = 0.0012</text>
    </g>
   </g>
   <g id="axes_2">
@@ -60,36 +60,36 @@ z
     <g id="xtick_1">
      <g id="line2d_1"/>
      <g id="text_7">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(39.418425 247.746807)">Str. sell</text>
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(49.167956 257.542217)">56</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(37.640925 248.259473)">Str. sell</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(48.44655 259.06123)">56</text>
      </g>
     </g>
     <g id="xtick_2">
      <g id="line2d_2"/>
      <g id="text_8">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(82.78425 247.746807)">Sell</text>
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(82.780734 257.542217)">601</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(82.161984 248.259473)">Sell</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(81.698625 259.06123)">601</text>
      </g>
     </g>
     <g id="xtick_3">
      <g id="line2d_3"/>
      <g id="text_9">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(117.148669 247.746807)">Hold</text>
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(115.143356 257.542217)">1,720</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(116.158669 248.259473)">Hold</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(113.520544 259.06123)">1,720</text>
      </g>
     </g>
     <g id="xtick_4">
      <g id="line2d_4"/>
      <g id="text_10">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(154.764337 247.746807)">Buy</text>
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(155.011134 257.542393)">940</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(153.915666 248.25877)">Buy</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(153.929025 259.060527)">940</text>
      </g>
     </g>
     <g id="xtick_5">
      <g id="line2d_5"/>
      <g id="text_11">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(183.376491 247.746807)">Str. buy</text>
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(191.126334 257.542393)">159</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(181.343053 248.259473)">Str. buy</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(190.044225 259.06123)">159</text>
      </g>
     </g>
    </g>
@@ -102,7 +102,7 @@ L 216.6912 213.938182
      </g>
      <g id="line2d_7"/>
      <g id="text_12">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="32.1152" y="217.214305" transform="rotate(-0 32.1152 217.214305)">0.4</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="32.1152" y="217.357127" transform="rotate(-0 32.1152 217.357127)">0.4</text>
      </g>
     </g>
     <g id="ytick_2">
@@ -113,7 +113,7 @@ L 216.6912 168.774545
      </g>
      <g id="line2d_9"/>
      <g id="text_13">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="32.1152" y="172.050669" transform="rotate(-0 32.1152 172.050669)">0.5</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="32.1152" y="172.193491" transform="rotate(-0 32.1152 172.193491)">0.5</text>
      </g>
     </g>
     <g id="ytick_3">
@@ -124,7 +124,7 @@ L 216.6912 123.610909
      </g>
      <g id="line2d_11"/>
      <g id="text_14">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="32.1152" y="126.887032" transform="rotate(-0 32.1152 126.887032)">0.6</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="32.1152" y="127.029854" transform="rotate(-0 32.1152 127.029854)">0.6</text>
      </g>
     </g>
    </g>
@@ -270,36 +270,36 @@ z
     <g id="xtick_6">
      <g id="line2d_19"/>
      <g id="text_15">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(251.595225 247.746807)">Str. sell</text>
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(261.344756 257.542217)">16</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(249.817725 248.259473)">Str. sell</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(260.62335 259.06123)">16</text>
      </g>
     </g>
     <g id="xtick_7">
      <g id="line2d_20"/>
      <g id="text_16">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(294.96105 247.746807)">Sell</text>
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(294.957534 257.542217)">185</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(294.338784 248.259473)">Sell</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(293.875425 259.06123)">185</text>
      </g>
     </g>
     <g id="xtick_8">
      <g id="line2d_21"/>
      <g id="text_17">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(329.325469 247.746807)">Hold</text>
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(331.072734 257.542217)">610</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(328.335469 248.259473)">Hold</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(329.990625 259.06123)">610</text>
      </g>
     </g>
     <g id="xtick_9">
      <g id="line2d_22"/>
      <g id="text_18">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(366.941137 247.746807)">Buy</text>
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(367.187934 257.542393)">312</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(366.092466 248.25877)">Buy</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(366.105825 259.060527)">312</text>
      </g>
     </g>
     <g id="xtick_10">
      <g id="line2d_23"/>
      <g id="text_19">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(395.553291 247.746807)">Str. buy</text>
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(405.805556 257.542393)">27</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(393.519853 248.259473)">Str. buy</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(405.08415 259.06123)">27</text>
      </g>
     </g>
    </g>

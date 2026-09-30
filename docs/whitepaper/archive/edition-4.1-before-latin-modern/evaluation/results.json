@@ -1,0 +1,998 @@
+{
+  "counts": {
+    "stored": 6973,
+    "deduped_all_models": 6653,
+    "excluded_model_mismatch": 2,
+    "unique_company_years": 6651,
+    "from_completed_runs": 6503,
+    "with_parsed_verdict": 6519,
+    "with_filing_date": 6543,
+    "with_entry_price": 6203,
+    "tickers_with_entry_price": 1309
+  },
+  "horizons": {
+    "6M": {
+      "all": {
+        "n_long": 1929,
+        "n_short": 1109,
+        "n_all": 6162,
+        "spread_se": 0.012112817660410702,
+        "long_mean_excess": 0.00011262770661622951,
+        "short_mean_excess": -0.03359868237436595,
+        "all_mean_excess": -0.019342497642644126,
+        "spread": 0.03371131008098218,
+        "median_spread": 0.024249894692249252,
+        "rank_spread": 0.03984733128104473,
+        "rank_spread_se": 0.010997298567469163,
+        "naive_welch_p": 0.005427397086180628,
+        "ticker_averaged_naive_p": 0.010110267958074562,
+        "n_long_tickers": 880,
+        "n_short_tickers": 638
+      },
+      "window_before_cutoff": {
+        "n_long": 1461,
+        "n_short": 811,
+        "n_all": 4570,
+        "spread_se": 0.012919348054772822,
+        "long_mean_excess": -0.015241370622133333,
+        "short_mean_excess": -0.04734795041063924,
+        "all_mean_excess": -0.027962722436196057,
+        "spread": 0.0321065797885059,
+        "median_spread": 0.021839278794101746,
+        "rank_spread": 0.04257842200810885,
+        "rank_spread_se": 0.012817939383617723,
+        "naive_welch_p": 0.01305675859260923,
+        "ticker_averaged_naive_p": 0.050790856497576475,
+        "n_long_tickers": 779,
+        "n_short_tickers": 521
+      },
+      "filed_after_cutoff": {
+        "n_long": 416,
+        "n_short": 275,
+        "n_all": 1432,
+        "spread_se": 0.031165724686796174,
+        "long_mean_excess": 0.05610170519228186,
+        "short_mean_excess": 0.01027886733881253,
+        "all_mean_excess": 0.012023305110820046,
+        "spread": 0.04582283785346933,
+        "median_spread": 0.027018328426718252,
+        "rank_spread": 0.03734476014398591,
+        "rank_spread_se": 0.022667609507412142,
+        "naive_welch_p": 0.1419519241232841,
+        "ticker_averaged_naive_p": 0.13773530067158996,
+        "n_long_tickers": 397,
+        "n_short_tickers": 266
+      },
+      "high_conviction": {
+        "n_long": 677,
+        "n_short": 775,
+        "n_all": 1468,
+        "spread_se": 0.018020224587722296,
+        "long_mean_excess": 0.020665882567374345,
+        "short_mean_excess": -0.03567957882694005,
+        "all_mean_excess": -0.009956975201619313,
+        "spread": 0.05634546139431439,
+        "median_spread": 0.03628989419392781,
+        "rank_spread": 0.05817800852699434,
+        "rank_spread_se": 0.015100074549057527,
+        "naive_welch_p": 0.001803692680521777,
+        "ticker_averaged_naive_p": 0.012530993898928845,
+        "n_long_tickers": 426,
+        "n_short_tickers": 494
+      }
+    },
+    "1Y": {
+      "all": {
+        "n_long": 1852,
+        "n_short": 1035,
+        "n_all": 5880,
+        "spread_se": 0.02621013656968495,
+        "long_mean_excess": 0.05374141410164965,
+        "short_mean_excess": -0.06502211301363932,
+        "all_mean_excess": 0.0016495271618639676,
+        "spread": 0.11876352711528897,
+        "median_spread": 0.08366828633847678,
+        "rank_spread": 0.09352522207127906,
+        "rank_spread_se": 0.011231198967148451,
+        "naive_welch_p": 6.104493347980988e-06,
+        "ticker_averaged_naive_p": 0.011626661119353454,
+        "n_long_tickers": 860,
+        "n_short_tickers": 611
+      },
+      "window_before_cutoff": {
+        "n_long": 1099,
+        "n_short": 657,
+        "n_all": 3476,
+        "spread_se": 0.019699531246168942,
+        "long_mean_excess": 0.021933785980800997,
+        "short_mean_excess": -0.10876500471554017,
+        "all_mean_excess": -0.02516707280335455,
+        "spread": 0.13069879069634116,
+        "median_spread": 0.08292880016652981,
+        "rank_spread": 0.11149686750432325,
+        "rank_spread_se": 0.014128310973796144,
+        "naive_welch_p": 4.4601413344176296e-11,
+        "ticker_averaged_naive_p": 5.712992099200984e-06,
+        "n_long_tickers": 682,
+        "n_short_tickers": 464
+      },
+      "filed_after_cutoff": {
+        "n_long": 339,
+        "n_short": 201,
+        "n_all": 1150,
+        "spread_se": 0.11859410720575296,
+        "long_mean_excess": 0.2522834191025414,
+        "short_mean_excess": 0.10286899126330373,
+        "all_mean_excess": 0.1128944197772961,
+        "spread": 0.14941442783923764,
+        "median_spread": 0.06469399851793112,
+        "rank_spread": 0.0619793961862124,
+        "rank_spread_se": 0.026215438796055115,
+        "naive_welch_p": 0.2083297817200003,
+        "ticker_averaged_naive_p": 0.21576267501559218,
+        "n_long_tickers": 339,
+        "n_short_tickers": 199
+      },
+      "high_conviction": {
+        "n_long": 653,
+        "n_short": 729,
+        "n_all": 1398,
+        "spread_se": 0.028868206906050995,
+        "long_mean_excess": 0.06907106782294943,
+        "short_mean_excess": -0.06428381525166645,
+        "all_mean_excess": -0.0024239323365320533,
+        "spread": 0.13335488307461588,
+        "median_spread": 0.09528370289282329,
+        "rank_spread": 0.1072630382984548,
+        "rank_spread_se": 0.015232552389541553,
+        "naive_welch_p": 4.2237697914082905e-06,
+        "ticker_averaged_naive_p": 0.006120205984722679,
+        "n_long_tickers": 416,
+        "n_short_tickers": 467
+      }
+    },
+    "2Y": {
+      "all": {
+        "n_long": 1475,
+        "n_short": 817,
+        "n_all": 4618,
+        "spread_se": 0.03717025883774044,
+        "long_mean_excess": 0.04868350619241109,
+        "short_mean_excess": -0.16643973896897601,
+        "all_mean_excess": -0.01648610312437988,
+        "spread": 0.2151232451613871,
+        "median_spread": 0.18187056894607234,
+        "rank_spread": 0.12002713506606588,
+        "rank_spread_se": 0.012521991205058007,
+        "naive_welch_p": 8.282910719052074e-09,
+        "ticker_averaged_naive_p": 1.7601338442940827e-05,
+        "n_long_tickers": 783,
+        "n_short_tickers": 522
+      },
+      "window_before_cutoff": {
+        "n_long": 671,
+        "n_short": 440,
+        "n_all": 2239,
+        "spread_se": 0.04998450762121656,
+        "long_mean_excess": 0.17011524169383554,
+        "short_mean_excess": -0.1457473932738712,
+        "all_mean_excess": 0.03354194445462056,
+        "spread": 0.3158626349677067,
+        "median_spread": 0.21476034508046715,
+        "rank_spread": 0.15096410794721754,
+        "rank_spread_se": 0.017402882424314686,
+        "naive_welch_p": 3.8215869195346835e-10,
+        "ticker_averaged_naive_p": 5.113384604762039e-08,
+        "n_long_tickers": 513,
+        "n_short_tickers": 361
+      },
+      "filed_after_cutoff": {
+        "n_long": 0,
+        "n_short": 0,
+        "n_all": 0
+      },
+      "high_conviction": {
+        "n_long": 550,
+        "n_short": 580,
+        "n_all": 1142,
+        "spread_se": 0.05012967261759472,
+        "long_mean_excess": 0.07048924745390614,
+        "short_mean_excess": -0.15792749351415997,
+        "all_mean_excess": -0.047941878692834616,
+        "spread": 0.2284167409680661,
+        "median_spread": 0.23938190963526879,
+        "rank_spread": 0.14136230956670093,
+        "rank_spread_se": 0.016682686357852687,
+        "naive_welch_p": 5.767673315832141e-06,
+        "ticker_averaged_naive_p": 0.0010335834527140989,
+        "n_long_tickers": 372,
+        "n_short_tickers": 391
+      }
+    }
+  },
+  "vintages": {
+    "2020": {
+      "6M": {
+        "n_long": 268,
+        "n_short": 144,
+        "n_all": 818,
+        "spread_se": 0.03567014334186533,
+        "long_mean_excess": -0.07258919806427971,
+        "short_mean_excess": -0.051154387977455855,
+        "all_mean_excess": -0.06968672112710557,
+        "spread": -0.02143481008682386,
+        "median_spread": -0.018456443320525984,
+        "rank_spread": -0.010047688412055389,
+        "rank_spread_se": 0.031300159134754375,
+        "naive_welch_p": 0.5486137896541492,
+        "ticker_averaged_naive_p": 0.5486137896541492,
+        "n_long_tickers": 268,
+        "n_short_tickers": 144
+      },
+      "1Y": {
+        "n_long": 268,
+        "n_short": 144,
+        "n_all": 818,
+        "spread_se": 0.03582186785013881,
+        "long_mean_excess": 0.02236970060657545,
+        "short_mean_excess": -0.1575369539125756,
+        "all_mean_excess": -0.05491994575601211,
+        "spread": 0.17990665451915105,
+        "median_spread": 0.1165138055940278,
+        "rank_spread": 0.14893138220876068,
+        "rank_spread_se": 0.02968614185559631,
+        "naive_welch_p": 8.883331480127112e-07,
+        "ticker_averaged_naive_p": 8.883331480127112e-07,
+        "n_long_tickers": 268,
+        "n_short_tickers": 144
+      },
+      "2Y": {
+        "n_long": 268,
+        "n_short": 144,
+        "n_all": 818,
+        "spread_se": 0.08223352783862593,
+        "long_mean_excess": 0.2771907253417404,
+        "short_mean_excess": -0.16093807459043163,
+        "all_mean_excess": 0.07571839537081164,
+        "spread": 0.438128799932172,
+        "median_spread": 0.24083865551109085,
+        "rank_spread": 0.2234363532784327,
+        "rank_spread_se": 0.028627007816068226,
+        "naive_welch_p": 1.7231392245468638e-07,
+        "ticker_averaged_naive_p": 1.7231392245468514e-07,
+        "n_long_tickers": 268,
+        "n_short_tickers": 144
+      }
+    },
+    "2021": {
+      "6M": {
+        "n_long": 331,
+        "n_short": 253,
+        "n_all": 1185,
+        "spread_se": 0.02139852607082567,
+        "long_mean_excess": 0.04490162573364403,
+        "short_mean_excess": -0.007163214272780743,
+        "all_mean_excess": 0.021967726134229034,
+        "spread": 0.05206484000642477,
+        "median_spread": 0.017539239572306742,
+        "rank_spread": 0.03194950836875782,
+        "rank_spread_se": 0.024199498969495973,
+        "naive_welch_p": 0.015272675082281285,
+        "ticker_averaged_naive_p": 0.015272675082281285,
+        "n_long_tickers": 331,
+        "n_short_tickers": 253
+      },
+      "1Y": {
+        "n_long": 331,
+        "n_short": 253,
+        "n_all": 1185,
+        "spread_se": 0.029791212503647947,
+        "long_mean_excess": 0.1366195789002781,
+        "short_mean_excess": 0.019834358525547345,
+        "all_mean_excess": 0.09774242744668876,
+        "spread": 0.11678522037473074,
+        "median_spread": 0.06583521018264349,
+        "rank_spread": 0.08795287934136037,
+        "rank_spread_se": 0.023803872043661328,
+        "naive_welch_p": 9.905366426610587e-05,
+        "ticker_averaged_naive_p": 9.905366426610587e-05,
+        "n_long_tickers": 331,
+        "n_short_tickers": 253
+      },
+      "2Y": {
+        "n_long": 331,
+        "n_short": 253,
+        "n_all": 1185,
+        "spread_se": 0.062138443157866624,
+        "long_mean_excess": 0.06010106705165755,
+        "short_mean_excess": -0.14994687846562793,
+        "all_mean_excess": -0.011549216836239372,
+        "spread": 0.21004794551728548,
+        "median_spread": 0.13287238031875104,
+        "rank_spread": 0.11417552325426439,
+        "rank_spread_se": 0.024050181149577295,
+        "naive_welch_p": 0.000772752054631481,
+        "ticker_averaged_naive_p": 0.0007727520546314812,
+        "n_long_tickers": 331,
+        "n_short_tickers": 253
+      }
+    },
+    "2022": {
+      "6M": {
+        "n_long": 415,
+        "n_short": 212,
+        "n_all": 1220,
+        "spread_se": 0.023411367142615706,
+        "long_mean_excess": -0.050575077571334275,
+        "short_mean_excess": -0.13489788897254784,
+        "all_mean_excess": -0.08810011307115488,
+        "spread": 0.08432281140121356,
+        "median_spread": 0.0553195038464015,
+        "rank_spread": 0.08879765893142627,
+        "rank_spread_se": 0.02468009576723183,
+        "naive_welch_p": 0.0003477433130227162,
+        "ticker_averaged_naive_p": 0.0003477433130227162,
+        "n_long_tickers": 415,
+        "n_short_tickers": 212
+      },
+      "1Y": {
+        "n_long": 415,
+        "n_short": 212,
+        "n_all": 1220,
+        "spread_se": 0.036986144256759966,
+        "long_mean_excess": -0.07456149734086803,
+        "short_mean_excess": -0.23823049182278314,
+        "all_mean_excess": -0.12923484837550336,
+        "spread": 0.1636689944819151,
+        "median_spread": 0.1345879172718285,
+        "rank_spread": 0.12105686277432653,
+        "rank_spread_se": 0.024568329768355487,
+        "naive_welch_p": 1.182934713793694e-05,
+        "ticker_averaged_naive_p": 1.1829347137936973e-05,
+        "n_long_tickers": 415,
+        "n_short_tickers": 212
+      },
+      "2Y": {
+        "n_long": 415,
+        "n_short": 212,
+        "n_all": 1220,
+        "spread_se": 0.08014380916708683,
+        "long_mean_excess": -0.10718805841646795,
+        "short_mean_excess": -0.2580727623063597,
+        "all_mean_excess": -0.17637556993224365,
+        "spread": 0.15088470388989178,
+        "median_spread": 0.15751538045760105,
+        "rank_spread": 0.09674495693879764,
+        "rank_spread_se": 0.024500482600869785,
+        "naive_welch_p": 0.060498136589494295,
+        "ticker_averaged_naive_p": 0.06049813658949434,
+        "n_long_tickers": 415,
+        "n_short_tickers": 212
+      }
+    },
+    "2023": {
+      "6M": {
+        "n_long": 407,
+        "n_short": 182,
+        "n_all": 1212,
+        "spread_se": 0.027595092854923092,
+        "long_mean_excess": 0.011402755794201523,
+        "short_mean_excess": -0.0077398684694104,
+        "all_mean_excess": 0.011053884385177853,
+        "spread": 0.01914262426361192,
+        "median_spread": 0.04194931986585748,
+        "rank_spread": 0.05374844359992892,
+        "rank_spread_se": 0.025594658711819138,
+        "naive_welch_p": 0.48846587773216804,
+        "ticker_averaged_naive_p": 0.488465877732168,
+        "n_long_tickers": 407,
+        "n_short_tickers": 182
+      },
+      "1Y": {
+        "n_long": 407,
+        "n_short": 182,
+        "n_all": 1212,
+        "spread_se": 0.034116723042237784,
+        "long_mean_excess": -0.012871517756811526,
+        "short_mean_excess": -0.09310100918596534,
+        "all_mean_excess": -0.011864773853608226,
+        "spread": 0.08022949142915381,
+        "median_spread": 0.08413483765354524,
+        "rank_spread": 0.06975032593844471,
+        "rank_spread_se": 0.025359583028223248,
+        "naive_welch_p": 0.01921945659043273,
+        "ticker_averaged_naive_p": 0.01921945659043273,
+        "n_long_tickers": 407,
+        "n_short_tickers": 182
+      },
+      "2Y": {
+        "n_long": 407,
+        "n_short": 182,
+        "n_all": 1212,
+        "spread_se": 0.08018662671866213,
+        "long_mean_excess": 0.04151050516971908,
+        "short_mean_excess": -0.08939891591624424,
+        "all_mean_excess": 0.05682751522902214,
+        "spread": 0.13090942108596332,
+        "median_spread": 0.16870886623386394,
+        "rank_spread": 0.06909279062744406,
+        "rank_spread_se": 0.02532608288149042,
+        "naive_welch_p": 0.10336924219073308,
+        "ticker_averaged_naive_p": 0.10336924219073304,
+        "n_long_tickers": 407,
+        "n_short_tickers": 182
+      }
+    },
+    "2024": {
+      "6M": {
+        "n_long": 372,
+        "n_short": 203,
+        "n_all": 1236,
+        "spread_se": 0.033663580576201196,
+        "long_mean_excess": 0.020832862267218144,
+        "short_mean_excess": 0.015774525738674095,
+        "all_mean_excess": -0.0031294174981197865,
+        "spread": 0.005058336528544049,
+        "median_spread": 0.009067175210659584,
+        "rank_spread": 0.012134186698427585,
+        "rank_spread_se": 0.025649498117313464,
+        "naive_welch_p": 0.880623361838055,
+        "ticker_averaged_naive_p": 0.8806233618380551,
+        "n_long_tickers": 372,
+        "n_short_tickers": 203
+      },
+      "1Y": {
+        "n_long": 372,
+        "n_short": 203,
+        "n_all": 1236,
+        "spread_se": 0.10701496003885701,
+        "long_mean_excess": 0.172467308944555,
+        "short_mean_excess": 0.07657657534500648,
+        "all_mean_excess": 0.0794272803177634,
+        "spread": 0.09589073359954853,
+        "median_spread": 0.05738717847476571,
+        "rank_spread": 0.052560701682028366,
+        "rank_spread_se": 0.025847716337592468,
+        "naive_welch_p": 0.3706304489057822,
+        "ticker_averaged_naive_p": 0.37063044890578234,
+        "n_long_tickers": 372,
+        "n_short_tickers": 203
+      },
+      "2Y": {
+        "n_long": 36,
+        "n_short": 19,
+        "n_all": 123,
+        "spread_se": 0.21823733635998993,
+        "long_mean_excess": 0.11146447897171338,
+        "short_mean_excess": -0.15493761119109206,
+        "all_mean_excess": 0.06083078938381489,
+        "spread": 0.26640209016280547,
+        "median_spread": 0.41078088304932514,
+        "rank_spread": 0.16617933723196882,
+        "rank_spread_se": 0.08610064751932883,
+        "naive_welch_p": 0.2306067539020489,
+        "ticker_averaged_naive_p": 0.2306067539020489,
+        "n_long_tickers": 36,
+        "n_short_tickers": 19
+      }
+    },
+    "2025": {
+      "6M": {
+        "n_long": 119,
+        "n_short": 100,
+        "n_all": 431,
+        "spread_se": 0.05501570722385658,
+        "long_mean_excess": 0.09856346568690538,
+        "short_mean_excess": -0.024905376244960187,
+        "all_mean_excess": 0.01784764624034155,
+        "spread": 0.12346884193186557,
+        "median_spread": 0.08505162606842942,
+        "rank_spread": 0.08160950691181329,
+        "rank_spread_se": 0.03932797622655987,
+        "naive_welch_p": 0.02585542011403768,
+        "ticker_averaged_naive_p": 0.02585542011403766,
+        "n_long_tickers": 119,
+        "n_short_tickers": 100
+      },
+      "1Y": {
+        "n_long": 44,
+        "n_short": 27,
+        "n_all": 160,
+        "spread_se": 0.24865636052005133,
+        "long_mean_excess": 0.3948848929085777,
+        "short_mean_excess": 0.07785921934315455,
+        "all_mean_excess": 0.06543636603926961,
+        "spread": 0.31702567356542316,
+        "median_spread": 0.2812011043924376,
+        "rank_spread": 0.10682870370370373,
+        "rank_spread_se": 0.07508619664349364,
+        "naive_welch_p": 0.20669035007644052,
+        "ticker_averaged_naive_p": 0.20669035007644063,
+        "n_long_tickers": 44,
+        "n_short_tickers": 27
+      },
+      "2Y": {
+        "n_long": 18,
+        "n_short": 3,
+        "n_all": 55,
+        "spread_se": 0.4865495757647228,
+        "long_mean_excess": 0.06684174688322879,
+        "short_mean_excess": -0.45531912036263966,
+        "all_mean_excess": 0.23735993903205724,
+        "spread": 0.5221608672458684,
+        "median_spread": 0.8451153465268283,
+        "rank_spread": 0.2505050505050504,
+        "rank_spread_se": 0.28689630221996903,
+        "naive_welch_p": 0.3693911213858909,
+        "ticker_averaged_naive_p": 0.3693911213858909,
+        "n_long_tickers": 18,
+        "n_short_tickers": 3
+      }
+    },
+    "2026": {
+      "6M": {
+        "n_long": 17,
+        "n_short": 11,
+        "n_all": 54,
+        "spread_se": 0.13021361685548116,
+        "long_mean_excess": 0.09868142430413597,
+        "short_mean_excess": 0.1566185160687841,
+        "all_mean_excess": 0.04801999861633909,
+        "spread": -0.05793709176464813,
+        "median_spread": -0.05323988728186779,
+        "rank_spread": -0.12596553773024355,
+        "rank_spread_se": 0.1021561009317447,
+        "naive_welch_p": 0.6600495381331302,
+        "ticker_averaged_naive_p": 0.6600495381331302,
+        "n_long_tickers": 17,
+        "n_short_tickers": 11
+      },
+      "1Y": {
+        "n_long": 15,
+        "n_short": 10,
+        "n_all": 44,
+        "spread_se": 0.2877882356614356,
+        "long_mean_excess": 0.1974595630554354,
+        "short_mean_excess": 0.08302800791082757,
+        "all_mean_excess": 0.05506260999954811,
+        "spread": 0.11443155514460784,
+        "median_spread": 0.13785925821531986,
+        "rank_spread": 0.09848484848484851,
+        "rank_spread_se": 0.12077029866656162,
+        "naive_welch_p": 0.6949236997666735,
+        "ticker_averaged_naive_p": 0.6949236997666735,
+        "n_long_tickers": 15,
+        "n_short_tickers": 10
+      }
+    }
+  },
+  "verdicts_by_vintage": {
+    "2019": {
+      "SELL": 4,
+      "HOLD": 1
+    },
+    "2020": {
+      "STRONG BUY": 23,
+      "HOLD": 428,
+      "BUY": 256,
+      "STRONG SELL": 19,
+      "SELL": 130
+    },
+    "2021": {
+      "HOLD": 633,
+      "SELL": 250,
+      "BUY": 287,
+      "STRONG BUY": 55,
+      "STRONG SELL": 11
+    },
+    "2022": {
+      "SELL": 200,
+      "HOLD": 609,
+      "BUY": 364,
+      "STRONG BUY": 75,
+      "STRONG SELL": 20
+    },
+    "2023": {
+      "HOLD": 647,
+      "SELL": 172,
+      "BUY": 380,
+      "STRONG BUY": 44,
+      "STRONG SELL": 18
+    },
+    "2024": {
+      "HOLD": 691,
+      "SELL": 194,
+      "BUY": 355,
+      "STRONG SELL": 16,
+      "STRONG BUY": 32
+    },
+    "2025": {
+      "SELL": 95,
+      "HOLD": 219,
+      "STRONG SELL": 6,
+      "STRONG BUY": 15,
+      "BUY": 106
+    },
+    "2026": {
+      "HOLD": 27,
+      "BUY": 16,
+      "STRONG BUY": 1,
+      "SELL": 11
+    },
+    "2027": {
+      "HOLD": 1
+    }
+  },
+  "filing_months": {
+    "10": 77,
+    "2": 4230,
+    "11": 280,
+    "7": 63,
+    "1": 55,
+    "12": 106,
+    "3": 984,
+    "8": 202,
+    "5": 197,
+    "4": 67,
+    "6": 78,
+    "9": 72
+  },
+  "april_convention_after_filing": 6386,
+  "conviction_counts": {
+    "SELL|HIGH": 712,
+    "HOLD|MEDIUM": 3000,
+    "SELL|MEDIUM": 339,
+    "HOLD|LOW": 145,
+    "STRONG SELL|None": 3,
+    "BUY|MEDIUM": 1293,
+    "HOLD|None": 94,
+    "BUY|None": 9,
+    "STRONG BUY|HIGH": 239,
+    "STRONG SELL|HIGH": 87,
+    "BUY|HIGH": 461,
+    "HOLD|HIGH": 17,
+    "SELL|None": 3,
+    "SELL|LOW": 2,
+    "STRONG BUY|None": 6,
+    "BUY|LOW": 1
+  },
+  "primary": {
+    "historical": {
+      "question": "Does the BUY-minus-SELL spread survive a within-vintage, within-industry permutation test?",
+      "horizon": "1Y",
+      "summary": {
+        "n_long": 1099,
+        "n_short": 657,
+        "n_all": 3476,
+        "spread_se": 0.019699531246168942,
+        "long_mean_excess": 0.021933785980800997,
+        "short_mean_excess": -0.10876500471554017,
+        "all_mean_excess": -0.02516707280335455,
+        "spread": 0.13069879069634116,
+        "median_spread": 0.08292880016652981,
+        "rank_spread": 0.11149686750432325,
+        "rank_spread_se": 0.014128310973796144,
+        "naive_welch_p": 4.4601413344176296e-11,
+        "ticker_averaged_naive_p": 5.712992099200984e-06,
+        "n_long_tickers": 682,
+        "n_short_tickers": 464
+      },
+      "within_vintage": {
+        "blocks": [
+          "fiscal_year"
+        ],
+        "statistic": "mean",
+        "n": 3476,
+        "n_long": 1099,
+        "n_short": 657,
+        "p_method": "two_sided_distance_from_permutation_null_mean",
+        "n_blocks": 6,
+        "observed_spread": 0.13069879069634116,
+        "p_two_sided": 9.999000099990002e-05,
+        "null_p2_5": -0.059697988348505926,
+        "null_p97_5": 0.025404152400668997,
+        "null_mean": -0.01650745696949136,
+        "null_sd": 0.02183531211180227,
+        "min_detectable_spread": 0.06113887391304636
+      },
+      "within_vintage_industry": {
+        "blocks": [
+          "fiscal_year",
+          "industry"
+        ],
+        "statistic": "mean",
+        "n": 3380,
+        "n_long": 1061,
+        "n_short": 635,
+        "p_method": "two_sided_distance_from_permutation_null_mean",
+        "n_blocks": 367,
+        "observed_spread": 0.12972364422772692,
+        "p_two_sided": 9.999000099990002e-05,
+        "null_p2_5": 0.003993066055233134,
+        "null_p97_5": 0.07779309658726749,
+        "null_mean": 0.04189168220803296,
+        "null_sd": 0.01871734774248813,
+        "min_detectable_spread": 0.05240857367896676
+      },
+      "rank_within_vintage_industry": {
+        "blocks": [
+          "fiscal_year",
+          "industry"
+        ],
+        "statistic": "rank",
+        "n": 3380,
+        "n_long": 1061,
+        "n_short": 635,
+        "p_method": "two_sided_distance_from_permutation_null_mean",
+        "n_blocks": 367,
+        "observed_spread": 0.11474141228042439,
+        "p_two_sided": 9.999000099990002e-05,
+        "null_p2_5": 0.024747803077119306,
+        "null_p97_5": 0.07244726237582821,
+        "null_mean": 0.04837361756595238,
+        "null_sd": 0.012116601185486929,
+        "min_detectable_spread": 0.0339264833193634
+      }
+    },
+    "post_cutoff": {
+      "question": "Does a spread appear for filings published after the model's knowledge cutoff?",
+      "horizon": "6M",
+      "summary": {
+        "n_long": 416,
+        "n_short": 275,
+        "n_all": 1432,
+        "spread_se": 0.031165724686796174,
+        "long_mean_excess": 0.05610170519228186,
+        "short_mean_excess": 0.01027886733881253,
+        "all_mean_excess": 0.012023305110820046,
+        "spread": 0.04582283785346933,
+        "median_spread": 0.027018328426718252,
+        "rank_spread": 0.03734476014398591,
+        "rank_spread_se": 0.022667609507412142,
+        "naive_welch_p": 0.1419519241232841,
+        "ticker_averaged_naive_p": 0.13773530067158996,
+        "n_long_tickers": 397,
+        "n_short_tickers": 266
+      },
+      "within_vintage": {
+        "blocks": [
+          "fiscal_year"
+        ],
+        "statistic": "mean",
+        "n": 1431,
+        "n_long": 416,
+        "n_short": 275,
+        "p_method": "two_sided_distance_from_permutation_null_mean",
+        "n_blocks": 3,
+        "observed_spread": 0.04582283785346933,
+        "p_two_sided": 0.09369063093690631,
+        "null_p2_5": -0.05884729739705108,
+        "null_p97_5": 0.0534293630360608,
+        "null_mean": -0.0024189442998251713,
+        "null_sd": 0.02884154176255512,
+        "min_detectable_spread": 0.08075631693515434
+      },
+      "within_vintage_industry": {
+        "blocks": [
+          "fiscal_year",
+          "industry"
+        ],
+        "statistic": "mean",
+        "n": 1372,
+        "n_long": 392,
+        "n_short": 268,
+        "p_method": "two_sided_distance_from_permutation_null_mean",
+        "n_blocks": 176,
+        "observed_spread": 0.051040338483124885,
+        "p_two_sided": 0.0552944705529447,
+        "null_p2_5": -0.04951062728490034,
+        "null_p97_5": 0.05145416252879376,
+        "null_mean": 0.001363734063103339,
+        "null_sd": 0.025776023504032776,
+        "min_detectable_spread": 0.07217286581129177
+      },
+      "rank_within_vintage_industry": {
+        "blocks": [
+          "fiscal_year",
+          "industry"
+        ],
+        "statistic": "rank",
+        "n": 1372,
+        "n_long": 392,
+        "n_short": 268,
+        "p_method": "two_sided_distance_from_permutation_null_mean",
+        "n_blocks": 176,
+        "observed_spread": 0.040197053642748226,
+        "p_two_sided": 0.1601839816018398,
+        "null_p2_5": -0.0237116975830665,
+        "null_p97_5": 0.05026724813008469,
+        "null_mean": 0.013723554053577345,
+        "null_sd": 0.018908450013408455,
+        "min_detectable_spread": 0.05294366003754367
+      }
+    },
+    "post_cutoff_1y": {
+      "question": "Does the 1Y spread appear for filings published after the model's knowledge cutoff?",
+      "horizon": "1Y",
+      "summary": {
+        "n_long": 339,
+        "n_short": 201,
+        "n_all": 1150,
+        "spread_se": 0.11859410720575296,
+        "long_mean_excess": 0.2522834191025414,
+        "short_mean_excess": 0.10286899126330373,
+        "all_mean_excess": 0.1128944197772961,
+        "spread": 0.14941442783923764,
+        "median_spread": 0.06469399851793112,
+        "rank_spread": 0.0619793961862124,
+        "rank_spread_se": 0.026215438796055115,
+        "naive_welch_p": 0.2083297817200003,
+        "ticker_averaged_naive_p": 0.21576267501559218,
+        "n_long_tickers": 339,
+        "n_short_tickers": 199
+      },
+      "within_vintage": {
+        "blocks": [
+          "fiscal_year"
+        ],
+        "statistic": "mean",
+        "n": 1150,
+        "n_long": 339,
+        "n_short": 201,
+        "p_method": "two_sided_distance_from_permutation_null_mean",
+        "n_blocks": 3,
+        "observed_spread": 0.14941442783923764,
+        "p_two_sided": 0.21477852214778523,
+        "null_p2_5": -0.2674355807125884,
+        "null_p97_5": 0.20995456339782292,
+        "null_mean": -0.002048083776858517,
+        "null_sd": 0.12203198060069038,
+        "min_detectable_spread": 0.34168954568193305
+      },
+      "within_vintage_industry": {
+        "blocks": [
+          "fiscal_year",
+          "industry"
+        ],
+        "statistic": "mean",
+        "n": 1096,
+        "n_long": 323,
+        "n_short": 190,
+        "p_method": "two_sided_distance_from_permutation_null_mean",
+        "n_blocks": 132,
+        "observed_spread": 0.1406684976111477,
+        "p_two_sided": 0.10238976102389762,
+        "null_p2_5": -0.3181394671616431,
+        "null_p97_5": 0.1660135272583507,
+        "null_mean": -0.054655873831669546,
+        "null_sd": 0.12180981910333423,
+        "min_detectable_spread": 0.34106749348933585
+      },
+      "rank_within_vintage_industry": {
+        "blocks": [
+          "fiscal_year",
+          "industry"
+        ],
+        "statistic": "rank",
+        "n": 1096,
+        "n_long": 323,
+        "n_short": 190,
+        "p_method": "two_sided_distance_from_permutation_null_mean",
+        "n_blocks": 132,
+        "observed_spread": 0.059395506454329894,
+        "p_two_sided": 0.0058994100589941,
+        "null_p2_5": -0.041054465904714746,
+        "null_p97_5": 0.04268744441496492,
+        "null_mean": 0.0008745272199869058,
+        "null_sd": 0.021422909304174946,
+        "min_detectable_spread": 0.05998414605168984
+      }
+    }
+  },
+  "secondary_permutation": {
+    "6M": {
+      "blocks": [
+        "fiscal_year",
+        "industry"
+      ],
+      "statistic": "mean",
+      "n": 6039,
+      "n_long": 1881,
+      "n_short": 1088,
+      "p_method": "two_sided_distance_from_permutation_null_mean",
+      "n_blocks": 612,
+      "observed_spread": 0.033485131405820774,
+      "p_two_sided": 0.0096990300969903,
+      "null_p2_5": -0.01414166450148087,
+      "null_p97_5": 0.027195386937076262,
+      "null_mean": 0.00646673325284641,
+      "null_sd": 0.01057255541474497,
+      "min_detectable_spread": 0.029603155161285914
+    },
+    "1Y": {
+      "blocks": [
+        "fiscal_year",
+        "industry"
+      ],
+      "statistic": "mean",
+      "n": 5760,
+      "n_long": 1808,
+      "n_short": 1012,
+      "p_method": "two_sided_distance_from_permutation_null_mean",
+      "n_blocks": 572,
+      "observed_spread": 0.11619002784239359,
+      "p_two_sided": 0.00019998000199980003,
+      "null_p2_5": -0.04357178628633087,
+      "null_p97_5": 0.06005895921060514,
+      "null_mean": 0.010985805515299294,
+      "null_sd": 0.026805942341559485,
+      "min_detectable_spread": 0.07505663855636656
+    },
+    "2Y": {
+      "blocks": [
+        "fiscal_year",
+        "industry"
+      ],
+      "statistic": "mean",
+      "n": 4506,
+      "n_long": 1434,
+      "n_short": 798,
+      "p_method": "two_sided_distance_from_permutation_null_mean",
+      "n_blocks": 455,
+      "observed_spread": 0.2148958608630615,
+      "p_two_sided": 9.999000099990002e-05,
+      "null_p2_5": -0.012139164703752151,
+      "null_p97_5": 0.13256074931796705,
+      "null_mean": 0.06264909446050497,
+      "null_sd": 0.036787800343500994,
+      "min_detectable_spread": 0.10300584096180278
+    }
+  },
+  "anachronism_probe": {
+    "readings_scanned": 6545,
+    "terms": {
+      "ChatGPT": {
+        "first_public": "2022-11-30",
+        "mentions": 0,
+        "before_term": []
+      },
+      "Inflation Reduction Act": {
+        "first_public": "2022-08-16",
+        "mentions": 300,
+        "before_term": []
+      },
+      "CHIPS and Science Act": {
+        "first_public": "2022-08-09",
+        "mentions": 12,
+        "before_term": []
+      },
+      "collapse of Silicon Valley Bank": {
+        "first_public": "2023-03-10",
+        "mentions": 0,
+        "before_term": []
+      },
+      "Silicon Valley Bank collapse": {
+        "first_public": "2023-03-10",
+        "mentions": 1,
+        "before_term": []
+      },
+      "SVB collapse": {
+        "first_public": "2023-03-10",
+        "mentions": 2,
+        "before_term": []
+      },
+      "DeepSeek": {
+        "first_public": "2025-01-20",
+        "mentions": 1,
+        "before_term": []
+      },
+      "Liberation Day": {
+        "first_public": "2025-04-02",
+        "mentions": 0,
+        "before_term": []
+      }
+    }
+  },
+  "industry_unknown_share": 0.004675157182008705,
+  "price_files_used": 1310
+}

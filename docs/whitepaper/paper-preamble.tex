@@ -6,12 +6,7 @@
 \else
   \usepackage{fontspec}
 \fi
-\ifPDFTeX
 \usepackage{lmodern}
-\else
-\setmainfont{Times New Roman}
-\setsansfont{Arial}
-\fi
 \usepackage[margin=1in]{geometry}
 \usepackage{microtype}
 \usepackage{graphicx}
@@ -43,8 +38,8 @@
 \fancyhead[R]{\footnotesize\thepage}
 \setlength{\headheight}{14pt}
 \renewcommand{\headrulewidth}{0.3pt}
-\titleformat{\section}{\normalfont\sffamily\Large\bfseries\color{accent}}{}{0em}{}
-\titleformat{\subsection}{\normalfont\sffamily\large\bfseries}{}{0em}{}
+\titleformat{\section}{\normalfont\Large\bfseries\color{accent}}{}{0em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{}{0em}{}
 \titlespacing*{\section}{0pt}{2.5ex plus 1ex}{1.4ex}
 \titlespacing*{\subsection}{0pt}{2ex plus 1ex}{1ex}
 \setcounter{secnumdepth}{-1}
@@ -52,6 +47,7 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt plus 1pt}
 \setlength{\emergencystretch}{3em}
+\tolerance=1500
 \raggedbottom
 \clubpenalty=10000
 \widowpenalty=10000
@@ -77,11 +73,11 @@
 \AddToShipoutPictureFG*{\AtPageLowerLeft{\put(72,23){\parbox{\textwidth}{\small\textbf{PAPER_AUTHOR}\hfill Technical white paper · Edition 4.1\\[2pt]\footnotesize 30 September 2026}}}}
 \raggedright
 \hyphenpenalty=10000
-\vspace*{-10mm}
+\vspace*{-20mm}
 {\color{accent}\small EREBUS OBSERVATORY NETWORK / EON\par}
-\vspace{6mm}
+\vspace{3mm}
 {\fontsize{40}{44}\selectfont\bfseries PAPER_TITLE\par}
-\vspace{5mm}
+\vspace{2mm}
 {\fontsize{16}{20}\selectfont PAPER_SUBTITLE\par}
 \end{titlepage}
 \hypersetup{pageanchor=true}

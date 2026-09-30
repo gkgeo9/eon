@@ -1,0 +1,19 @@
+# Publication assets are deliberate exceptions to the repository's ignore rules.
+!figures/*.pdf
+!eon-whitepaper.pdf
+!evaluation/trades.csv
+!evaluation/v1-feb-cache/trades.csv
+!evaluation/origin-ledger/trades.csv
+!evaluation/sealed-ledger/ledger.csv
+# Third-party price data stays local; its hash is in evaluation/prices/run.json.
+evaluation/prices/*.parquet
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+__pycache__/
+
+# Generated editorial artwork is a publication input.
+!figures/art/*.png
+!figures/art/manifest.json

@@ -5,18 +5,21 @@
   "numbered_figures": 17,
   "illustrations": 6,
   "tables": 3,
-  "visual_review": "All 32 pages inspected in contact sheets; detail inspection of edited cover/workshop, chart labels, tables, contents and conclusion. No clipped text or TeX overflow. Some whitespace remains at part boundaries and around the full-page company grid.",
+  "visual_review": "Reviewed all pages in contact sheets and full-size abstract, architecture and Part II synthesis pages after Latin Modern reflow. No clipped text, missing glyphs or TeX overflow. One underfull line around a nonbreaking package name is readable. Preserved 32 pages by reducing the small compass vignette to 30% PDF width.",
   "evidence_unchanged": true,
   "unchanged_other_artworks": 4,
   "inputs": {
     "eon-whitepaper.md": "23b47d02b79bb9eaaf36a33e68aa7cc13acabd1ab5c90d354b343954677cdee9",
-    "eon-whitepaper.pdf": "c4fe8406da0892f1dd083a614dc64161e24eb28f6307461dab54f84be04205af",
-    "eon-whitepaper.tex": "31d075a730a256e55827c22ee4de5767dbc2c63973ed7d5ce1e208998bed080b",
-    "build_paper.py": "a5e731af16c3640d6d1d292e9e0f738ba4538ad839df289b1fa772871a40bde1",
-    "paper-preamble.tex": "a59d5ce20d36dde289fc781f901a3d848353ab1b93ca2720c32b7d8756931c99",
+    "eon-whitepaper.pdf": "62ab170b36e8402cf505a469f9d5c6ab2383b41f2ca8fa4a33d3b546d2487888",
+    "eon-whitepaper.tex": "d0a5307ec11d3340c32e1697f1aa43e8ad4f746c01b0a15c6990cd8f50318cc6",
+    "build_paper.py": "367f9425789d5d79ceedf46c9a44a99e68f205a0791ec2c2cb1386be2ff72684",
+    "paper-preamble.tex": "38b568a9b1f0d2cf22fca90a68037914611a16ca5c46da32b1ff5f8fbc2bc1fa",
     "figures/art/manifest.json": "a0c2946a2b914beb2ea1e1f672ce96fef2d034cff2b9950b04910b5865faffef",
-    "render_figures.py": "f2c71ab9f2044270e4a28fcba2da76a630a9a86944f226a6bd9758e76985c485",
+    "render_figures.py": "957cd75743858174c80c4be400bb69bf029e03237d8abe57614f25807d399acc",
     "render_diagrams.py": "710349ea9a98f23efee02016b148d61662efffdb7f39073dc434d72874fe6b42"
   },
-  "people_removal_review": "All six current illustrations inspected; worker and speaker removed. Updated PDF pages 7 and 26 checked. Other four art assets unchanged."
+  "people_removal_review": "All six current illustrations inspected; worker and speaker removed. Updated PDF pages 7 and 26 checked. Other four art assets unchanged.",
+  "typography": "Latin Modern publication text and DejaVu Sans figures, matching ArtML.",
+  "cover_spacing_review": "Cover text raised so both subtitle lines clear the blue windows; rendered cover inspected.",
+  "figure_font_review": "Inspected all seventeen regenerated figures for label crowding. Publication validation passed: 32 pages, 17 numbered figures, 88 internal links, no text outside page bounds or missing glyphs. Frozen evidence and all six art assets unchanged."
 }

@@ -1,0 +1,33 @@
+# The paper's own forecast: EON's current verdicts, frozen at publication and
+# graded one year later. Written on 30 September 2026, before freezing.
+# Nothing here may change after the freeze except the grading date arriving.
+version: 1
+
+trades: evaluation/trades.csv
+prices: evaluation/prices/closes.parquet
+knowledge_cutoff: '2025-01-31'
+
+# Membership: for each company, its most recent stored Gemini 2.5 Flash reading
+# of a filing published after the knowledge cutoff, with a parsed verdict.
+# Excluded: readings timestamped before their matched filing date (a known
+# filing-date join error), and companies with no close in the last week of the
+# price snapshot (they cannot be graded from the same starting point).
+latest_per_company: true
+exclude_read_before_filed: true
+live_price_window: ['2026-09-21', '2026-09-28']
+
+# The freeze. Prices at freeze are the last close on or before this date.
+freeze_date: '2026-09-28'
+grading:
+  start: first close after 2026-09-30
+  horizon_trading_days: 252     # about one year: grade in early October 2027
+  benchmark: SPY
+  # Primary statistic, fixed now: BUY-type minus SELL-type mean percentile rank
+  # of one-year excess return within the ledger, two-sided permutation test
+  # (10,000 shuffles of verdicts across the ledger). Secondary: the same for
+  # the STRONG calls only, and the five-verdict Spearman.
+  primary: buy_minus_sell_rank_spread
+  permutations: 10000
+
+# Published in full in the paper: every STRONG BUY and STRONG SELL.
+publish_in_paper: [STRONG BUY, STRONG SELL]

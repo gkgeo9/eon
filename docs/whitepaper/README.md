@@ -19,6 +19,7 @@ Read **[BRIEF.md](BRIEF.md)** before revising.
 |---|---|
 | `eon-whitepaper.md` | Canonical editorial source |
 | `eon-whitepaper.pdf`, `.tex` | Generated publication editions |
+| `eon-whitepaper-share.pdf`, `make_share_pdf.py` | 2.7 MB sharing copy (JPEG illustrations, merged figure fonts). Remake with `python make_share_pdf.py --check` after any rebuild |
 | `BRIEF.md` | Editorial standard and definition of excellence |
 | `figures.md` | Every figure's claim, source and limitation |
 | `graphics.md` | Delivered artwork, placements and retained optional briefs |
@@ -93,9 +94,10 @@ illustrations were edited to remove their optical devices; the other four
 are unchanged. The previous illustrated edition is preserved under
 `archive/edition-4-before-review-fixes/`.
 
-This build uses Times New Roman and Arial (installed on the build machine),
-with DejaVu Sans for missing figure symbols. Install those fonts when
-reproducing this layout; the renderer does not download them. Text is at least
+The publication uses Latin Modern for body text, headings and captions,
+matching the ArtML reference paper’s LaTeX typography. Latin Modern ships with
+the TeX distribution. Figures use DejaVu Sans, also matching the ArtML reference. Matplotlib
+includes this font, so no system Arial installation is required. Text is at least
 8.2 pt in figures at their native 6.27-inch width. A4 PDF figures can be zoomed
 on a phone; this is not a responsive mobile layout.
 
@@ -106,3 +108,6 @@ of funding or conflicts is inferred from the repository.
 The current artwork contains no people. The workshop and Part III scene were
 updated on 30 September 2026; their prior versions are retained in
 `archive/edition-4.1-before-people-removal/`.
+
+The typography revision is preserved alongside its predecessor in
+`archive/edition-4.1-before-latin-modern/`. Content and artwork are unchanged.

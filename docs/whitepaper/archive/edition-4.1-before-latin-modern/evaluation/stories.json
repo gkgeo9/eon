@@ -1,0 +1,1001 @@
+{
+  "stage": "whitepaper-stories",
+  "timestamp": "2026-09-29T21:04:25.439476+00:00",
+  "config": {
+    "version": 1,
+    "trades": "evaluation/trades.csv",
+    "knowledge_cutoff": "2025-01-31",
+    "horizon": "1Y",
+    "verdict_levels": {
+      "STRONG SELL": -2,
+      "SELL": -1,
+      "HOLD": 0,
+      "BUY": 1,
+      "STRONG BUY": 2
+    },
+    "permutations": 10000,
+    "permutation_seed": 20260930,
+    "grid": {
+      "fiscal_years": [
+        2020,
+        2021,
+        2022,
+        2023,
+        2024
+      ],
+      "draw": 24,
+      "seed": 20260930,
+      "names_source": "all_companies_08022026.csv"
+    },
+    "named_cases": [
+      "AAPL",
+      "BW"
+    ],
+    "options_ledger": {
+      "result_type": "AsymmetricOptionsV4",
+      "horizon_trading_days": 126,
+      "permutations": 10000,
+      "seed": 20260930
+    }
+  },
+  "inputs": {
+    "evaluation/trades.csv": "f46a26d2d5140a8fc83868905a093989d0745ce2b13c65c18249d0dbd3cce96e",
+    "stories-config.yaml": "8cad903e7fea7aa071619b67acbaac8961de7629203318f6f53d9decafc7c819"
+  },
+  "versions": {
+    "python": "3.12.6",
+    "numpy": "2.5.2",
+    "pandas": "2.3.3"
+  },
+  "ladder": {
+    "historical": {
+      "verdicts": {
+        "STRONG SELL": {
+          "n": 56,
+          "mean_rank": 0.43053551936038215,
+          "rank_se": 0.04453276742979269,
+          "median_excess": -0.18686978472297275
+        },
+        "SELL": {
+          "n": 601,
+          "mean_rank": 0.4342188543274399,
+          "rank_se": 0.011800567492255437,
+          "median_excess": -0.1145977713642925
+        },
+        "HOLD": {
+          "n": 1720,
+          "mean_rank": 0.4979813575069587,
+          "rank_se": 0.007004580207544342,
+          "median_excess": -0.06532157295373806
+        },
+        "BUY": {
+          "n": 940,
+          "mean_rank": 0.5365263921101157,
+          "rank_se": 0.009013209917580391,
+          "median_excess": -0.0362326277465768
+        },
+        "STRONG BUY": {
+          "n": 159,
+          "mean_rank": 0.5978725532676074,
+          "rank_se": 0.02088255015862849,
+          "median_excess": -0.0149815410885276
+        }
+      },
+      "spearman_level_vs_rank": 0.13533813221945898,
+      "null_mean": -0.00044789290680602385,
+      "p_two_sided": 9.999000099990002e-05,
+      "n": 3476
+    },
+    "post_cutoff": {
+      "verdicts": {
+        "STRONG SELL": {
+          "n": 16,
+          "mean_rank": 0.5749201772121132,
+          "rank_se": 0.07999894079126711,
+          "median_excess": 0.0812559198431143
+        },
+        "SELL": {
+          "n": 185,
+          "mean_rank": 0.4885498196724209,
+          "rank_se": 0.02288469777863513,
+          "median_excess": -0.075589776377519
+        },
+        "HOLD": {
+          "n": 610,
+          "mean_rank": 0.47206466525471147,
+          "rank_se": 0.011777143539374606,
+          "median_excess": -0.08858522953041476
+        },
+        "BUY": {
+          "n": 312,
+          "mean_rank": 0.5569452893114274,
+          "rank_se": 0.015066482608392013,
+          "median_excess": 0.00506127103815585
+        },
+        "STRONG BUY": {
+          "n": 27,
+          "mean_rank": 0.5627105353581109,
+          "rank_se": 0.04161754295606338,
+          "median_excess": -0.0039694013849009
+        }
+      },
+      "spearman_level_vs_rank": 0.09380786132828596,
+      "null_mean": -0.0005217104857771069,
+      "p_two_sided": 0.0011998800119988001,
+      "n": 1150
+    }
+  },
+  "grid": {
+    "eligible": 195,
+    "drawn": [
+      {
+        "ticker": "ACIW",
+        "name": "ACI Worldwide, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "STRONG SELL",
+            "excess": -0.2699881461535383,
+            "filed": "2021-02-25"
+          },
+          "2021": {
+            "verdict": "HOLD",
+            "excess": -0.1660416048522246,
+            "filed": "2022-02-24"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": -0.0789122084306663,
+            "filed": "2023-03-01"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": 0.5354118310150104,
+            "filed": "2024-02-29"
+          },
+          "2024": {
+            "verdict": "BUY",
+            "excess": -0.4363780877188523,
+            "filed": "2025-02-27"
+          }
+        }
+      },
+      {
+        "ticker": "BW",
+        "name": "Babcock & Wilcox Enterprises Inc",
+        "cells": {
+          "2020": {
+            "verdict": "HOLD",
+            "excess": -0.0949877264710258,
+            "filed": "2021-03-08"
+          },
+          "2021": {
+            "verdict": "SELL",
+            "excess": -0.1884939201865572,
+            "filed": "2022-03-08"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": -1.182303553824089,
+            "filed": "2023-03-16"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": 0.0414263244577886,
+            "filed": "2024-03-15"
+          },
+          "2024": {
+            "verdict": "BUY",
+            "excess": 33.1406422973063,
+            "filed": "2025-03-31"
+          }
+        }
+      },
+      {
+        "ticker": "COKE",
+        "name": "Coca-Cola Consolidated, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "SELL",
+            "excess": 0.8033985729177218,
+            "filed": "2021-02-26"
+          },
+          "2021": {
+            "verdict": "STRONG BUY",
+            "excess": 0.3205552193351576,
+            "filed": "2022-02-22"
+          },
+          "2022": {
+            "verdict": "STRONG BUY",
+            "excess": 0.235502284398654,
+            "filed": "2023-02-22"
+          },
+          "2023": {
+            "verdict": "STRONG BUY",
+            "excess": 0.5348949384223407,
+            "filed": "2024-02-21"
+          },
+          "2024": {
+            "verdict": "BUY",
+            "excess": 0.2632796572449558,
+            "filed": "2025-02-20"
+          }
+        }
+      },
+      {
+        "ticker": "CTBI",
+        "name": "Community Trust Bancorp, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": -0.0905565820613256,
+            "filed": "2021-02-26"
+          },
+          "2021": {
+            "verdict": "HOLD",
+            "excess": 0.1233923310645991,
+            "filed": "2022-02-28"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": -0.3542073779976942,
+            "filed": "2023-02-28"
+          },
+          "2023": {
+            "verdict": "BUY",
+            "excess": 0.2322246335925293,
+            "filed": "2024-02-28"
+          },
+          "2024": {
+            "verdict": "SELL",
+            "excess": -0.0206242938250613,
+            "filed": "2025-02-28"
+          }
+        }
+      },
+      {
+        "ticker": "DGX",
+        "name": "Quest Diagnostics Incorporated",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": 0.0081535535208867,
+            "filed": "2021-02-22"
+          },
+          "2021": {
+            "verdict": "BUY",
+            "excess": 0.1398465738809974,
+            "filed": "2022-02-28"
+          },
+          "2022": {
+            "verdict": "BUY",
+            "excess": -0.3908934020161549,
+            "filed": "2023-02-21"
+          },
+          "2023": {
+            "verdict": "BUY",
+            "excess": 0.2080751014081079,
+            "filed": "2024-02-22"
+          },
+          "2024": {
+            "verdict": "SELL",
+            "excess": 0.0800039001535639,
+            "filed": "2025-02-20"
+          }
+        }
+      },
+      {
+        "ticker": "EME",
+        "name": "EMCOR Group, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "HOLD",
+            "excess": 0.0400736380904904,
+            "filed": "2021-02-25"
+          },
+          "2021": {
+            "verdict": "BUY",
+            "excess": 0.5165706663492525,
+            "filed": "2022-02-24"
+          },
+          "2022": {
+            "verdict": "SELL",
+            "excess": 0.3843706288273751,
+            "filed": "2023-02-23"
+          },
+          "2023": {
+            "verdict": "BUY",
+            "excess": 0.0908861183228415,
+            "filed": "2024-02-28"
+          },
+          "2024": {
+            "verdict": "STRONG BUY",
+            "excess": 0.6438827536837204,
+            "filed": "2025-02-26"
+          }
+        }
+      },
+      {
+        "ticker": "EVRG",
+        "name": "Evergy, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": 0.0619965641957767,
+            "filed": "2021-02-26"
+          },
+          "2021": {
+            "verdict": "SELL",
+            "excess": 0.0457556760777476,
+            "filed": "2022-02-25"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": -0.4273708942579564,
+            "filed": "2023-02-24"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": 0.275556830695906,
+            "filed": "2024-02-29"
+          },
+          "2024": {
+            "verdict": "HOLD",
+            "excess": 0.1150351920673877,
+            "filed": "2025-02-27"
+          }
+        }
+      },
+      {
+        "ticker": "EYPT",
+        "name": "EyePoint, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "HOLD",
+            "excess": -0.0162631496245011,
+            "filed": "2021-03-12"
+          },
+          "2021": {
+            "verdict": "HOLD",
+            "excess": -0.7478633282095779,
+            "filed": "2022-03-14"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": 7.236051044995836,
+            "filed": "2023-03-10"
+          },
+          "2023": {
+            "verdict": "BUY",
+            "excess": -0.7936986742584682,
+            "filed": "2024-03-08"
+          },
+          "2024": {
+            "verdict": "SELL",
+            "excess": 0.975866882330512,
+            "filed": "2025-03-06"
+          }
+        }
+      },
+      {
+        "ticker": "FBNC",
+        "name": "First Bancorp",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": -0.0212040381890774,
+            "filed": "2021-02-26"
+          },
+          "2021": {
+            "verdict": "BUY",
+            "excess": 0.0178679486614418,
+            "filed": "2022-03-01"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": -0.477322734283878,
+            "filed": "2023-02-28"
+          },
+          "2023": {
+            "verdict": "SELL",
+            "excess": 0.0559832212570403,
+            "filed": "2024-02-28"
+          },
+          "2024": {
+            "verdict": "SELL",
+            "excess": 0.2455661910538642,
+            "filed": "2025-02-26"
+          }
+        }
+      },
+      {
+        "ticker": "FMBH",
+        "name": "First Mid Bancshares, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "STRONG BUY",
+            "excess": -0.1152024612247702,
+            "filed": "2021-03-08"
+          },
+          "2021": {
+            "verdict": "HOLD",
+            "excess": -0.1737231688818844,
+            "filed": "2022-03-02"
+          },
+          "2022": {
+            "verdict": "SELL",
+            "excess": -0.2509317941449078,
+            "filed": "2023-03-03"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": 0.0752983769584345,
+            "filed": "2024-03-06"
+          },
+          "2024": {
+            "verdict": "BUY",
+            "excess": -0.0694902838978417,
+            "filed": "2025-02-28"
+          }
+        }
+      },
+      {
+        "ticker": "GNTX",
+        "name": "Gentex Corporation",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": -0.2668019301322829,
+            "filed": "2021-02-22"
+          },
+          "2021": {
+            "verdict": "BUY",
+            "excess": 0.0217410815399382,
+            "filed": "2022-02-23"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": 0.0060425587309334,
+            "filed": "2023-02-22"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": -0.4955489293281212,
+            "filed": "2024-02-22"
+          },
+          "2024": {
+            "verdict": "SELL",
+            "excess": -0.193334475692821,
+            "filed": "2025-02-25"
+          }
+        }
+      },
+      {
+        "ticker": "IEP",
+        "name": "Icahn Enterprises L.P.",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": -0.1062271956317379,
+            "filed": "2021-02-26"
+          },
+          "2021": {
+            "verdict": "STRONG SELL",
+            "excess": 0.2233769767794505,
+            "filed": "2022-02-25"
+          },
+          "2022": {
+            "verdict": "STRONG SELL",
+            "excess": -0.8575655998059613,
+            "filed": "2023-02-24"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": -0.5443483699312875,
+            "filed": "2024-02-29"
+          },
+          "2024": {
+            "verdict": "HOLD",
+            "excess": -0.1860022081822796,
+            "filed": "2025-02-26"
+          }
+        }
+      },
+      {
+        "ticker": "KTOS",
+        "name": "Kratos Defense & Security Solutions, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "HOLD",
+            "excess": -0.486951749127741,
+            "filed": "2021-02-25"
+          },
+          "2021": {
+            "verdict": "HOLD",
+            "excess": -0.0916088597865393,
+            "filed": "2022-02-22"
+          },
+          "2022": {
+            "verdict": "SELL",
+            "excess": 0.1408007957017376,
+            "filed": "2023-02-23"
+          },
+          "2023": {
+            "verdict": "BUY",
+            "excess": 0.0570114213877241,
+            "filed": "2024-02-13"
+          },
+          "2024": {
+            "verdict": "HOLD",
+            "excess": 2.2663929005934893,
+            "filed": "2025-02-26"
+          }
+        }
+      },
+      {
+        "ticker": "MGRC",
+        "name": "McGrath RentCorp",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": -0.1616627956967973,
+            "filed": "2021-02-23"
+          },
+          "2021": {
+            "verdict": "SELL",
+            "excess": 0.3773003350713391,
+            "filed": "2022-02-23"
+          },
+          "2022": {
+            "verdict": "BUY",
+            "excess": -0.0869623172132856,
+            "filed": "2023-02-22"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": -0.1655885787021989,
+            "filed": "2024-02-21"
+          },
+          "2024": {
+            "verdict": "HOLD",
+            "excess": -0.2391121047716036,
+            "filed": "2025-02-19"
+          }
+        }
+      },
+      {
+        "ticker": "MPB",
+        "name": "Mid Penn Bancorp, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": -0.0823548594606518,
+            "filed": "2021-03-15"
+          },
+          "2021": {
+            "verdict": "SELL",
+            "excess": 0.0856726174034369,
+            "filed": "2022-03-15"
+          },
+          "2022": {
+            "verdict": "BUY",
+            "excess": -0.5648310901140288,
+            "filed": "2023-03-16"
+          },
+          "2023": {
+            "verdict": "BUY",
+            "excess": 0.2500953853701424,
+            "filed": "2024-03-28"
+          },
+          "2024": {
+            "verdict": "BUY",
+            "excess": 0.052260130624222,
+            "filed": "2025-03-13"
+          }
+        }
+      },
+      {
+        "ticker": "MTZ",
+        "name": "MasTec, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "HOLD",
+            "excess": -0.2549852592354314,
+            "filed": "2021-02-25"
+          },
+          "2021": {
+            "verdict": "BUY",
+            "excess": 0.3824400249860349,
+            "filed": "2022-03-01"
+          },
+          "2022": {
+            "verdict": "SELL",
+            "excess": -0.3546063275970874,
+            "filed": "2023-03-16"
+          },
+          "2023": {
+            "verdict": "SELL",
+            "excess": 0.2231240669582757,
+            "filed": "2024-03-01"
+          },
+          "2024": {
+            "verdict": "HOLD",
+            "excess": 1.1927085705141285,
+            "filed": "2025-02-28"
+          }
+        }
+      },
+      {
+        "ticker": "MYRG",
+        "name": "MYR Group Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "STRONG BUY",
+            "excess": 0.4128963455524088,
+            "filed": "2021-03-03"
+          },
+          "2021": {
+            "verdict": "HOLD",
+            "excess": 0.3633660808922996,
+            "filed": "2022-02-23"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": 0.1786921314482403,
+            "filed": "2023-02-22"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": -0.4069223563535342,
+            "filed": "2024-02-28"
+          },
+          "2024": {
+            "verdict": "SELL",
+            "excess": 1.0925241236901584,
+            "filed": "2025-02-26"
+          }
+        }
+      },
+      {
+        "ticker": "NIC",
+        "name": "Nicolet Bankshares, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": 0.1074058510376065,
+            "filed": "2021-02-26"
+          },
+          "2021": {
+            "verdict": "SELL",
+            "excess": -0.1335081050508128,
+            "filed": "2022-02-25"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": -0.226108156496156,
+            "filed": "2023-02-24"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": 0.3396098932194311,
+            "filed": "2024-02-28"
+          },
+          "2024": {
+            "verdict": "HOLD",
+            "excess": 0.147671520005042,
+            "filed": "2025-02-25"
+          }
+        }
+      },
+      {
+        "ticker": "NWBI",
+        "name": "Northwest Bancshares, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": -0.094053299546756,
+            "filed": "2021-02-26"
+          },
+          "2021": {
+            "verdict": "HOLD",
+            "excess": 0.1151410117931547,
+            "filed": "2022-02-25"
+          },
+          "2022": {
+            "verdict": "SELL",
+            "excess": -0.4127963043535287,
+            "filed": "2023-02-24"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": -0.0131285214882375,
+            "filed": "2024-02-23"
+          },
+          "2024": {
+            "verdict": "HOLD",
+            "excess": -0.0956647729971797,
+            "filed": "2025-02-25"
+          }
+        }
+      },
+      {
+        "ticker": "OC",
+        "name": "Owens Corning",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": 0.0815085780591364,
+            "filed": "2021-02-17"
+          },
+          "2021": {
+            "verdict": "BUY",
+            "excess": 0.0867418675441039,
+            "filed": "2022-02-16"
+          },
+          "2022": {
+            "verdict": "STRONG BUY",
+            "excess": 0.1814030914289908,
+            "filed": "2023-02-15"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": 0.0057063441940425,
+            "filed": "2024-02-14"
+          },
+          "2024": {
+            "verdict": "SELL",
+            "excess": -0.3873348166998658,
+            "filed": "2025-02-24"
+          }
+        }
+      },
+      {
+        "ticker": "PRLB",
+        "name": "Proto Labs, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "SELL",
+            "excess": -0.797687572110005,
+            "filed": "2021-02-19"
+          },
+          "2021": {
+            "verdict": "HOLD",
+            "excess": -0.374671958828302,
+            "filed": "2022-02-18"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": -0.1581554852164186,
+            "filed": "2023-02-21"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": -0.0959045129723281,
+            "filed": "2024-02-16"
+          },
+          "2024": {
+            "verdict": "BUY",
+            "excess": 0.3836834248754723,
+            "filed": "2025-02-21"
+          }
+        }
+      },
+      {
+        "ticker": "UVE",
+        "name": "Universal Insurance Holdings, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "SELL",
+            "excess": -0.3109776021567725,
+            "filed": "2021-02-26"
+          },
+          "2021": {
+            "verdict": "SELL",
+            "excess": 0.8156011003606699,
+            "filed": "2022-02-28"
+          },
+          "2022": {
+            "verdict": "BUY",
+            "excess": -0.2018622506952969,
+            "filed": "2023-02-28"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": -0.0373979735364464,
+            "filed": "2024-02-28"
+          },
+          "2024": {
+            "verdict": "HOLD",
+            "excess": 0.4960385688284563,
+            "filed": "2025-02-28"
+          }
+        }
+      },
+      {
+        "ticker": "VLY",
+        "name": "Valley National Bancorp",
+        "cells": {
+          "2020": {
+            "verdict": "BUY",
+            "excess": 0.0101977811752722,
+            "filed": "2021-02-26"
+          },
+          "2021": {
+            "verdict": "SELL",
+            "excess": -0.0524894786983122,
+            "filed": "2022-02-28"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": -0.6031842038132427,
+            "filed": "2023-03-01"
+          },
+          "2023": {
+            "verdict": "HOLD",
+            "excess": 0.0597973025608884,
+            "filed": "2024-02-29"
+          },
+          "2024": {
+            "verdict": "HOLD",
+            "excess": 0.1831282644932172,
+            "filed": "2025-02-28"
+          }
+        }
+      },
+      {
+        "ticker": "ZD",
+        "name": "Ziff Davis, Inc.",
+        "cells": {
+          "2020": {
+            "verdict": "HOLD",
+            "excess": -0.1290558896323762,
+            "filed": "2021-03-01"
+          },
+          "2021": {
+            "verdict": "HOLD",
+            "excess": -0.165443094534172,
+            "filed": "2022-03-15"
+          },
+          "2022": {
+            "verdict": "HOLD",
+            "excess": -0.4291384367507224,
+            "filed": "2023-03-01"
+          },
+          "2023": {
+            "verdict": "SELL",
+            "excess": -0.5954215722283626,
+            "filed": "2024-02-26"
+          },
+          "2024": {
+            "verdict": "BUY",
+            "excess": -0.5374519272324689,
+            "filed": "2025-02-25"
+          }
+        }
+      }
+    ],
+    "directional_cells": 70,
+    "directional_agree": 40
+  },
+  "named": {
+    "AAPL": [
+      {
+        "fiscal_year": 2024,
+        "verdict": "HOLD",
+        "conviction": "MEDIUM",
+        "filing_date": "2024-11-01",
+        "read_at": "2026-02-03 18:05:19",
+        "entry_date": "2024-11-04",
+        "excess_6M": -0.1064821583041821,
+        "excess_1Y": 0.0301043131932359
+      },
+      {
+        "fiscal_year": 2025,
+        "verdict": "SELL",
+        "conviction": "HIGH",
+        "filing_date": "2025-10-31",
+        "read_at": "2026-02-02 17:32:19",
+        "entry_date": "2025-11-03",
+        "excess_6M": -0.009353252981211,
+        "excess_1Y": NaN
+      }
+    ],
+    "BW": [
+      {
+        "fiscal_year": 2020,
+        "verdict": "HOLD",
+        "conviction": "LOW",
+        "filing_date": "2021-03-08",
+        "read_at": "2026-02-09 11:19:02",
+        "entry_date": "2021-03-09",
+        "excess_6M": -0.1889540167710687,
+        "excess_1Y": -0.0949877264710258
+      },
+      {
+        "fiscal_year": 2021,
+        "verdict": "SELL",
+        "conviction": "MEDIUM",
+        "filing_date": "2022-03-08",
+        "read_at": "2026-02-09 11:14:37",
+        "entry_date": "2022-03-09",
+        "excess_6M": 0.1321886495625016,
+        "excess_1Y": -0.1884939201865572
+      },
+      {
+        "fiscal_year": 2022,
+        "verdict": "HOLD",
+        "conviction": "MEDIUM",
+        "filing_date": "2023-03-16",
+        "read_at": "2026-02-09 11:10:04",
+        "entry_date": "2023-03-17",
+        "excess_6M": -0.2942742197255007,
+        "excess_1Y": -1.182303553824089
+      },
+      {
+        "fiscal_year": 2023,
+        "verdict": "HOLD",
+        "conviction": "LOW",
+        "filing_date": "2024-03-15",
+        "read_at": "2026-02-09 11:07:29",
+        "entry_date": "2024-03-18",
+        "excess_6M": 0.4970214520116691,
+        "excess_1Y": 0.0414263244577886
+      },
+      {
+        "fiscal_year": 2024,
+        "verdict": "BUY",
+        "conviction": "MEDIUM",
+        "filing_date": "2025-03-31",
+        "read_at": "2026-02-09 11:05:27",
+        "entry_date": "2025-04-01",
+        "excess_6M": 4.784099827159027,
+        "excess_1Y": 33.1406422973063
+      }
+    ]
+  },
+  "options_ledger": {
+    "n": 1365,
+    "by_bias": {
+      "Call Bias (Upside Tail)": {
+        "n": 26,
+        "mean_rank": 0.4830938292476754,
+        "mean_abs_rank": 0.5260355029585798,
+        "median_excess": -0.0732940822198207,
+        "share_beat_spy": 0.34615384615384615
+      },
+      "No Edge (Skip)": {
+        "n": 312,
+        "mean_rank": 0.49015215553677094,
+        "mean_abs_rank": 0.46886212078519773,
+        "median_excess": -0.07520768013205892,
+        "share_beat_spy": 0.34615384615384615
+      },
+      "Put Bias (Downside Tail)": {
+        "n": 847,
+        "mean_rank": 0.5123266344045564,
+        "mean_abs_rank": 0.5057635005686953,
+        "median_excess": -0.05282931190347373,
+        "share_beat_spy": 0.40968122786304606
+      },
+      "Straddle Bias (Binary)": {
+        "n": 180,
+        "mean_rank": 0.46428571428571436,
+        "mean_abs_rank": 0.5258689458689458,
+        "median_excess": -0.07762968277544513,
+        "share_beat_spy": 0.35555555555555557
+      }
+    },
+    "call_minus_put_rank": {
+      "observed": -0.02923280515688098,
+      "p_two_sided": 0.6185381461853815
+    },
+    "straddle_minus_no_edge_abs_rank": {
+      "observed": 0.0570068250837481,
+      "p_two_sided": 0.031096890310968902
+    },
+    "score_vs_abs_move_spearman": {
+      "observed": 0.11935164819765652,
+      "p_two_sided": 9.999000099990002e-05
+    },
+    "share_all_beat_spy": 0.3868131868131868
+  }
+}

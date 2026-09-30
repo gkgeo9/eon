@@ -29,13 +29,13 @@ z
   </g>
   <g id="axes_1">
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 14px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.152383" transform="rotate(-0 6.7716 23.152383)">One stock can decide a mean</text>
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597813" transform="rotate(-0 6.7716 23.597813)">One stock can decide a mean</text>
    </g>
    <g id="text_2">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="41.832246" transform="rotate(-0 6.7716 41.832246)">Post-cutoff filings  /  one-year excess over SPY, percentage points  /  symmetric log axis</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">Post-cutoff filings  /  one-year excess over SPY, percentage points  /  symmetric log axis</text>
    </g>
    <g id="text_3">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="54.1728" y="252.889102" transform="rotate(-0 54.1728 252.889102)">Solid line: mean.  Dotted line: median.  Linear between −100 and +100 points.</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="54.1728" y="252.898242" transform="rotate(-0 54.1728 252.898242)">Solid line: mean.  Dotted line: median.  Linear between −100 and +100 points.</text>
    </g>
   </g>
   <g id="axes_2">
@@ -56,7 +56,7 @@ L 70.664322 80.64
      </g>
      <g id="line2d_2"/>
      <g id="text_4">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="70.664322" y="227.552246" transform="rotate(-0 70.664322 227.552246)">−100</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="70.664322" y="227.837891" transform="rotate(-0 70.664322 227.837891)">−100</text>
      </g>
     </g>
     <g id="xtick_2">
@@ -67,7 +67,7 @@ L 174.723512 80.64
      </g>
      <g id="line2d_4"/>
      <g id="text_5">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="174.723512" y="227.552246" transform="rotate(-0 174.723512 227.552246)">0</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="174.723512" y="227.837891" transform="rotate(-0 174.723512 227.837891)">0</text>
      </g>
     </g>
     <g id="xtick_3">
@@ -78,7 +78,7 @@ L 278.782702 80.64
      </g>
      <g id="line2d_6"/>
      <g id="text_6">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="278.782702" y="227.552246" transform="rotate(-0 278.782702 227.552246)">+100</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="278.782702" y="227.837891" transform="rotate(-0 278.782702 227.837891)">+100</text>
      </g>
     </g>
     <g id="xtick_4">
@@ -89,7 +89,7 @@ L 372.435973 80.64
      </g>
      <g id="line2d_8"/>
      <g id="text_7">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="372.435973" y="227.552246" transform="rotate(-0 372.435973 227.552246)">+1,000</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="372.435973" y="227.837891" transform="rotate(-0 372.435973 227.837891)">+1,000</text>
      </g>
     </g>
     <g id="xtick_5">
@@ -100,7 +100,7 @@ L 417.119939 80.64
      </g>
      <g id="line2d_10"/>
      <g id="text_8">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="417.119939" y="227.552246" transform="rotate(-0 417.119939 227.552246)">+3,000</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="417.119939" y="227.837891" transform="rotate(-0 417.119939 227.837891)">+3,000</text>
      </g>
     </g>
    </g>
@@ -700,25 +700,25 @@ L 168.259355 202.464
 " clip-path="url(#p3571d0c21c)" style="fill: none; stroke-dasharray: 1.2,1.98; stroke-dashoffset: 0; stroke: #1f2a37; stroke-width: 1.2"/>
    </g>
    <g id="text_9">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="70.664322" y="156.063502" transform="rotate(-0 70.664322 156.063502)">BUY  n = 339   mean +25.2   median +0.3</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="70.664322" y="156.072642" transform="rotate(-0 70.664322 156.072642)">BUY  n = 339   mean +25.2   median +0.3</text>
    </g>
    <g id="text_10">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #e0605a" x="70.664322" y="210.207502" transform="rotate(-0 70.664322 210.207502)">SELL  n = 201   mean +10.3   median −6.2</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #e0605a" x="70.664322" y="210.216642" transform="rotate(-0 70.664322 210.216642)">SELL  n = 201   mean +10.3   median −6.2</text>
    </g>
    <g id="patch_3">
-    <path d="M 374.143004 98.81551 
-Q 396.839648 114.868589 418.6235 130.276061 
+    <path d="M 381.36706 99.424083 
+Q 400.494521 115.115683 418.757599 130.098168 
 " style="fill: none; stroke: #e0605a; stroke-linecap: round"/>
-    <path d="M 416.723773 126.727675 
-L 418.6235 130.276061 
-L 414.644956 129.666811 
+    <path d="M 417.115991 126.423236 
+L 418.757599 130.098168 
+L 414.832689 129.206495 
 z
 " style="fill: #e0605a; stroke: #e0605a; stroke-linecap: round"/>
    </g>
    <g id="text_11">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #e0605a" transform="translate(278.782702 73.5023)">Babcock &amp; Wilcox, $0.46 to $15.72</text>
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #e0605a" transform="translate(278.782702 83.29771)">+3,314 points, checked twice</text>
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #e0605a" transform="translate(278.782702 93.09312)">adds 10 points to the BUY mean</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #e0605a" transform="translate(278.782702 71.488198)">Babcock &amp; Wilcox, $0.46 to $15.72</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #e0605a" transform="translate(278.782702 82.290659)">+3,314 points, checked twice</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #e0605a" transform="translate(278.782702 93.09312)">adds 10 points to the BUY mean</text>
    </g>
   </g>
  </g>

@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="451.44pt" height="345.6pt" viewBox="0 0 451.44 345.6" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>EON paper renderer</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 345.6 
+L 451.44 345.6 
+L 451.44 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 132.919653 76.032 
+Q 146.719996 76.032 159.402306 76.032 
+" style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
+    <path d="M 155.402306 74.032 
+L 159.402306 76.032 
+L 155.402306 78.032 
+z
+" style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 290.923653 76.032 
+Q 304.723996 76.032 317.406306 76.032 
+" style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
+    <path d="M 313.406306 74.032 
+L 317.406306 76.032 
+L 313.406306 78.032 
+z
+" style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 78.686097 237.213373 
+Q 113.98733 245.894088 148.202872 254.307827 
+" style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
+    <path d="M 144.796168 251.410523 
+L 148.202872 254.307827 
+L 143.841007 255.294808 
+z
+" style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 225.72 238.734928 
+Q 225.72 245.891924 225.72 251.930887 
+" style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
+    <path d="M 227.72 247.930887 
+L 225.72 251.930887 
+L 223.72 247.930887 
+z
+" style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 372.753903 237.213373 
+Q 337.45267 245.894088 303.237128 254.307827 
+" style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
+    <path d="M 307.598993 255.294808 
+L 303.237128 254.307827 
+L 306.643832 251.410523 
+z
+" style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 6.7716 98.496 
+L 128.6604 98.496 
+L 128.6604 53.568 
+L 6.7716 53.568 
+z
+" clip-path="url(#p0af8cdb692)" style="fill: #e8ecef"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 164.7756 98.496 
+L 286.6644 98.496 
+L 286.6644 53.568 
+L 164.7756 53.568 
+z
+" clip-path="url(#p0af8cdb692)" style="fill: #0f766e"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 322.7796 98.496 
+L 444.6684 98.496 
+L 444.6684 53.568 
+L 322.7796 53.568 
+z
+" clip-path="url(#p0af8cdb692)" style="fill: #ddf1ee"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 6.7716 235.008 
+L 146.718 235.008 
+L 146.718 122.688 
+L 6.7716 122.688 
+z
+" clip-path="url(#p0af8cdb692)" style="fill: #f3f4f2"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 155.7468 235.008 
+L 295.6932 235.008 
+L 295.6932 122.688 
+L 155.7468 122.688 
+z
+" clip-path="url(#p0af8cdb692)" style="fill: #f3f4f2"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 304.722 235.008 
+L 444.6684 235.008 
+L 444.6684 122.688 
+L 304.722 122.688 
+z
+" clip-path="url(#p0af8cdb692)" style="fill: #f3f4f2"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 90.288 286.848 
+L 361.152 286.848 
+L 361.152 257.472 
+L 90.288 257.472 
+z
+" clip-path="url(#p0af8cdb692)" style="fill: #0f766e"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.152383" transform="rotate(-0 6.7716 23.152383)">One filing becomes one countable verdict</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="41.837344" transform="rotate(-0 6.7716 41.837344)">Specimen: Apple 10-K for fiscal 2025, filed 31 Oct 2025  /  first stored reading</text>
+   </g>
+   <g id="text_3">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="67.993102" transform="rotate(-0 13.5432 67.993102)">INPUT</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #1f2a37" transform="translate(13.5432 80.665741)">Extracted 10-K text,</text>
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #1f2a37" transform="translate(13.5432 92.221952)">name and fiscal year</text>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #ffffff" x="171.5472" y="67.993102" transform="rotate(-0 171.5472 67.993102)">ONE MODEL CALL</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #ffffff" transform="translate(171.5472 81.289413)">Gemini 2.5 Flash with</text>
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #ffffff" transform="translate(171.5472 92.277499)">a JSON response schema</text>
+   </g>
+   <g id="text_7">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="329.5512" y="67.993102" transform="rotate(-0 329.5512 67.993102)">35 FIELDS</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #1f2a37" transform="translate(329.5512 80.707226)">Three lenses of eleven,</text>
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #1f2a37" transform="translate(329.5512 92.221952)">synthesis, final verdict</text>
+   </g>
+   <g id="text_9">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="137.113102" transform="rotate(-0 13.5432 137.113102)">BUFFETT  ·  11 fields</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="154.393014" transform="rotate(-0 13.5432 154.393014)">Moat and moat rating</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="168.908214" transform="rotate(-0 13.5432 168.908214)">Management, pricing power</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="183.42605" transform="rotate(-0 13.5432 183.42605)">ROIC, free cash flow</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="197.938702" transform="rotate(-0 13.5432 197.938702)">Intrinsic value</text>
+   </g>
+   <g id="text_14">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="13.5432" y="213.145102" transform="rotate(-0 13.5432 213.145102)">Lens verdict: PASS</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="13.5432" y="226.969014" transform="rotate(-0 13.5432 226.969014)">Action signal: PASS</text>
+   </g>
+   <g id="text_16">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="162.5184" y="137.113102" transform="rotate(-0 162.5184 137.113102)">TALEB  ·  11 fields</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="154.393014" transform="rotate(-0 162.5184 154.393014)">Fragility, tail risks</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="168.910762" transform="rotate(-0 162.5184 168.910762)">Optionality, skin in the game</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="183.423502" transform="rotate(-0 162.5184 183.423502)">Hidden risks, dependencies</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="197.938614" transform="rotate(-0 162.5184 197.938614)">Lindy effect, via negativa</text>
+   </g>
+   <g id="text_21">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="162.5184" y="213.145102" transform="rotate(-0 162.5184 213.145102)">Lens verdict: NEUTRAL</text>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="162.5184" y="226.969014" transform="rotate(-0 162.5184 226.969014)">Action signal: INVESTIGATE</text>
+   </g>
+   <g id="text_23">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="311.4936" y="137.113102" transform="rotate(-0 311.4936 137.113102)">CONTRARIAN  ·  11 fields</text>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="154.393014" transform="rotate(-0 311.4936 154.393014)">Consensus, why it is wrong</text>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="168.908214" transform="rotate(-0 311.4936 168.908214)">Hidden strengths and flaws</text>
+   </g>
+   <g id="text_26">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="183.423414" transform="rotate(-0 311.4936 183.423414)">Market pricing, positioning</text>
+   </g>
+   <g id="text_27">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="197.938614" transform="rotate(-0 311.4936 197.938614)">Catalyst timeline</text>
+   </g>
+   <g id="text_28">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="311.4936" y="213.145102" transform="rotate(-0 311.4936 213.145102)">Lens verdict: AVOID</text>
+   </g>
+   <g id="text_29">
+    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="311.4936" y="226.969014" transform="rotate(-0 311.4936 226.969014)">Action signal: PASS</text>
+   </g>
+   <g id="text_30">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #ffffff" x="225.72" y="274.747793" transform="rotate(-0 225.72 274.747793)">FINAL VERDICT   SELL  ·  Conviction: High</text>
+   </g>
+   <g id="text_31">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="225.72" y="306.457014" transform="rotate(-0 225.72 306.457014)">Six months later, Apple had trailed SPY by 0.9 points: a draw.</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p0af8cdb692">
+   <rect x="0" y="0" width="451.44" height="345.6"/>
+  </clipPath>
+ </defs>
+</svg>

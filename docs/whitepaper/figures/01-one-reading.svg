@@ -135,100 +135,100 @@ z
 " clip-path="url(#p0af8cdb692)" style="fill: #0f766e"/>
    </g>
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 14px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.152383" transform="rotate(-0 6.7716 23.152383)">One filing becomes one countable verdict</text>
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597812" transform="rotate(-0 6.7716 23.597812)">One filing becomes one countable verdict</text>
    </g>
    <g id="text_2">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="41.837344" transform="rotate(-0 6.7716 41.837344)">Specimen: Apple 10-K for fiscal 2025, filed 31 Oct 2025  /  first stored reading</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">Specimen: Apple 10-K for fiscal 2025, filed 31 Oct 2025  /  first stored reading</text>
    </g>
    <g id="text_3">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="67.993102" transform="rotate(-0 13.5432 67.993102)">INPUT</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="68.001891" transform="rotate(-0 13.5432 68.001891)">INPUT</text>
    </g>
    <g id="text_4">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #1f2a37" transform="translate(13.5432 80.665741)">Extracted 10-K text,</text>
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #1f2a37" transform="translate(13.5432 92.221952)">name and fiscal year</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(13.5432 80.576972)">Extracted 10-K text,</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(13.5432 92.764237)">name and fiscal year</text>
    </g>
    <g id="text_5">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #ffffff" x="171.5472" y="67.993102" transform="rotate(-0 171.5472 67.993102)">ONE MODEL CALL</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ffffff" x="171.5472" y="68.001891" transform="rotate(-0 171.5472 68.001891)">ONE MODEL CALL</text>
    </g>
    <g id="text_6">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #ffffff" transform="translate(171.5472 81.289413)">Gemini 2.5 Flash with</text>
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #ffffff" transform="translate(171.5472 92.277499)">a JSON response schema</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #ffffff" transform="translate(171.5472 81.036113)">Gemini 2.5 Flash with</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #ffffff" transform="translate(171.5472 92.764237)">a JSON response schema</text>
    </g>
    <g id="text_7">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="329.5512" y="67.993102" transform="rotate(-0 329.5512 67.993102)">35 FIELDS</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="329.5512" y="68.001891" transform="rotate(-0 329.5512 68.001891)">35 FIELDS</text>
    </g>
    <g id="text_8">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #1f2a37" transform="translate(329.5512 80.707226)">Three lenses of eleven,</text>
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; fill: #1f2a37" transform="translate(329.5512 92.221952)">synthesis, final verdict</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(329.5512 80.576972)">Three lenses of eleven,</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(329.5512 92.764237)">synthesis, final verdict</text>
    </g>
    <g id="text_9">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="137.113102" transform="rotate(-0 13.5432 137.113102)">BUFFETT  ·  11 fields</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="137.122242" transform="rotate(-0 13.5432 137.122242)">BUFFETT  ·  11 fields</text>
    </g>
    <g id="text_10">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="154.393014" transform="rotate(-0 13.5432 154.393014)">Moat and moat rating</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="154.402242" transform="rotate(-0 13.5432 154.402242)">Moat and moat rating</text>
    </g>
    <g id="text_11">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="168.908214" transform="rotate(-0 13.5432 168.908214)">Management, pricing power</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="168.917442" transform="rotate(-0 13.5432 168.917442)">Management, pricing power</text>
    </g>
    <g id="text_12">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="183.42605" transform="rotate(-0 13.5432 183.42605)">ROIC, free cash flow</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="183.432642" transform="rotate(-0 13.5432 183.432642)">ROIC, free cash flow</text>
    </g>
    <g id="text_13">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="197.938702" transform="rotate(-0 13.5432 197.938702)">Intrinsic value</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="13.5432" y="197.947842" transform="rotate(-0 13.5432 197.947842)">Intrinsic value</text>
    </g>
    <g id="text_14">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="13.5432" y="213.145102" transform="rotate(-0 13.5432 213.145102)">Lens verdict: PASS</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="13.5432" y="213.154242" transform="rotate(-0 13.5432 213.154242)">Lens verdict: PASS</text>
    </g>
    <g id="text_15">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="13.5432" y="226.969014" transform="rotate(-0 13.5432 226.969014)">Action signal: PASS</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="13.5432" y="226.978242" transform="rotate(-0 13.5432 226.978242)">Action signal: PASS</text>
    </g>
    <g id="text_16">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="162.5184" y="137.113102" transform="rotate(-0 162.5184 137.113102)">TALEB  ·  11 fields</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="162.5184" y="137.122242" transform="rotate(-0 162.5184 137.122242)">TALEB  ·  11 fields</text>
    </g>
    <g id="text_17">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="154.393014" transform="rotate(-0 162.5184 154.393014)">Fragility, tail risks</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="154.402242" transform="rotate(-0 162.5184 154.402242)">Fragility, tail risks</text>
    </g>
    <g id="text_18">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="168.910762" transform="rotate(-0 162.5184 168.910762)">Optionality, skin in the game</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="168.917442" transform="rotate(-0 162.5184 168.917442)">Optionality, skin in the game</text>
    </g>
    <g id="text_19">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="183.423502" transform="rotate(-0 162.5184 183.423502)">Hidden risks, dependencies</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="183.432642" transform="rotate(-0 162.5184 183.432642)">Hidden risks, dependencies</text>
    </g>
    <g id="text_20">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="197.938614" transform="rotate(-0 162.5184 197.938614)">Lindy effect, via negativa</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="162.5184" y="197.947842" transform="rotate(-0 162.5184 197.947842)">Lindy effect, via negativa</text>
    </g>
    <g id="text_21">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="162.5184" y="213.145102" transform="rotate(-0 162.5184 213.145102)">Lens verdict: NEUTRAL</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="162.5184" y="213.154242" transform="rotate(-0 162.5184 213.154242)">Lens verdict: NEUTRAL</text>
    </g>
    <g id="text_22">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="162.5184" y="226.969014" transform="rotate(-0 162.5184 226.969014)">Action signal: INVESTIGATE</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="162.5184" y="226.978242" transform="rotate(-0 162.5184 226.978242)">Action signal: INVESTIGATE</text>
    </g>
    <g id="text_23">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="311.4936" y="137.113102" transform="rotate(-0 311.4936 137.113102)">CONTRARIAN  ·  11 fields</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="311.4936" y="137.122242" transform="rotate(-0 311.4936 137.122242)">CONTRARIAN  ·  11 fields</text>
    </g>
    <g id="text_24">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="154.393014" transform="rotate(-0 311.4936 154.393014)">Consensus, why it is wrong</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="154.402242" transform="rotate(-0 311.4936 154.402242)">Consensus, why it is wrong</text>
    </g>
    <g id="text_25">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="168.908214" transform="rotate(-0 311.4936 168.908214)">Hidden strengths and flaws</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="168.917442" transform="rotate(-0 311.4936 168.917442)">Hidden strengths and flaws</text>
    </g>
    <g id="text_26">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="183.423414" transform="rotate(-0 311.4936 183.423414)">Market pricing, positioning</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="183.432642" transform="rotate(-0 311.4936 183.432642)">Market pricing, positioning</text>
    </g>
    <g id="text_27">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="197.938614" transform="rotate(-0 311.4936 197.938614)">Catalyst timeline</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="311.4936" y="197.947842" transform="rotate(-0 311.4936 197.947842)">Catalyst timeline</text>
    </g>
    <g id="text_28">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="311.4936" y="213.145102" transform="rotate(-0 311.4936 213.145102)">Lens verdict: AVOID</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="311.4936" y="213.154242" transform="rotate(-0 311.4936 213.154242)">Lens verdict: AVOID</text>
    </g>
    <g id="text_29">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="311.4936" y="226.969014" transform="rotate(-0 311.4936 226.969014)">Action signal: PASS</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="311.4936" y="226.978242" transform="rotate(-0 311.4936 226.978242)">Action signal: PASS</text>
    </g>
    <g id="text_30">
-    <text style="font-weight: 700; font-size: 10px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #ffffff" x="225.72" y="274.747793" transform="rotate(-0 225.72 274.747793)">FINAL VERDICT   SELL  ·  Conviction: High</text>
+    <text style="font-weight: 700; font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #ffffff" x="225.72" y="274.758047" transform="rotate(-0 225.72 274.758047)">FINAL VERDICT   SELL  ·  Conviction: High</text>
    </g>
    <g id="text_31">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="225.72" y="306.457014" transform="rotate(-0 225.72 306.457014)">Six months later, Apple had trailed SPY by 0.9 points: a draw.</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="225.72" y="306.466242" transform="rotate(-0 225.72 306.466242)">Six months later, Apple had trailed SPY by 0.9 points: a draw.</text>
    </g>
   </g>
  </g>

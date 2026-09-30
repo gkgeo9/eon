@@ -460,3 +460,18 @@ PDF SHA-256 begins `f1fd9be8bc68d55a`.
 
 - No model was called and no reading was generated or changed.
 - No factor controls, anonymised re-reading, or second price source.
+
+## Latin Modern typography — 30 September 2026
+
+Matched the ArtML reference’s Latin Modern body, heading and caption fonts.
+Preserved prose, evidence figures and all artwork. The small compass vignette
+is set at 30% width in the PDF to prevent a two-line spill page after font
+reflow. Added explicit LaTeX rendering of the less-than-or-equal symbol.
+The preceding publication is archived in `archive/edition-4.1-before-latin-modern/`.
+
+## Figure font and cover clearance — 30 September 2026
+
+Confirmed that ArtML figures use DejaVu Sans and changed EON’s figure font
+from Arial to the same family. Regenerated all seventeen figures from the
+existing frozen evidence. Retained Latin Modern for publication text.
+Raised the cover text so the subtitle clears the windows in the illustration.

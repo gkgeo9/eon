@@ -29,40 +29,40 @@ z
   </g>
   <g id="axes_1">
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 14px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.152383" transform="rotate(-0 6.7716 23.152383)">A 141-page filing becomes one word</text>
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597812" transform="rotate(-0 6.7716 23.597812)">A 141-page filing becomes one word</text>
    </g>
    <g id="text_2">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="41.837344" transform="rotate(-0 6.7716 41.837344)">The median 10-K on its way through EON  /  characters, logarithmic scale</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">The median 10-K on its way through EON  /  characters, logarithmic scale</text>
    </g>
    <g id="text_3">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="81.586702" transform="rotate(-0 6.7716 81.586702)">EDGAR HTML</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="81.595491" transform="rotate(-0 6.7716 81.595491)">EDGAR HTML</text>
    </g>
    <g id="text_4">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="95.079707" transform="rotate(-0 6.7716 95.079707)">5.6–19.6× more than its text</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="95.08834" transform="rotate(-0 6.7716 95.08834)">5.6–19.6× more than its text</text>
    </g>
    <g id="text_5">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="117.500302" transform="rotate(-0 6.7716 117.500302)">Visible text</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="117.509442" transform="rotate(-0 6.7716 117.509442)">Visible text</text>
    </g>
    <g id="text_6">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="130.993307" transform="rotate(-0 6.7716 130.993307)">what a person would read</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="131.00194" transform="rotate(-0 6.7716 131.00194)">what a person would read</text>
    </g>
    <g id="text_7">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="153.413902" transform="rotate(-0 6.7716 153.413902)">Text sent to the model</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="153.423042" transform="rotate(-0 6.7716 153.423042)">Text sent to the model</text>
    </g>
    <g id="text_8">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="166.906824" transform="rotate(-0 6.7716 166.906824)">141 pages ≈ 98k tokens</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="166.91554" transform="rotate(-0 6.7716 166.91554)">141 pages ≈ 98k tokens</text>
    </g>
    <g id="text_9">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="189.327414" transform="rotate(-0 6.7716 189.327414)">The reading</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="189.336642" transform="rotate(-0 6.7716 189.336642)">The reading</text>
    </g>
    <g id="text_10">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="202.820507" transform="rotate(-0 6.7716 202.820507)">35 fields, about 5,000 words</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="202.82914" transform="rotate(-0 6.7716 202.82914)">35 fields, about 5,000 words</text>
    </g>
    <g id="text_11">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="225.241102" transform="rotate(-0 6.7716 225.241102)">The verdict</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="225.250242" transform="rotate(-0 6.7716 225.250242)">The verdict</text>
    </g>
    <g id="text_12">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="238.734107" transform="rotate(-0 6.7716 238.734107)">one word</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="238.74274" transform="rotate(-0 6.7716 238.74274)">one word</text>
    </g>
   </g>
   <g id="axes_2">
@@ -83,7 +83,7 @@ L 162.5184 68.112
      </g>
      <g id="line2d_2"/>
      <g id="text_13">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="162.5184" y="259.232246" transform="rotate(-0 162.5184 259.232246)">1</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="162.5184" y="259.517891" transform="rotate(-0 162.5184 259.517891)">1</text>
      </g>
     </g>
     <g id="xtick_2">
@@ -94,7 +94,7 @@ L 226.423113 68.112
      </g>
      <g id="line2d_4"/>
      <g id="text_14">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="226.423113" y="259.232246" transform="rotate(-0 226.423113 259.232246)">100</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="226.423113" y="259.517891" transform="rotate(-0 226.423113 259.517891)">100</text>
      </g>
     </g>
     <g id="xtick_3">
@@ -105,7 +105,7 @@ L 290.327826 68.112
      </g>
      <g id="line2d_6"/>
      <g id="text_15">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="290.327826" y="259.232246" transform="rotate(-0 290.327826 259.232246)">10k</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="290.327826" y="259.518594" transform="rotate(-0 290.327826 259.518594)">10k</text>
      </g>
     </g>
     <g id="xtick_4">
@@ -116,7 +116,7 @@ L 354.232539 68.112
      </g>
      <g id="line2d_8"/>
      <g id="text_16">
-      <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="354.232539" y="259.232246" transform="rotate(-0 354.232539 259.232246)">1M</text>
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #6b7280" x="354.232539" y="259.517891" transform="rotate(-0 354.232539 259.517891)">1M</text>
      </g>
     </g>
     <g id="xtick_5">
@@ -629,19 +629,19 @@ z
 " clip-path="url(#p4226b0f63e)" style="fill: #0f766e"/>
    </g>
    <g id="text_17">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="380.3535" y="88.397902" transform="rotate(-0 380.3535 88.397902)">5,255,175</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="380.3535" y="88.406691" transform="rotate(-0 380.3535 88.406691)">5,255,175</text>
    </g>
    <g id="text_18">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #97a3ea" x="350.687116" y="124.311502" transform="rotate(-0 350.687116 124.311502)">619,627</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #97a3ea" x="350.687116" y="124.320291" transform="rotate(-0 350.687116 124.320291)">619,627</text>
    </g>
    <g id="text_19">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #4c5fd5" x="344.410531" y="160.225102" transform="rotate(-0 344.410531 160.225102)">394,180</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #4c5fd5" x="344.410531" y="160.233891" transform="rotate(-0 344.410531 160.233891)">394,180</text>
    </g>
    <g id="text_20">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #5fb3ab" x="308.728559" y="196.138702" transform="rotate(-0 308.728559 196.138702)">30,128</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #5fb3ab" x="308.728559" y="196.147491" transform="rotate(-0 308.728559 196.147491)">30,128</text>
    </g>
    <g id="text_21">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="184.852139" y="232.052302" transform="rotate(-0 184.852139 232.052302)">4</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="184.852139" y="232.061091" transform="rotate(-0 184.852139 232.061091)">4</text>
    </g>
   </g>
  </g>

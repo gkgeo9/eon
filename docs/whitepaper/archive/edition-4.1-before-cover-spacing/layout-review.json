@@ -1,0 +1,23 @@
+{
+  "edition": "4.1",
+  "status": "reviewed; author contact and disclosures pending",
+  "pages": 32,
+  "numbered_figures": 17,
+  "illustrations": 6,
+  "tables": 3,
+  "visual_review": "Reviewed all pages in contact sheets and full-size abstract, architecture and Part II synthesis pages after Latin Modern reflow. No clipped text, missing glyphs or TeX overflow. One underfull line around a nonbreaking package name is readable. Preserved 32 pages by reducing the small compass vignette to 30% PDF width.",
+  "evidence_unchanged": true,
+  "unchanged_other_artworks": 4,
+  "inputs": {
+    "eon-whitepaper.md": "23b47d02b79bb9eaaf36a33e68aa7cc13acabd1ab5c90d354b343954677cdee9",
+    "eon-whitepaper.pdf": "9dffadac85183fe7d020e4c98942922b41b249a803cf60ebb6f6f3d07c223646",
+    "eon-whitepaper.tex": "6cf0c2505d33ea8d71ff08ebfde6010388366345133dc54d37f03699fa07572d",
+    "build_paper.py": "367f9425789d5d79ceedf46c9a44a99e68f205a0791ec2c2cb1386be2ff72684",
+    "paper-preamble.tex": "94926ce8aedbf817fbad9bd5aa8f2ae8722c34b0ee3e643a5425465dd17e5737",
+    "figures/art/manifest.json": "a0c2946a2b914beb2ea1e1f672ce96fef2d034cff2b9950b04910b5865faffef",
+    "render_figures.py": "f2c71ab9f2044270e4a28fcba2da76a630a9a86944f226a6bd9758e76985c485",
+    "render_diagrams.py": "710349ea9a98f23efee02016b148d61662efffdb7f39073dc434d72874fe6b42"
+  },
+  "people_removal_review": "All six current illustrations inspected; worker and speaker removed. Updated PDF pages 7 and 26 checked. Other four art assets unchanged.",
+  "typography": "Latin Modern, matching ArtML; serif body, headings and captions. Existing chart fonts unchanged."
+}

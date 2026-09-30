@@ -24,9 +24,6 @@ os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "eon-pap
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.font_manager as fm
-for font in Path("/System/Library/Fonts/Supplemental").glob("Arial*.ttf"):
-    fm.fontManager.addfont(str(font))
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
@@ -50,7 +47,7 @@ VERDICT_FACE = {
 OUT = HERE / "figures"
 plt.rcParams.update(
     {
-        "font.family": ["Arial", "DejaVu Sans"],
+        "font.family": "DejaVu Sans",
         "font.size": 9,
         "text.color": C["ink"],
         "axes.labelcolor": C["ink"],

@@ -105,6 +105,9 @@ def main() -> None:
                     raise FileNotFoundError(asset)
                 attrs = dict(image["c"][0][2])
                 width = float(attrs.get("width", "100%").rstrip("%")) / 100
+                # Keep the Part II synthesis on its page after Latin Modern reflow.
+                if original_path.endswith("art-spot-compass.png"):
+                    width = 0.30
                 caption_block = blocks[i + 1]
                 assert caption_block["t"] == "Para"
                 caption_tex = subprocess.run(
@@ -171,6 +174,7 @@ def main() -> None:
         "\u00d7": r"\times",
         "\u2212": "-",
         "≥": r"\geq",
+        "≤": r"\leq",
         "≈": r"\approx",
         "→": r"\rightarrow",
     }.items():

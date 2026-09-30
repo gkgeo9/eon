@@ -120,44 +120,44 @@ z
 " clip-path="url(#p016ce0254f)" style="fill: url(#hbf609878a4)"/>
    </g>
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 14px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.152383" transform="rotate(-0 6.7716 23.152383)">One company runs in a line; a batch runs in lanes</text>
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597813" transform="rotate(-0 6.7716 23.597813)">One company runs in a line; a batch runs in lanes</text>
    </g>
    <g id="text_2">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="41.832246" transform="rotate(-0 6.7716 41.832246)">How the CLI executes  /  schematic, not to scale</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">How the CLI executes  /  schematic, not to scale</text>
    </g>
    <g id="text_3">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="68.929014" transform="rotate(-0 6.7716 68.929014)">A  eon analyze AAPL --years 3</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="68.938242" transform="rotate(-0 6.7716 68.938242)">A  eon analyze AAPL --years 3</text>
    </g>
    <g id="text_4">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(6.7716 105.417793)">one</text>
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(6.7716 114.195371)">process</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(6.7716 105.21957)">one</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(6.7716 114.596133)">process</text>
    </g>
    <g id="text_5">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="149.929014" transform="rotate(-0 6.7716 149.929014)">B  eon batch companies.csv  (25 keys; five lanes shown)</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="149.938242" transform="rotate(-0 6.7716 149.938242)">B  eon batch companies.csv  (25 keys; five lanes shown)</text>
    </g>
    <g id="text_6">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="20.3148" y="315.399707" transform="rotate(-0 20.3148 315.399707)">SEC download</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="20.3148" y="315.40834" transform="rotate(-0 20.3148 315.40834)">SEC download</text>
    </g>
    <g id="text_7">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="130.9176" y="315.399707" transform="rotate(-0 130.9176 315.399707)">Chrome → PDF</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="130.9176" y="315.40834" transform="rotate(-0 130.9176 315.40834)">Chrome → PDF</text>
    </g>
    <g id="text_8">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="241.5204" y="315.399707" transform="rotate(-0 241.5204 315.399707)">text</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="241.5204" y="315.408008" transform="rotate(-0 241.5204 315.408008)">text</text>
    </g>
    <g id="text_9">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="352.1232" y="315.399707" transform="rotate(-0 352.1232 315.399707)">model call</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="352.1232" y="315.40834" transform="rotate(-0 352.1232 315.40834)">model call</text>
    </g>
    <g id="text_10">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="20.3148" y="327.999624" transform="rotate(-0 20.3148 327.999624)">save year</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="20.3148" y="328.008008" transform="rotate(-0 20.3148 328.008008)">save year</text>
    </g>
    <g id="text_11">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="130.9176" y="327.999624" transform="rotate(-0 130.9176 327.999624)">per-key pause</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="130.9176" y="328.00834" transform="rotate(-0 130.9176 328.00834)">per-key pause</text>
    </g>
    <g id="text_12">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="241.5204" y="327.999707" transform="rotate(-0 241.5204 327.999707)">quota wait</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="241.5204" y="328.00834" transform="rotate(-0 241.5204 328.00834)">quota wait</text>
    </g>
    <g id="text_13">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="338.58" y="327.999624" transform="rotate(-0 338.58 327.999624)">|  lease heartbeat</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="338.58" y="328.026934" transform="rotate(-0 338.58 328.026934)">|  lease heartbeat</text>
    </g>
   </g>
   <g id="axes_2">
@@ -306,13 +306,13 @@ z
 " clip-path="url(#pfaf1f65b10)" style="fill: url(#h38407874ef); stroke: #ffffff; stroke-width: 0.4; stroke-linejoin: miter"/>
    </g>
    <g id="text_14">
-    <text style="font-size: 8.2px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="65.648114" y="91.536" transform="rotate(-0 65.648114 91.536)">year 1</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="65.648114" y="91.536" transform="rotate(-0 65.648114 91.536)">year 1</text>
    </g>
    <g id="text_15">
-    <text style="font-size: 8.2px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="184.304021" y="91.536" transform="rotate(-0 184.304021 91.536)">year 2</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="184.304021" y="91.536" transform="rotate(-0 184.304021 91.536)">year 2</text>
    </g>
    <g id="text_16">
-    <text style="font-size: 8.2px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="302.959928" y="91.536" transform="rotate(-0 302.959928 91.536)">year 3</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="302.959928" y="91.536" transform="rotate(-0 302.959928 91.536)">year 3</text>
    </g>
   </g>
   <g id="axes_3">
@@ -1174,27 +1174,27 @@ L 273.018079 151.2
 " clip-path="url(#p871a92b83a)" style="fill: none; stroke: #e8a33d; stroke-width: 1.3; stroke-linecap: square"/>
    </g>
    <g id="text_17">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="61.276678" y="167.145162" transform="rotate(-0 61.276678 167.145162)">worker 1</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="61.276678" y="167.153794" transform="rotate(-0 61.276678 167.153794)">worker 1</text>
    </g>
    <g id="text_18">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="61.276678" y="190.054252" transform="rotate(-0 61.276678 190.054252)">worker 2</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="61.276678" y="190.062885" transform="rotate(-0 61.276678 190.062885)">worker 2</text>
    </g>
    <g id="text_19">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="61.276678" y="212.963343" transform="rotate(-0 61.276678 212.963343)">worker 3</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="61.276678" y="212.971976" transform="rotate(-0 61.276678 212.971976)">worker 3</text>
    </g>
    <g id="text_20">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="61.276678" y="235.872434" transform="rotate(-0 61.276678 235.872434)">worker 4</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="61.276678" y="235.881067" transform="rotate(-0 61.276678 235.881067)">worker 4</text>
    </g>
    <g id="text_21">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="61.276678" y="258.781525" transform="rotate(-0 61.276678 258.781525)">worker 5</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="61.276678" y="258.790158" transform="rotate(-0 61.276678 258.790158)">worker 5</text>
    </g>
    <g id="text_22">
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; fill: #1f2a37" transform="translate(274.943001 286.316226)">quota spent: workers wait</text>
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; fill: #1f2a37" transform="translate(274.943001 295.567447)">for midnight Pacific</text>
+    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(274.943001 286.800411)">quota spent: workers wait</text>
+    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(274.943001 297.002735)">for midnight Pacific</text>
    </g>
    <g id="text_23">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(67.051444 286.316226)">staggered starts; each worker leases</text>
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; fill: #6b7280" transform="translate(67.051444 295.567613)">one company and reserves one key</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(67.051444 286.800411)">staggered starts; each worker leases</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #6b7280" transform="translate(67.051444 297.002735)">one company and reserves one key</text>
    </g>
   </g>
  </g>

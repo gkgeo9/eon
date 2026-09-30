@@ -242,82 +242,82 @@ z
 " clip-path="url(#p65d7c8ecab)" style="fill: #ddf1ee"/>
    </g>
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 14px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.152383" transform="rotate(-0 6.7716 23.152383)">Many workers. One writer. A durable memory.</text>
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597812" transform="rotate(-0 6.7716 23.597812)">Many workers. One writer. A durable memory.</text>
    </g>
    <g id="text_2">
-    <text style="font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="41.837344" transform="rotate(-0 6.7716 41.837344)">SQLite on one machine  /  claiming work and saving results are separate operations</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">SQLite on one machine  /  claiming work and saving results are separate operations</text>
    </g>
    <g id="text_3">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #4c5fd5" x="6.7716" y="66.481102" transform="rotate(-0 6.7716 66.481102)">A  CLAIM THE WORK</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #4c5fd5" x="6.7716" y="66.489891" transform="rotate(-0 6.7716 66.489891)">A  CLAIM THE WORK</text>
    </g>
    <g id="text_4">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="69.9732" y="96.807502" transform="rotate(-0 69.9732 96.807502)">PENDING</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="69.9732" y="96.816291" transform="rotate(-0 69.9732 96.816291)">PENDING</text>
    </g>
    <g id="text_5">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="225.72" y="96.807502" transform="rotate(-0 225.72 96.807502)">RUNNING</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="225.72" y="96.816291" transform="rotate(-0 225.72 96.816291)">RUNNING</text>
    </g>
    <g id="text_6">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="381.4668" y="96.807502" transform="rotate(-0 381.4668 96.807502)">COMPLETE</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="381.4668" y="96.816291" transform="rotate(-0 381.4668 96.816291)">COMPLETE</text>
    </g>
    <g id="text_7">
-    <text style="font-size: 8.7px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="125.50098" transform="rotate(-0 6.7716 125.50098)">Conditional UPDATE: only a pending item can be claimed.</text>
+    <text style="font-size: 8.7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="125.509901" transform="rotate(-0 6.7716 125.509901)">Conditional UPDATE: only a pending item can be claimed.</text>
    </g>
    <g id="text_8">
-    <text style="font-size: 8.7px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="138.33138" transform="rotate(-0 6.7716 138.33138)">Heartbeat renews a 3 h lease every 5 min; stale work returns to pending.</text>
+    <text style="font-size: 8.7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="138.340301" transform="rotate(-0 6.7716 138.340301)">Heartbeat renews a 3 h lease every 5 min; stale work returns to pending.</text>
    </g>
    <g id="text_9">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="6.7716" y="161.348302" transform="rotate(-0 6.7716 161.348302)">B  SERIALIZE THE WRITES</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="6.7716" y="161.357091" transform="rotate(-0 6.7716 161.357091)">B  SERIALIZE THE WRITES</text>
    </g>
    <g id="text_10">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="47.4012" y="197.571707" transform="rotate(-0 47.4012 197.571707)">worker 1</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="47.4012" y="197.58034" transform="rotate(-0 47.4012 197.58034)">worker 1</text>
    </g>
    <g id="text_11">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="47.4012" y="215.067707" transform="rotate(-0 47.4012 215.067707)">worker 2</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="47.4012" y="215.07634" transform="rotate(-0 47.4012 215.07634)">worker 2</text>
    </g>
    <g id="text_12">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="47.4012" y="232.563707" transform="rotate(-0 47.4012 232.563707)">worker 3</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="47.4012" y="232.57234" transform="rotate(-0 47.4012 232.57234)">worker 3</text>
    </g>
    <g id="text_13">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #0f766e" x="180.576" y="212.281102" transform="rotate(-0 180.576 212.281102)">ONE WRITER</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #0f766e" x="180.576" y="212.289891" transform="rotate(-0 180.576 212.289891)">ONE WRITER</text>
    </g>
    <g id="text_14">
-    <text style="font-size: 8.2px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="180.576" y="225.29327" transform="rotate(-0 180.576 225.29327)">short transactions</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="180.576" y="225.301598" transform="rotate(-0 180.576 225.301598)">short transactions</text>
    </g>
    <g id="text_15">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="314.65368" y="212.281102" transform="rotate(-0 314.65368 212.281102)">SQLite + WAL</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="314.65368" y="212.290242" transform="rotate(-0 314.65368 212.290242)">SQLite + WAL</text>
    </g>
    <g id="text_16">
-    <text style="font-size: 8.2px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="314.65368" y="225.29327" transform="rotate(-0 314.65368 225.29327)">committed results</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="314.65368" y="225.301598" transform="rotate(-0 314.65368 225.301598)">committed results</text>
    </g>
    <g id="text_17">
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="409.45608" y="212.151707" transform="rotate(-0 409.45608 212.151707)">UI / CLI</text>
+    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="409.45608" y="212.160008" transform="rotate(-0 409.45608 212.160008)">UI / CLI</text>
    </g>
    <g id="text_18">
-    <text style="font-size: 8.2px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="409.45608" y="225.29327" transform="rotate(-0 409.45608 225.29327)">readers</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="409.45608" y="225.301598" transform="rotate(-0 409.45608 225.301598)">readers</text>
    </g>
    <g id="text_19">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="249.865224" transform="rotate(-0 6.7716 249.865224)">Busy writer? Wait up to 30 s; retry with backoff and jitter (10 attempts total).</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="249.87394" transform="rotate(-0 6.7716 249.87394)">Busy writer? Wait up to 30 s; retry with backoff and jitter (10 attempts total).</text>
    </g>
    <g id="text_20">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="273.322702" transform="rotate(-0 6.7716 273.322702)">C  KEEP TWO KINDS OF MEMORY</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="273.331491" transform="rotate(-0 6.7716 273.331491)">C  KEEP TWO KINDS OF MEMORY</text>
    </g>
    <g id="text_21">
-    <text style="font-weight: 700; font-size: 8.7px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="294.62898" transform="rotate(-0 13.5432 294.62898)">batch_jobs → batch_items</text>
+    <text style="font-weight: 700; font-size: 8.7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="294.637901" transform="rotate(-0 13.5432 294.637901)">batch_jobs → batch_items</text>
    </g>
    <g id="text_22">
-    <text style="font-size: 8.2px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="306.94119" transform="rotate(-0 13.5432 306.94119)">queue state · owner · lease · progress</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="306.949598" transform="rotate(-0 13.5432 306.949598)">queue state · owner · lease · progress</text>
    </g>
    <g id="text_23">
-    <text style="font-weight: 700; font-size: 8.7px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="239.2632" y="294.62898" transform="rotate(-0 239.2632 294.62898)">analysis_runs → analysis_results</text>
+    <text style="font-weight: 700; font-size: 8.7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="239.2632" y="294.637901" transform="rotate(-0 239.2632 294.637901)">analysis_runs → analysis_results</text>
    </g>
    <g id="text_24">
-    <text style="font-size: 8.2px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="239.2632" y="306.94119" transform="rotate(-0 239.2632 306.94119)">run config · year · validated answer</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="239.2632" y="306.949598" transform="rotate(-0 239.2632 306.949598)">run config · year · validated answer</text>
    </g>
    <g id="text_25">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="339.289224" transform="rotate(-0 6.7716 339.289224)">Per-year checkpoints reduce repeated work. A unique index rejects duplicate rows.</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="339.29794" transform="rotate(-0 6.7716 339.29794)">Per-year checkpoints reduce repeated work. A unique index rejects duplicate rows.</text>
    </g>
    <g id="text_26">
-    <text style="font-size: 8.5px; font-family: 'Arial', 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="352.899631" transform="rotate(-0 6.7716 352.899631)">SQLite backup API keeps five copies. Leases are not an exactly-once guarantee.</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="352.90594" transform="rotate(-0 6.7716 352.90594)">SQLite backup API keeps five copies. Leases are not an exactly-once guarantee.</text>
    </g>
   </g>
  </g>
