@@ -146,9 +146,9 @@ timestamps are not proof of an unchanged archive.
 ## 3. From scripts to a processor
 
 In October 2025 the scripts became a single reusable module,
-`standardized_sec_ai`. A common filing processor downloaded, converted and
-read reports for any ticker. Its most important change was a single word:
-Pydantic.
+`standardized_sec_ai`. Its centre was `tenk_processor.py`, which downloaded,
+converted and read filings for any ticker, and its most important change was a
+single word: Pydantic.
 
 Pydantic is a Python library for declaring the exact shape of data. Handed to
 Gemini as a response schema, it forces the model to answer in named fields of
@@ -156,8 +156,8 @@ fixed types, and rejects any answer that does not fit. The project's own notes
 from that month celebrate it: "No more JSON parsing errors!" The 130 spellings
 of six factors could not happen again.
 
-This version also introduced the three-lens prompt that EON still uses:
-read the filing as Buffett would (moat, management, price), as
+The same folder held `ppee.py`, the three-lens prompt from which EON's is
+still drawn: read the filing as Buffett would (moat, management, price), as
 Taleb would (fragility, tail risk, optionality), and as a contrarian would
 (what everyone believes, and why they might be wrong).
 
@@ -357,9 +357,9 @@ works with that rather than against it.
   backup API and keeps the last five.
 
 The schema itself has been through 14 migrations, each written to be safe to
-run twice and applied automatically at start-up. An earlier corrupted
-database survives in the repository's history: a concrete reminder of why
-recovery belongs in the design.
+run twice and applied automatically at start-up. One earlier file in the
+repository's history is named `fintel.db.corrupted`: a reminder of why the
+rest exists.
 
 ### 5.5 Interfaces and alerting
 

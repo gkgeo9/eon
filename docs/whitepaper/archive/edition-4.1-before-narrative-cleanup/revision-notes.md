@@ -475,9 +475,3 @@ Confirmed that ArtML figures use DejaVu Sans and changed EON’s figure font
 from Arial to the same family. Regenerated all seventeen figures from the
 existing frozen evidence. Retained Latin Modern for publication text.
 Raised the cover text so the subtitle clears the windows in the illustration.
-
-## Narrative filename cleanup — 30 September 2026
-
-Replaced incidental script and damaged-database filenames with descriptions
-of their role. Preserved meaningful library names, commands and reproduction
-paths. No evidence or artwork changed.

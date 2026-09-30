@@ -13,6 +13,7 @@ things are stored, never what is drawn:
 
 Needs pikepdf, PyMuPDF, Pillow, fontTools and matplotlib (for the full DejaVu
 files). mozjpeg-lossless-optimization is used when installed. Run with
+--out NAME to pick a different file name (keeps earlier copies) and
 --check to render every page of both files and report the worst difference.
 """
 
@@ -34,6 +35,8 @@ from pikepdf import Name
 HERE = Path(__file__).resolve().parent
 SOURCE = HERE / "eon-whitepaper.pdf"
 TARGET = HERE / "eon-whitepaper-share.pdf"
+if "--out" in sys.argv:
+    TARGET = HERE / sys.argv[sys.argv.index("--out") + 1]
 MAX_DPI = 450
 JPEG_QUALITY = 88
 MIN_IMAGE_BYTES = 200_000

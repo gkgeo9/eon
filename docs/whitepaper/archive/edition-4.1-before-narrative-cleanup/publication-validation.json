@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-30T22:20:33.748803+00:00",
+  "timestamp": "2026-09-30T14:56:52.328964+00:00",
   "status": "passed",
   "checks": {
     "numbered_figures": 17,
@@ -19,13 +19,13 @@
       "pages": 32,
       "caption_order": "1\u201317",
       "text_in_page_bounds": true,
-      "bytes": 15645507
+      "bytes": 15645579
     }
   },
   "inputs": {
-    "eon-whitepaper.md": "6dcf782e082846bdedee69f3c7ea8df6e20d0f71b26dc363f1123a43e1f44635",
-    "eon-whitepaper.pdf": "fb51a6661a3cd0c794eb915811e9ecde016dcd07f3b8b0003eacad278a395a0f",
-    "document-build.json": "d0fd1f7f8577bae1b01aa085842fab9499ff3ed1f14652db488cf4780110e33a",
+    "eon-whitepaper.md": "23b47d02b79bb9eaaf36a33e68aa7cc13acabd1ab5c90d354b343954677cdee9",
+    "eon-whitepaper.pdf": "62ab170b36e8402cf505a469f9d5c6ab2383b41f2ca8fa4a33d3b546d2487888",
+    "document-build.json": "e5882e2feb40d4e599a2a96708635d543ec121be70512051356c2c89fa06ae5e",
     "figures/art/manifest.json": "a0c2946a2b914beb2ea1e1f672ce96fef2d034cff2b9950b04910b5865faffef",
     "validate_publication.py": "f9630194e47c530fe160274e8a243750b9416bee008ffd7bd9bb993ff47b775f"
   }

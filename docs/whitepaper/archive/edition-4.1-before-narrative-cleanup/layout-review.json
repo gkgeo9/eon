@@ -9,9 +9,9 @@
   "evidence_unchanged": true,
   "unchanged_other_artworks": 4,
   "inputs": {
-    "eon-whitepaper.md": "6dcf782e082846bdedee69f3c7ea8df6e20d0f71b26dc363f1123a43e1f44635",
-    "eon-whitepaper.pdf": "fb51a6661a3cd0c794eb915811e9ecde016dcd07f3b8b0003eacad278a395a0f",
-    "eon-whitepaper.tex": "8fa3ce5dd1b2b3cd4a4e581d6c74385caac45c55987dce1beb2a526418ca677e",
+    "eon-whitepaper.md": "23b47d02b79bb9eaaf36a33e68aa7cc13acabd1ab5c90d354b343954677cdee9",
+    "eon-whitepaper.pdf": "62ab170b36e8402cf505a469f9d5c6ab2383b41f2ca8fa4a33d3b546d2487888",
+    "eon-whitepaper.tex": "d0a5307ec11d3340c32e1697f1aa43e8ad4f746c01b0a15c6990cd8f50318cc6",
     "build_paper.py": "367f9425789d5d79ceedf46c9a44a99e68f205a0791ec2c2cb1386be2ff72684",
     "paper-preamble.tex": "38b568a9b1f0d2cf22fca90a68037914611a16ca5c46da32b1ff5f8fbc2bc1fa",
     "figures/art/manifest.json": "a0c2946a2b914beb2ea1e1f672ce96fef2d034cff2b9950b04910b5865faffef",
@@ -21,6 +21,5 @@
   "people_removal_review": "All six current illustrations inspected; worker and speaker removed. Updated PDF pages 7 and 26 checked. Other four art assets unchanged.",
   "typography": "Latin Modern publication text and DejaVu Sans figures, matching ArtML.",
   "cover_spacing_review": "Cover text raised so both subtitle lines clear the blue windows; rendered cover inspected.",
-  "figure_font_review": "Inspected all seventeen regenerated figures for label crowding. Publication validation passed: 32 pages, 17 numbered figures, 88 internal links, no text outside page bounds or missing glyphs. Frozen evidence and all six art assets unchanged.",
-  "narrative_cleanup_review": "Replaced three incidental filenames with prose descriptions. Inspected changed physical pages 8 and 14; all other pages render identically to the prior edition. Publication and numerical checks passed; 32 pages retained."
+  "figure_font_review": "Inspected all seventeen regenerated figures for label crowding. Publication validation passed: 32 pages, 17 numbered figures, 88 internal links, no text outside page bounds or missing glyphs. Frozen evidence and all six art assets unchanged."
 }

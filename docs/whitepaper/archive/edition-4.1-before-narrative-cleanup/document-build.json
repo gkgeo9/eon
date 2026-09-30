@@ -1,6 +1,6 @@
 {
-  "markdown_sha256": "6dcf782e082846bdedee69f3c7ea8df6e20d0f71b26dc363f1123a43e1f44635",
-  "latex_sha256": "8fa3ce5dd1b2b3cd4a4e581d6c74385caac45c55987dce1beb2a526418ca677e",
+  "markdown_sha256": "23b47d02b79bb9eaaf36a33e68aa7cc13acabd1ab5c90d354b343954677cdee9",
+  "latex_sha256": "d0a5307ec11d3340c32e1697f1aa43e8ad4f746c01b0a15c6990cd8f50318cc6",
   "preamble_sha256": "38b568a9b1f0d2cf22fca90a68037914611a16ca5c46da32b1ff5f8fbc2bc1fa",
   "generator_sha256": "367f9425789d5d79ceedf46c9a44a99e68f205a0791ec2c2cb1386be2ff72684",
   "pandoc": "pandoc 3.6.4",
