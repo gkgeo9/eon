@@ -1,0 +1,87 @@
+# Pre-registered protocol for the whitepaper's backtest re-evaluation.
+# Version 1 was written before the evaluation was first run; its outputs are kept
+# in evaluation/v1-feb-cache/. Version 2's amendments are listed at the end, with
+# the reason for each. Change nothing else without a note in revision-notes.md.
+version: 3
+
+database: data/eon.db            # opened read-only, immutable
+result_type: SimplifiedAnalysis  # the three-lens multi-perspective schema
+benchmark: SPY
+# v1 read data/price_cache (fetched Feb 2026, ends 2026-02-06). v2 reads a
+# refresh made by refresh_prices.py into the whitepaper folder only.
+price_source: docs/whitepaper/evaluation/prices/closes.parquet
+price_end: '2026-09-28'          # last complete session before the refresh
+
+# One reading per company-year. Overlapping batches stored some twice.
+dedupe: keep_lowest_row_id
+
+# Entry is the first trading day strictly after the actual 10-K filing date
+# (file_cache.filing_date). Readings without a filing date are excluded.
+entry_rule: first_trading_day_after_filing_date
+horizons_trading_days: {6M: 126, 1Y: 252, 2Y: 504}
+
+# Verdict parsing: the leading token of final_verdict.
+long_verdicts: [STRONG BUY, BUY]
+short_verdicts: [SELL, STRONG SELL]
+
+# Gemini 2.5 Flash's published knowledge cutoff. A holding window that ends
+# before it could, in principle, be known to the model. A filing published
+# after it is classed post-cutoff conditional on the published information boundary.
+model: gemini-2.5-flash
+knowledge_cutoff: '2025-01-31'
+
+# Two primary questions, fixed in advance. Everything else is secondary.
+primary:
+  - id: historical
+    question: Does the BUY-minus-SELL spread survive a within-vintage, within-industry permutation test?
+    horizon: 1Y
+    sample: outcome window ends before knowledge_cutoff
+  - id: post_cutoff
+    question: Does a spread appear for filings published after the model's knowledge cutoff?
+    horizon: 6M
+    sample: filing_date after knowledge_cutoff
+
+  # Amendment (v2, 29 Sep 2026), added after v1 was seen. v1 showed the effect
+  # lives at 1Y and beyond, where the post-cutoff test had no data. This mirrors
+  # the historical test exactly: same horizon, blocks and statistic. It adds no
+  # free parameter; it only becomes computable once prices pass Feb 2026.
+  - id: post_cutoff_1y
+    question: Does the 1Y spread appear for filings published after the model's knowledge cutoff?
+    horizon: 1Y
+    sample: filing_date after knowledge_cutoff
+
+permutations: 10000
+permutation_seed: 20260929
+industry_source: all_companies_08022026.csv   # FactSet industry, a Feb 2026 snapshot
+industry_column: FactSet Ind
+min_block_size: 2
+
+# Amendment (v2, 29 Sep 2026), added after inspecting post-cutoff returns: one
+# reading (BW, +3,314% 1Y excess) moves the post-cutoff 1Y mean by ~10 points.
+# A rank statistic is therefore reported for every primary sample alike: the
+# difference in mean within-vintage percentile rank, same permutation blocks.
+# It is a robustness check, not a replacement for the primary mean statistic.
+secondary_statistics: [rank_within_vintage_industry]
+
+# Amendment (v2, 29 Sep 2026), exploratory and disclosed: an anachronism probe.
+# Each term entered public use on a known date. A reading of a filing published
+# before that date that uses the term would show the model's later knowledge
+# leaking into a reading. The probe counts all mentions too, so its power shows.
+# Dates are conservative (the later of first use and enactment).
+anachronism_terms:
+  ChatGPT: '2022-11-30'
+  Inflation Reduction Act: '2022-08-16'
+  CHIPS and Science Act: '2022-08-09'
+  collapse of Silicon Valley Bank: '2023-03-10'
+  Silicon Valley Bank collapse: '2023-03-10'
+  SVB collapse: '2023-03-10'
+  DeepSeek: '2025-01-20'
+  Liberation Day: '2025-04-02'
+
+# Edition 2 correction: compare distances from the permutation null mean,
+# because industry blocks can preserve a nonzero spread. Same data and shuffles.
+p_value_method: two_sided_distance_from_permutation_null_mean
+
+# Edition 2: scope each evaluated reading to its recorded model.
+# Two July 2026 Gemini 3.5 Flash readings remain in the descriptive corpus only.
+model_filter: exact_run_config_model

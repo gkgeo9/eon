@@ -1,0 +1,26 @@
+version: 3
+figure_width_inches: 6.27
+preview_dpi: 240
+figure_count: 17
+quota_reset_hour_utc: 8
+keys: 25
+requests_per_key_per_day: 20
+min_vintage_readings: 400
+# Edition 3 palette: teal for EON and its subject, indigo for systems and
+# structure, amber for time and attention, coral for adverse results and SELL.
+palette:
+  ink: '#1F2A37'
+  muted: '#6B7280'
+  light: '#E8ECEF'
+  paper: '#F7F8FA'
+  accent: '#0F766E'
+  accent_mid: '#5FB3AB'
+  accent_light: '#DDF1EE'
+  indigo: '#4C5FD5'
+  indigo_mid: '#97A3EA'
+  indigo_light: '#E6E9FB'
+  amber: '#E8A33D'
+  amber_light: '#FCF0DC'
+  warning: '#E0605A'
+  warning_mid: '#F2A29D'
+  warning_light: '#FCEBEA'

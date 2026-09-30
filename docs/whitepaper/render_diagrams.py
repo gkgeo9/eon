@@ -47,8 +47,8 @@ def lineage() -> None:
     for i, (name, when, face, what, kept) in enumerate(stages):
         y = top - (i + 1) * row_h - i * gap
         rbox(ax, 0.015, y, 0.24, row_h, face)
-        text(ax, 0.03, y + row_h * 0.64, name, weight="bold", color="white", size=9.5 if len(name) < 16 else 8.5)
-        text(ax, 0.03, y + row_h * 0.3, when, color="white", size=8.5)
+        text(ax, 0.03, y + row_h * 0.64, name, weight="bold", color=C["ink"] if face in (C["amber"], C["indigo_mid"], C["accent_mid"]) else "white", size=9.5 if len(name) < 16 else 8.5)
+        text(ax, 0.03, y + row_h * 0.3, when, color=C["ink"] if face in (C["amber"], C["indigo_mid"], C["accent_mid"]) else "white", size=8.5)
         rbox(ax, 0.27, y, 0.715, row_h, C["paper"])
         text(ax, 0.285, y + row_h * 0.66, what, weight="bold", size=9)
         text(ax, 0.285, y + row_h * 0.3, kept, size=8.5, color=C["muted"])
@@ -62,39 +62,38 @@ def lineage() -> None:
 
 
 def architecture() -> None:
-    fig, ax = canvas(
-        6.9,
-        "Five layers between a filing and a verdict",
-        "EON's architecture  /  module names from the repository",
-    )
-    layers = [
-        ("SOURCES", C["muted"], [("SEC EDGAR", "10-K HTML and filing metadata"), ("Market data", "Yahoo prices, FactSet snapshot")]),
-        ("ACQUIRE", C["indigo"], [("Downloader", "EDGAR filings,\ncached per year"), ("SEC queue", "≤ 10 req/s,\nfile-locked"), ("Converter", "headless Chrome\nprints a PDF"), ("Extractor", "PyPDF2 text,\nnothing cut")]),
-        ("REASON", C["accent"], [("Prompt + schema", "three lenses,\n35 fields"), ("Key manager", "25 keys,\nleast-used first"), ("Request queue", "per-key locks,\n25 slots"), ("Gemini call", "validated;\nretried by cause")]),
-        ("REMEMBER", C["amber"], [("SQLite (WAL)", "runs, results,\nbatch items"), ("File cache", "27.5 GB PDFs,\nfetched once"), ("Backups", "backup API,\nlast five kept"), ("Migrations", "v001–v014,\nat start-up")]),
-        ("OPERATE", C["ink"], [("CLI", "multi-day\nbatches"), ("Web UI", "explore and\nresume"), ("Discord", "alerts while\nyou sleep"), ("Monitors", "disk, memory,\nstray Chrome")]),
+    fig, ax = canvas(6.0, "One reading, supported by a whole system",
+                     "Solid arrows: filing → verdict  /  the surrounding machinery keeps it running")
+    def card(x, y, w, h, title, body, face, tint):
+        rbox(ax, x, y, w, h, tint)
+        text(ax, x + .018, y + h - .028, title, weight="bold", color=face, size=9)
+        text(ax, x + .018, y + h * .34, body, size=8.5, linespacing=1.35)
+    card(.015,.775,.28,.105,"CLI", "start long-running work",C["indigo"],C["indigo_light"])
+    card(.315,.775,.28,.105,"WEB INTERFACE", "launch, inspect, resume",C["indigo"],C["indigo_light"])
+    card(.645,.775,.34,.105,"SHARED SERVICES", "one execution path",C["ink"],C["light"])
+    for x in [.155,.455]:
+        ax.plot([x,x,.81],[.775,.752,.752],color=C["indigo"],lw=.8)
+    arrow(ax,(.81,.752),(.81,.775),C["indigo"])
+    rows=[
+      (.57,"01  ACQUIRE", C["indigo"],C["indigo_light"],[("EDGAR HTML","download and cache"),("Chrome → PDF","print the rendered page"),("Extract text","PyPDF2; no summary")]),
+      (.365,"02  READ", C["accent"],C["accent_light"],[("Prompt + schema","three lenses · 35 fields"),("Model request","Gemini 2.5 Flash"),("Validate","accept or retry by cause")]),
+      (.16,"03  REMEMBER", C["ink"],C["paper"],[("Save each year","result + run identity"),("SQLite database","results and queue state"),("Read / export","UI, CLI and evaluation")]),
     ]
-    top, row_h, gap = 0.855, 0.118, 0.032
-    for r, (label, face, boxes) in enumerate(layers):
-        y = top - (r + 1) * row_h - r * gap
-        text(ax, 0.015, y + row_h / 2, label, weight="bold", color=face, size=9)
-        n = len(boxes)
-        x0, span = 0.155, 0.83
-        bw = (span - (n - 1) * 0.014) / n
-        for i, (title, body) in enumerate(boxes):
-            x = x0 + i * (bw + 0.014)
-            light = {C["muted"]: C["light"], C["indigo"]: C["indigo_light"], C["accent"]: C["accent_light"], C["amber"]: C["amber_light"], C["ink"]: C["light"]}[face]
-            rbox(ax, x, y, bw, row_h, light)
-            text(ax, x + 0.012, y + row_h - 0.028, title, weight="bold", color=face if face != C["muted"] else C["ink"], size=9)
-            text(ax, x + 0.012, y + row_h * 0.36, body, size=8, color=C["ink"], linespacing=1.3)
-            if label == "ACQUIRE" and i < n - 1:
-                arrow(ax, (x + bw, y + row_h / 2), (x + bw + 0.014, y + row_h / 2), C["indigo"])
-            if label == "REASON" and i < n - 1:
-                arrow(ax, (x + bw, y + row_h / 2), (x + bw + 0.014, y + row_h / 2), C["accent"])
-        if r < len(layers) - 1:
-            arrow(ax, (0.57, y - 0.002), (0.57, y - gap + 0.002), C["muted"])
-    footer(ax, "Source: eon/ package structure; limits from eon/ai/api_config.py. Arrows: the path of one filing.")
-    save(fig, "03-architecture")
+    for y,label,face,tint,cards in rows:
+        text(ax,.015,y+.152,label,weight="bold",color=face,size=9)
+        for i,(title,body) in enumerate(cards):
+            x=.015+i*.332
+            card(x,y,.305,.12,title,body,face,tint)
+            if i<2: arrow(ax,(x+.305,y+.06),(x+.332,y+.06),face)
+    # Route each stage into the first box of the next without implying that
+    # monitoring and storage services are additional steps in a model request.
+    for y in [.57,.365]:
+        ax.plot([.833,.833,.167],[y,y-.075,y-.075],color=C["muted"],lw=.8)
+        arrow(ax,(.167,y-.075),(.167,y-.085),C["muted"])
+    text(ax,.015,.072,"AROUND THE PATH",weight="bold",color=C["accent"],size=8.5)
+    text(ax,.27,.072,"SEC queue · per-key locks · leases · backups · Discord alerts",size=8.3)
+    footer(ax,"Source: eon/ package. Quotas and recovery govern the path; they are not extra analysis stages.")
+    save(fig,"03-architecture")
 
 
 # --------------------------------------------------------- life of a filing
@@ -176,7 +175,15 @@ def execution() -> None:
         x = w * 0.6
         while x < 10.5:
             seg = [(k, v * rng.uniform(0.8, 1.25)) for k, v in one_year]
-            x = lane(low, w, seg, x)
+            remaining = 10.7 - x
+            clipped = []
+            for kind, width in seg:
+                if remaining <= 0: break
+                take = min(width, remaining)
+                clipped.append((kind, take))
+                remaining -= take
+            x = lane(low, w, clipped, x)
+            if x >= 10.7: break
         lane(low, w, [("reset", 3.2)], 10.7)
         x2 = 13.9
         lane(low, w, one_year[:4], x2)
@@ -184,7 +191,7 @@ def execution() -> None:
         for hb in np.arange(1.5, 10.5, 2.2):
             low.plot([hb + w * 0.2], [w - 0.38], marker="|", color=C["ink"], ms=5, lw=0)
     low.axvline(10.7, color=C["amber"], lw=1.3)
-    low.text(10.8, 5.0, "keys spent: every worker\nwaits for midnight Pacific", size=8.5, color=C["amber"], va="top", weight="bold")
+    low.text(10.8, 5.0, "quota spent: workers wait\nfor midnight Pacific", size=8.5, color=C["ink"], va="top", weight="bold")
     low.text(0, 5.0, "staggered starts; each worker leases\none company and reserves one key", size=8.5, color=C["muted"], va="top")
     low.set_xlim(-0.2, 19.5)
     low.set_ylim(6.0, -0.6)
@@ -204,46 +211,46 @@ def execution() -> None:
 
 
 def database() -> None:
-    fig, ax = canvas(
-        6.2,
-        "The database is the batch's memory",
-        "Core tables and the mechanisms that keep many writers from colliding",
-    )
-    tables = [
-        (0.015, 0.54, "batch_jobs", ["batch_id", "status, priority", "totals: done / failed", "last_activity_at"], C["indigo"]),
-        (0.015, 0.2, "batch_items", ["batch_id → batch_jobs", "ticker, status", "lease_owner", "lease_expires_at", "last_heartbeat_at", "completed_years_list"], C["indigo"]),
-        (0.265, 0.54, "analysis_runs", ["run_id", "ticker, analysis_type", "config_json", "completed_years"], C["accent"]),
-        (0.265, 0.2, "analysis_results", ["run_id → analysis_runs", "ticker, fiscal_year", "result_type", "result_json (35 fields)", "UNIQUE(run, ticker, year,", "   filing, type)"], C["accent"]),
-    ]
-    for x, y, name, cols, face in tables:
-        h = 0.07 + 0.042 * len(cols)
-        rbox(ax, x, y, 0.23, h, "white", edge=face, lw=1.1)
-        rbox(ax, x, y + h - 0.05, 0.23, 0.05, face)
-        text(ax, x + 0.01, y + h - 0.025, name, weight="bold", color="white", size=9)
-        for j, col in enumerate(cols):
-            text(ax, x + 0.012, y + h - 0.08 - j * 0.042, col, size=8.2, color=C["ink"])
-    arrow(ax, (0.13, 0.54), (0.13, 0.48), C["indigo"])
-    arrow(ax, (0.38, 0.54), (0.38, 0.505), C["accent"])
-    arrow(ax, (0.245, 0.32), (0.265, 0.32), C["muted"])
-    notes = [
-        ("WAL journal", "readers never block the one writer"),
-        ("busy_timeout 30 s", "then up to 10 retries, jittered backoff"),
-        ("Claim a company", "UPDATE … WHERE pending: one winner"),
-        ("Heartbeat", "renews the lease; silence lets it expire"),
-        ("Crash recovery", "dead worker's items return to pending"),
-        ("Save each year", "resume from the last completed fiscal year"),
-        ("v014 unique index", "ended a double-save that duplicated rows"),
-        ("Backups", "SQLite backup API; the last five kept"),
-    ]
-    text(ax, 0.53, 0.805, "HOW CONCURRENT WRITES STAY SAFE", weight="bold", color=C["amber"], size=9)
-    for j, (head, body) in enumerate(notes):
-        y = 0.75 - j * 0.07
-        rbox(ax, 0.53, y - 0.027, 0.455, 0.055, C["amber_light"])
-        text(ax, 0.543, y + 0.008, head, weight="bold", size=8.5)
-        text(ax, 0.543, y - 0.014, body, size=8.2, color=C["ink"])
-    text(ax, 0.015, 0.14, "Also: file_cache, year checkpoints, custom prompts; 14 migrations.", size=8.5, color=C["muted"])
-    footer(ax, "Source: eon/ui/database/repository.py and migrations; eon/ui/services/batch_queue.py.")
-    save(fig, "07-database")
+    fig, ax = canvas(6.0,"Many workers. One writer. A durable memory.",
+                     "SQLite on one machine  /  claiming work and saving results are separate operations")
+    text(ax,.015,.835,"A  CLAIM THE WORK",weight="bold",color=C["indigo"])
+    states=[(.015,"PENDING",C["light"]),(.36,"RUNNING",C["indigo_light"]),(.705,"COMPLETE",C["accent_light"])]
+    for x,label,face in states:
+        rbox(ax,x,.72,.28,.075,face)
+        text(ax,x+.14,.757,label,ha="center",weight="bold",size=9)
+    arrow(ax,(.295,.757),(.36,.757),C["indigo"])
+    arrow(ax,(.64,.757),(.705,.757),C["accent"])
+    text(ax,.015,.683,"Conditional UPDATE: only a pending item can be claimed.",size=8.7)
+    text(ax,.015,.65,"Heartbeat renews a 3 h lease every 5 min; stale work returns to pending.",size=8.7)
+    text(ax,.015,.591,"B  SERIALIZE THE WRITES",weight="bold",color=C["accent"])
+    for i in range(3):
+        y=.48-i*.045
+        rbox(ax,.015,y,.18,.035,C["indigo_light"])
+        text(ax,.105,y+.0175,f"worker {i+1}",ha="center",size=8.5)
+        arrow(ax,(.195,y+.0175),(.285,.442),C["indigo"])
+    rbox(ax,.285,.4,.23,.095,C["accent_light"])
+    text(ax,.4,.46,"ONE WRITER",ha="center",weight="bold",color=C["accent"])
+    text(ax,.4,.426,"short transactions",ha="center",size=8.2)
+    arrow(ax,(.515,.447),(.6,.447),C["accent"])
+    rbox(ax,.6,.4,.195,.095,C["paper"],C["accent"])
+    text(ax,.697,.46,"SQLite + WAL",ha="center",weight="bold",size=9)
+    text(ax,.697,.426,"committed results",ha="center",size=8.2)
+    rbox(ax,.83,.4,.155,.095,C["light"])
+    text(ax,.907,.46,"UI / CLI",ha="center",weight="bold",size=8.5)
+    text(ax,.907,.426,"readers",ha="center",size=8.2)
+    arrow(ax,(.795,.447),(.83,.447),C["muted"])
+    text(ax,.015,.353,"Busy writer? Wait up to 30 s; retry with backoff and jitter (10 attempts total).",size=8.5)
+    text(ax,.015,.313,"C  KEEP TWO KINDS OF MEMORY",weight="bold",color=C["ink"])
+    for x,title,body,face in [
+       (.015,"batch_jobs → batch_items","queue state · owner · lease · progress",C["indigo_light"]),
+       (.515,"analysis_runs → analysis_results","run config · year · validated answer",C["accent_light"])]:
+        rbox(ax,x,.19,.47,.09,face)
+        text(ax,x+.015,.248,title,weight="bold",size=8.7)
+        text(ax,x+.015,.216,body,size=8.2)
+    text(ax,.015,.133,"Per-year checkpoints reduce repeated work. A unique index rejects duplicate rows.",size=8.5)
+    text(ax,.015,.098,"SQLite backup API keeps five copies. Leases are not an exactly-once guarantee.",size=8.5)
+    footer(ax,"Source: repository.py, migrations v001–v014, batch_queue.py. WAL lets reads overlap writes.")
+    save(fig,"07-database")
 
 
 # ---------------------------------------------------------------- catalogue
@@ -332,7 +339,7 @@ def options_ledger() -> None:
     o = ST["options_ledger"]
     order = [("Put Bias (Downside Tail)", "Put bias"), ("No Edge (Skip)", "No edge"), ("Straddle Bias (Binary)", "Straddle"), ("Call Bias (Upside Tail)", "Call bias")]
     fig, ax = canvas(
-        4.6,
+        3.4,
         "It saw how far a stock would move, not which way",
         "Options scan of 25–26 February 2026, graded six months on  /  written before the outcome",
     )
@@ -340,26 +347,27 @@ def options_ledger() -> None:
     for p, (key, head, ylab) in enumerate(panels):
         left = 0.08 + p * 0.48
         chart = fig.add_axes((left, 0.27, 0.4, 0.43))
-        text(ax, left, 0.77, head, weight="bold", color=C["accent"] if p else C["muted"])
-        text(ax, left, 0.735, ylab, color=C["muted"], size=8.5)
+        text(ax, left, 0.775, head, weight="bold", color=C["accent"] if p else C["muted"])
+        text(ax, left, 0.73, ylab, color=C["muted"], size=8.5)
         for i, (k, lab) in enumerate(order):
             r = o["by_bias"][k]
             v = r[key]
             face = {"Put bias": C["warning_mid"], "No edge": C["light"], "Straddle": C["indigo_mid"], "Call bias": C["accent_mid"]}[lab]
-            chart.bar(i, v - 0.5, bottom=0.5, color=face, width=0.62, lw=0)
-            chart.text(i, v + (0.004 if v >= 0.5 else -0.004), f"{v:.3f}", ha="center", va="bottom" if v >= 0.5 else "top", size=8.5)
-            chart.text(i, 0.425, f"{lab}\n{r['n']:,}", ha="center", va="top", size=8.5, color=C["ink"])
+            chart.plot([i, i], [0.5, v], color=face, lw=2)
+            chart.scatter([i], [v], s=42, color=face, edgecolors=C["ink"], linewidths=.6, zorder=3)
+            chart.text(i, v + (0.004 if v >= 0.5 else -0.004), f"{v * 100:.1f}", ha="center", va="bottom" if v >= 0.5 else "top", size=8.5)
+            chart.text(i, 0.43, f"{lab}\n{r['n']:,}", ha="center", va="top", size=8.5, color=C["ink"])
         chart.axhline(0.5, color=C["ink"], lw=0.8)
         chart.set_ylim(0.43, 0.56)
         chart.set_xlim(-0.6, 3.6)
         chart.set_xticks([])
-        chart.set_yticks([0.45, 0.5, 0.55] if p == 0 else [])
+        chart.set_yticks([0.45, 0.5, 0.55] if p == 0 else [], ["45th", "50th", "55th"] if p == 0 else [])
         chart.tick_params(length=0, pad=4)
         chart.grid(axis="y", color=C["light"], lw=0.7)
     d, m, s = o["call_minus_put_rank"], o["straddle_minus_no_edge_abs_rank"], o["score_vs_abs_move_spearman"]
-    text(ax, 0.08, 0.115, f"Calls − puts: {d['observed'] * 100:+.1f} points, p = {d['p_two_sided']:.2f}".replace("-", "−"), color=C["muted"])
-    text(ax, 0.56, 0.115, f"Straddle − no edge: {m['observed'] * 100:+.1f}, p = {m['p_two_sided']:.3f}", color=C["accent"])
-    text(ax, 0.56, 0.08, f"Score vs move size: ρ = {s['observed']:.2f}, p = {s['p_two_sided']:.4f}", color=C["accent"])
+    text(ax, 0.08, 0.15, f"Calls − puts: {d['observed'] * 100:+.1f} points, p = {d['p_two_sided']:.2f}".replace("-", "−"), color=C["muted"])
+    text(ax, 0.56, 0.15, f"Straddle − no edge: {m['observed'] * 100:+.1f}, p = {m['p_two_sided']:.3f}", color=C["accent"])
+    text(ax, 0.56, 0.105, f"Score vs move size: ρ = {s['observed']:.2f}, p = {s['p_two_sided']:.4f}", color=C["accent"])
     footer(ax, f"Source: evaluation/stories.json; {o['n']:,} companies, {o['by_bias']['Call Bias (Upside Tail)']['n']} with a call bias.")
     save(fig, "15-options-ledger")
 
@@ -370,14 +378,14 @@ def options_ledger() -> None:
 def shortcomings() -> None:
     sc = E["score_clustering"]["compounder"]
     fig, ax = canvas(
-        6.2,
+        4.8,
         "Eight ways a fluent model went wrong",
         "Measured in the project's own outputs, 2025–2026",
     )
     o = ST["options_ledger"]["by_bias"]
     total = sum(v["n"] for v in o.values())
     cards = [
-        ("99.8%", "of May 2025 analyses dated\nthemselves 2024 (1,916 of 1,919)", C["amber"]),
+        ("99.8%", "of May 2025 analyses\ndated themselves 2024\n(1,916 of 1,919)", C["amber"]),
         ("91", "options ideas with expiry\ndates already in the past", C["amber"]),
         (f"{sc['top_values']['68'] / sc['n']:.0%}", "of all 'compounder' scores\nwere exactly 68", C["indigo"]),
         (f"{o['Put Bias (Downside Tail)']['n'] / total:.0%}", "of companies given a put bias;\n"
@@ -392,7 +400,7 @@ def shortcomings() -> None:
         x, y = 0.015 + col * 0.49, 0.66 - row * 0.19
         rbox(ax, x, y, 0.475, 0.165, C["paper"])
         ax.add_patch(FancyBboxPatch((x, y), 0.012, 0.165, boxstyle="square,pad=0", facecolor=face, edgecolor="none"))
-        text(ax, x + 0.03, y + 0.0825, big, size=16, weight="bold", color=face)
+        text(ax, x + 0.03, y + 0.0825, big, size=16, weight="bold", color=C["ink"] if face in (C["amber"], C["warning"]) else face)
         text(ax, x + 0.17, y + 0.0825, small, size=8.5, linespacing=1.35)
     footer(ax, "Sources: origin files; evaluation outputs; data/eon.db; the flattening script's notes (~130).")
     save(fig, "16-shortcomings")

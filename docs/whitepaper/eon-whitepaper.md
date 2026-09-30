@@ -5,7 +5,7 @@
 **Author:** Gabriel George
 
 **Technical white paper. Erebus Observatory Network (EON)**
-30 September 2026 · Edition 4
+30 September 2026 · Edition 4 · Illustrated revision
 
 ---
 
@@ -25,8 +25,8 @@ This paper is mostly about how that machine was built and why it needed every
 part. It is also about what the machine read, and whether it was right. Graded
 naively, its BUY calls beat its SELL calls by 13 percentage points a year. But
 the model had been trained on the years it was being graded on: it may have
-read tomorrow's newspaper. Graded only on what it could not have known, the
-edge shrinks; its SELL calls stop working; a score written down in advance
+read tomorrow's newspaper. Tested on filings after the stated training cutoff, the
+rank spread shrinks; its SELL calls stop working; a score written down in advance
 pointed the wrong way; and an options scan turned out to see how far a stock
 would move, but not which way.
 
@@ -95,6 +95,10 @@ doing.
 
 ## Part I · Building the reader
 
+![A small night workshop turns filings into printed pages, reads them through a teal optical instrument, and records the work beneath a clock approaching midnight.](figures/art/art-part1-workshop.png){.illustration}
+
+*Illustration — The workshop. A metaphor for the system in Figure 3: the machinery matters because the reader cannot run alone.*
+
 EON was built five times. Each version answered a failure of the last and
 kept what worked (Figure 2).
 
@@ -138,8 +142,9 @@ factors spelled about 130 different ways. And the model did not know what day
 it was: of 1,919 comparative analyses run in May 2025, 1,916 dated themselves
 2024.
 
-The outputs were saved and never changed. More than a year later, that turned
-out to be their most valuable property (Section 8.4).
+The saved outputs survived. More than a year later, their recorded dates
+made a different kind of test possible (Section 8.4), although local file
+timestamps are not proof of an unchanged archive.
 
 ## 3. From scripts to a processor
 
@@ -192,14 +197,14 @@ with a 35-field schema, applied to every listed company's recent 10-Ks. Essays
 became a panel, the same measurement taken across 1,358 companies and six
 fiscal years. Everything in Part II depends on that.
 
-Asking one question of every filing is easy to say. Figure 3 shows what it
-took.
+Asking one question of every filing is easy to say. Figure 3 follows the
+request from two front doors through a shared service to a stored answer.
 
-![A layered architecture diagram: sources, acquisition, reasoning, storage and operation layers, with the modules in each.](figures/03-architecture.svg)
+![The CLI and web interface share services. A filing passes from EDGAR through PDF conversion and extraction to a model request, validation, storage and review; locks, quotas and recovery support that path.](figures/03-architecture.svg)
 
-*Figure 3. Five layers between a filing and a verdict. Each box is a module in the repository. Arrows trace one filing: fetched from EDGAR under the SEC's rate policy, printed to PDF by headless Chrome, extracted to text, sent with the schema through the key manager and request queue to Gemini, validated, and stored. Source: the eon/ package.*
+*Figure 3. One reading, supported by a whole system. The CLI and web interface use shared services. Arrows trace the filing through acquisition, model reading and durable storage. The SEC queue, key locks, leases, backups and alerts support execution around that path. This is a schematic of responsibilities, not a literal call graph. Source: the eon/ package.*
 
-Each layer exists because something failed without it. The rest of this
+Each supporting component answers an operational constraint. The rest of this
 section takes them in turn.
 
 ### 5.1 Getting the words: why a PDF, and not XML?
@@ -275,8 +280,9 @@ The first, in Fintel, was the in-process lock that different processes could
 not see. The second was the file lock that fixed it: one lock for the whole
 machine, held through each request and its 65-second pause. It worked, and it
 made 25 keys exactly as slow as one. The third, in EON, gave every key its own
-lock file and put a 25-slot semaphore across all of them, so that 25 requests
-could run at once while no single key was ever used twice at the same moment.
+lock file and added a 25-slot semaphore within each process. Requests on different
+keys could overlap; each key's file lock coordinated its use across
+processes on the same machine.
 The pause adapts: it shrinks after a run of successes, down to about 21
 seconds, and grows by half after a rate-limit error.
 
@@ -311,21 +317,21 @@ retrieved, and 22 after the model call failed repeatedly.
 
 A batch that runs for two weeks will be interrupted: by a crash, a reboot, a
 power cut, a closed laptop. The database is what lets it pick up where it
-left off without losing or repeating work (Figure 7).
+left off, preserving completed years and reducing repeated work (Figure 7).
 
-![A diagram of four core tables (batch_jobs, batch_items, analysis_runs, analysis_results) beside eight mechanisms that keep concurrent writes safe.](figures/07-database.svg)
+![Three panels separate an atomic work claim from serialized SQLite writes and the two table families that store queue state and analysis results.](figures/07-database.svg)
 
-*Figure 7. The database is the batch's memory. Batch tables track who is working on what; analysis tables hold what was read. Beside them, the mechanisms that let many workers and two interfaces share one SQLite file. Sources: eon/ui/database/repository.py and migrations; eon/ui/services/batch_queue.py.*
+*Figure 7. Many workers, one writer. A conditional update claims a pending company; heartbeats maintain its lease. SQLite serializes short write transactions while WAL allows readers to overlap the writer. Batch tables remember progress; analysis tables preserve readings. Checkpoints and uniqueness constraints reduce repeated work but do not promise exactly-once model calls. Sources: eon/ui/database/repository.py and migrations; eon/ui/services/batch_queue.py.*
 
 EON uses SQLite, a single file, because the whole system runs on one machine
 and a server database would add a service to install, configure and keep
 alive. SQLite's weakness is that only one writer can write at a time. EON
 works with that rather than against it.
 
-- **Write-ahead logging.** In WAL mode readers never block the writer, so the
+- **Write-ahead logging.** WAL mode allows readers to overlap the writer, so the
   web interface can browse results while a batch writes new ones.
 - **Patience, then retries.** Each connection waits up to 30 seconds for the
-  lock, then retries up to ten times with exponential backoff and random
+  lock, with up to ten attempts in total and exponential backoff plus random
   jitter, so that competing workers do not retry in lockstep.
 - **Leases.** A worker claims a company with a conditional update (set it to
   running, but only if it is still pending), so exactly one worker wins. The
@@ -388,18 +394,19 @@ with the platform's own separators. Stray Chrome processes are cleaned up with
 
 It depends on what is scarce.
 
-Against the quota, EON is efficient: every request is a whole filing, nothing
-is sent twice, and nothing is lost to a crash. Against the clock, it is not:
+Against the quota, EON aims to make every request count: each reads a whole
+filing, and checkpoints reduce repeated calls after an interruption. Against the clock, it is not:
 the batch spent about 80% of its time waiting. Against compute, it is
 wasteful but cheap: a browser per filing and about 6 seconds of extraction
-buy a faithful text. Against storage, it is heavy: 27.5 GB of PDFs for a
+buy a readable text whose fidelity still needs an audit. Against storage, it is heavy: 27.5 GB of PDFs for a
 database of 240 MB.
 
 If requests were plentiful, the design would change. Parsing HTML directly
 would drop the browser. Caching extracted text instead of PDFs would cut the
 disk. Sending only the sections each lens needs would cut tokens
-substantially. Every one of those trades faithfulness for speed, and while the quota
-was the constraint, there was no reason to make them.
+substantially. Section selection trades coverage for speed; direct HTML parsing and text
+caching could improve efficiency without that trade, provided their output
+was checked. The quota made those optimisations less urgent.
 
 ## 6. Workflows as hypotheses
 
@@ -434,6 +441,10 @@ Two rules came out of this work. Split a question the model cannot answer
 reliably in one piece. And let the model judge while code does the counting.
 
 ## Part II · What it read
+
+![An archive box, an annual report and a sealed verdict sit on a desk; a distant newspaper suggests an outcome still to come.](figures/art/art-part2-three-dates.png){.illustration}
+
+*Illustration — Three records, different clocks. The illustration introduces the question; Figure 9 specifies the event order that each test requires.*
 
 ## 7. Every question it was asked
 
@@ -508,8 +519,7 @@ SPY by 2.2 points and 657 SELL readings trailed it by 10.9: a spread of 13.1
 percentage points (p = 0.0001). About 42% of it came from favouring the right
 industries.
 
-For the 1,443 filings published after the cutoff, which the model cannot have
-read, the same test gives a different picture (Figure 10). Ranked by where each
+For the 1,443 filings published after the stated cutoff, the same test gives a different picture (Figure 10). Ranked by where each
 stock finished within its year, the spread halves, from 11.1 to 6.2 percentile
 points. The average spread, 14.9 points, looks unchanged, but its uncertainty
 is ±23 points.
@@ -533,7 +543,7 @@ A model that remembered which companies collapsed would look like this. So
 would a model whose caution suited 2021 to 2024 and not 2025. The data cannot
 choose between them.
 
-What survives the cutoff is real but small. By rank, BUY readings beat SELL
+The post-cutoff sample retains a small rank association. By rank, BUY readings beat SELL
 readings by **5.9 percentile points (p = 0.0059)** within industries. That
 statistic was chosen after the next figure was seen, and it rests largely on
 one filing season. By average, the result is inconclusive: 4.6 points at six
@@ -547,8 +557,9 @@ year later: 3,314 points ahead of SPY. That single reading adds 10 points to
 the BUY group's average. The price series was checked against Nasdaq's
 independent record; there was no split. EON read the filing on 9 February
 2026, rated it BUY, and by then the stock had already risen about twentyfold.
-The model could not see that: its training ended first, and its call path has
-web search switched off.
+The documented cutoff precedes that rise, and the call path has web search
+switched off. Those facts reduce one route to hindsight; they do not turn
+a late reading into a forecast.
 
 ![Strip plot of one-year excess returns after the cutoff: one BUY-rated stock, Babcock & Wilcox, sits far right at +3,314 points, dragging the BUY mean above its median.](figures/12-tails.svg)
 
@@ -598,7 +609,7 @@ EON left a ledger of its own. The Asymmetric Options V4 scan of 25–26 February
 six months before the outcomes it would be graded on. I wrote the test before
 running it (Figure 15).
 
-![Two panels of bar charts by options bias: average return percentile, which barely differs, and average size-of-move percentile, which is higher for straddle and call-bias names.](figures/15-options-ledger.svg)
+![Two panels of dot plots by options bias: average return percentile, which barely differs, and average size-of-move percentile, which is higher for straddle and call-bias names.](figures/15-options-ledger.svg)
 
 *Figure 15. It saw how far a stock would move, not which way. Six-month outcomes for 1,365 companies, by the bias the scan recorded in February 2026. Left: direction, as the average percentile of excess return. Right: magnitude, as the average percentile of the absolute excess return. Source: evaluation/stories.json.*
 
@@ -610,24 +621,31 @@ did. Its asymmetry score correlated with the size of the move, up or down
 saying something big will happen, moved more than those marked "no edge"
 (p = 0.031).
 
-This is the cleanest positive result in the project, and it is the modest
-kind. A model reading a 10-K can tell which companies are fragile, levered,
-dependent on a binary event, or opaque, and those companies move more. It
-cannot tell which way. That is what an options trader would call volatility,
-and it is already in the price of options.
+The useful distinction is magnitude versus direction: the recorder and
+unsettled compass in the illustration. Perhaps filings expose fragile balance
+sheets or binary risks; that explanation was not tested. The association
+concerns absolute excess returns, not realised volatility, and establishes
+neither profitable options trades nor an advantage over options prices.
+
+![A mechanical recorder traces swings while a compass needle appears unsettled. This is an editorial metaphor, not a data plot.](figures/art/art-spot-compass.png){.illustration width=42%}
+
+*Illustration — How far, not which way. Read alongside the measured outcomes in Figure 15.*
 
 ### 8.6 What the tests say together
 
-Graded with hindsight, the model looked like an analyst. Graded on what it
-could not have known, it looked like a careful reader with a small, fading
-edge, one bad idea and one modest talent. The evidence has limits that apply
-throughout: every clean result comes from roughly the same eighteen months;
+Graded with hindsight, the model looked like an analyst. Tested on later filings and dated readings, it looked like a careful reader
+with a small rank association, one bad idea and one modest talent. The evidence has limits that apply
+throughout: the later tests cover roughly the same eighteen months;
 the universe was drawn from companies still listed in 2026; industry is
 controlled but size, value, quality and momentum are not; extraction and the
 model's facts are unaudited; and returns are not trades. Section 11 is what
 the paper does about that.
 
 ## Part III · What it taught
+
+![A confident speaker stands beside a curled calendar, repetitive report cards and binoculars turned toward a storm cloud.](figures/art/art-part3-narrator.png){.illustration}
+
+*Illustration — The confident narrator. Stale dates, repeated answers and selective attention can hide behind fluent prose; Figure 16 records the observed patterns.*
 
 ## 9. How the model went wrong
 
@@ -750,11 +768,16 @@ making sure nothing was lost when something broke.
 The reader works. It is specific, tireless and consistent enough to be counted.
 Counting it produced a result that looked like foresight, and arranging the
 evidence by what the model could have known took most of that away. What
-remains is modest and real: a small edge in its BUY calls, a sense of which
-companies will move a lot, and a clear view of how a fluent model goes wrong.
+remains is worth testing again: a small rank association in BUY calls, an
+association with the size of later moves, and a clear view of how a fluent
+model goes wrong.
 
-The newspaper the model read ends in January 2025. Everything after that has
-to be read the ordinary way, one day at a time.
+The model's documented newspaper ends in January 2025. A forecast earns its
+name only when it is recorded before the events it predicts.
+
+![A closed envelope with a teal wax seal rests in morning light beside a card reading Open October 2027.](figures/art/art-closing-bet.png){.illustration width=86%}
+
+*Illustration — Open October 2027. Ledger fingerprint: `b5a03624`. This seal is a metaphor; the hash identifies the file, while independent timestamped publication would establish when it was fixed.*
 
 **Write the question once. Keep the answer with its date. Let the next year
 answer back.**
@@ -777,6 +800,9 @@ checked against Nasdaq.
 
 **Samples.** "Before the cutoff" means the return window closed before
 31 January 2025. "After the cutoff" means the filing was published after it.
+That is a boundary reported by the provider, not an independent audit of the
+model's knowledge. Some readings were made after entry or after part of the
+return window; these are retrospective post-cutoff tests, not forecasts.
 
 **Spreads and ranks.** The mean spread is the BUY-group average excess return
 minus the SELL-group average. The rank spread uses each reading's percentile
@@ -831,7 +857,7 @@ replication.
 
 The Markdown is the editorial source; LaTeX and PDF are generated from it.
 `BRIEF.md` sets the editorial standard, `figures.md` documents every figure,
-`graphics.md` briefs the commissioned illustrations, and `revision-notes.md`
+`graphics.md` records the illustration brief and delivered artwork, and `revision-notes.md`
 records every change and open question.
 
 | Path | Role |
@@ -858,6 +884,11 @@ python docs/whitepaper/validate_paper.py
 python docs/whitepaper/build_paper.py --pandoc /path/to/pandoc
 cd docs/whitepaper && tectonic -X compile eon-whitepaper.tex
 ```
+
+Six editorial illustrations were made with the built-in image generation
+tool and selected for this edition. They depict metaphors, not observations;
+the seventeen numbered figures remain code-generated. Their prompts, asset
+hashes and placement notes are in `figures/art/manifest.json` and `graphics.md`.
 
 The evaluators open databases read-only and use saved prices; the origin
 evaluator reads `stock_stuff_06042025/10K_automator` without changing it. The

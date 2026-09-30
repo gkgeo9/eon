@@ -45,7 +45,7 @@ def main() -> None:
             capture_output=True,
         ).stdout
     )
-    blocks, out, figures = ast["blocks"], [], []
+    blocks, out, figures, illustrations = ast["blocks"], [], [], []
     i = 0
     while i < len(blocks):
         block = blocks[i]
@@ -98,6 +98,29 @@ def main() -> None:
             continue
         if block["t"] == "Para" and len(block["c"]) == 1 and block["c"][0]["t"] == "Image":
             image = block["c"][0]
+            if "illustration" in image["c"][0][1]:
+                original_path = image["c"][2][0]
+                asset = HERE / original_path
+                if not asset.exists():
+                    raise FileNotFoundError(asset)
+                attrs = dict(image["c"][0][2])
+                width = float(attrs.get("width", "100%").rstrip("%")) / 100
+                caption_block = blocks[i + 1]
+                assert caption_block["t"] == "Para"
+                caption_tex = subprocess.run(
+                    [args.pandoc, "-f", "json", "-t", "latex"],
+                    input=json.dumps({**ast, "blocks": [caption_block]}), text=True,
+                    check=True, capture_output=True).stdout.strip()
+                alt = " ".join(x.get("c", "") for x in image["c"][1] if x["t"] == "Str")
+                latex = (r"\par\addvspace{7pt}\noindent\begin{minipage}{\linewidth}\centering" + "\n"
+                         + rf"\includegraphics[width={width:.2f}\linewidth]{{{original_path}}}" + "\n"
+                         + r"\par\vspace{4pt}{\footnotesize\raggedright " + caption_tex + r"\par}" + "\n"
+                         + r"\end{minipage}\par\addvspace{7pt}")
+                out.append({"t": "RawBlock", "c": ["latex", latex]})
+                illustrations.append({"asset": original_path, "alt": alt,
+                                      "sha256": hashlib.sha256(asset.read_bytes()).hexdigest()})
+                i += 2
+                continue
             caption_block = blocks[i + 1]
             assert caption_block["t"] == "Para" and caption_block["c"][0]["t"] == "Emph"
             inlines = caption_block["c"][0]["c"]
@@ -159,9 +182,17 @@ def main() -> None:
         result,
     )
     # Let prose fill the space before a large plate, but never leave its section.
-    result = result.replace("\\begin{figure}", "\\begin{figure}[!htbp]")
-    # Figures may drift past a heading onto the next page; flafter keeps them
-    # after their first mention. Barriers only where a new part of the argument starts.
+    result = result.replace("\\begin{figure}", "\\begin{figure}[H]")
+    # Keep evidence adjacent to its argument. Only the three large opener
+    # figures may float over following prose, within a bounded section.
+    for stem in ("02-lineage", "08-catalogue", "16-shortcomings"):
+        result = re.sub(
+            r"\\begin\{figure\}\[H\].*?\\end\{figure\}",
+            lambda m: m[0].replace("[H]", "[!htbp]", 1) if "fig:" + stem in m[0] else m[0],
+            result, flags=re.S,
+        )
+    for heading in ("3. From scripts to a processor", "8. Was it right?", "10. Why it was worth doing"):
+        result = result.replace(r"\section{" + heading, r"\FloatBarrier" + "\n" + r"\section{" + heading)
     for heading in ("Part I · Building the reader", "Part II · What it read", "Part III · What it taught", "Appendix A: methods"):
         result = result.replace(r"\section{" + heading, r"\FloatBarrier" + "\n" + r"\section{" + heading)
     for heading in (
@@ -210,6 +241,9 @@ def main() -> None:
         ),
         result,
     )
+    # Make every prose reference navigate to its numbered evidence figure.
+    labels = {str(f["number"]): "fig:" + Path(f["asset"]).stem for f in figures}
+    result = re.sub(r"\bFigure\s+(\d+)\b", lambda m: rf"\hyperref[{labels[m[1]]}]{{Figure~{m[1]}}}", result)
     header = (HERE / "paper-preamble.tex").read_text()
     header = header.replace("PAPER_AUTHOR", author_match[1])
     header = header.replace("PAPER_RUNNING_TITLE", title)
@@ -229,10 +263,12 @@ def main() -> None:
             [args.pandoc, "--version"], text=True, capture_output=True, check=True
         ).stdout.splitlines()[0],
         "figures": figures,
+        "illustrations": illustrations,
+        "cover": {"asset": "figures/art/art-cover.png", "sha256": hashlib.sha256((HERE / "figures/art/art-cover.png").read_bytes()).hexdigest()},
         "editorial_source": f"{STEM}.md",
     }
     (HERE / "document-build.json").write_text(json.dumps(report, indent=2) + "\n")
-    print("Generated matching LaTeX with seventeen figures and all three appendices.")
+    print(f"Generated LaTeX with {len(figures)} figures, {len(illustrations)} illustrations and an illustrated cover.")
 
 
 if __name__ == "__main__":

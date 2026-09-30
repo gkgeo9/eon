@@ -308,7 +308,7 @@ def cutoff_timeline() -> None:
         (0.73, "WITH HINDSIGHT", ["Filing", "Outcome", "Model cutoff", "Reading"],
          "The model may already know how the story ended.", C["muted"]),
         (0.49, "AFTER THE CUTOFF", ["Model cutoff", "Filing", "Outcome begins", "Reading"],
-         "The model cannot have read the filing, but the verdict came late.", C["accent"]),
+         "The filing follows the stated cutoff; the verdict still came late.", C["accent"]),
         (0.25, "WRITTEN IN ADVANCE", ["Filing", "Reading", "Record frozen", "Outcome"],
          "The verdict exists before anything it predicts. Only this is a forecast.", C["warning"]),
     ]

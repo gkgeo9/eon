@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="451.44pt" height="331.2pt" viewBox="0 0 451.44 331.2" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>EON paper renderer</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 331.2 
+L 451.44 331.2 
+L 451.44 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597812" transform="rotate(-0 6.7716 23.597812)">It saw how far a stock would move, not which way</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">Options scan of 25–26 February 2026, graded six months on  /  written before the outcome</text>
+   </g>
+   <g id="text_3">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="36.1152" y="78.513891" transform="rotate(-0 36.1152 78.513891)">WHICH WAY</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="36.1152" y="89.97634" transform="rotate(-0 36.1152 89.97634)">Average return percentile</text>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="252.8064" y="78.513891" transform="rotate(-0 252.8064 78.513891)">HOW FAR</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="252.8064" y="89.97634" transform="rotate(-0 252.8064 89.97634)">Average size-of-move percentile</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="36.1152" y="295.450242" transform="rotate(-0 36.1152 295.450242)">Calls − puts: −2.9 points, p = 0.62</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="252.8064" y="295.450242" transform="rotate(-0 252.8064 295.450242)">Straddle − no edge: +5.7, p = 0.031</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="252.8064" y="307.042242" transform="rotate(-0 252.8064 307.042242)">Score vs move size: ρ = 0.12, p = 0.0001</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="317.445891" transform="rotate(-0 6.7716 317.445891)">Source: evaluation/stories.json; 1,365 companies, 26 with a call bias.</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_2">
+    <path d="M 36.1152 241.776 
+L 216.6912 241.776 
+L 216.6912 99.36 
+L 36.1152 99.36 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1"/>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_1">
+      <path d="M 36.1152 219.865846 
+L 216.6912 219.865846 
+" clip-path="url(#p2cfe49f7fa)" style="fill: none; stroke: #e8ecef; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2"/>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="32.1152" y="223.284791" transform="rotate(-0 32.1152 223.284791)">0.45</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_3">
+      <path d="M 36.1152 165.090462 
+L 216.6912 165.090462 
+" clip-path="url(#p2cfe49f7fa)" style="fill: none; stroke: #e8ecef; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4"/>
+     <g id="text_12">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="32.1152" y="168.509407" transform="rotate(-0 32.1152 168.509407)">0.50</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_5">
+      <path d="M 36.1152 110.315077 
+L 216.6912 110.315077 
+" clip-path="url(#p2cfe49f7fa)" style="fill: none; stroke: #e8ecef; stroke-width: 0.7; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6"/>
+     <g id="text_13">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #6b7280" x="32.1152" y="113.734022" transform="rotate(-0 32.1152 113.734022)">0.55</text>
+     </g>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 48.583543 165.090462 
+L 75.24 165.090462 
+L 75.24 151.586539 
+L 48.583543 151.586539 
+z
+" clip-path="url(#p2cfe49f7fa)" style="fill: #f2a29d"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 91.577829 165.090462 
+L 118.234286 165.090462 
+L 118.234286 175.878851 
+L 91.577829 175.878851 
+z
+" clip-path="url(#p2cfe49f7fa)" style="fill: #e8ecef"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 134.572114 165.090462 
+L 161.228571 165.090462 
+L 161.228571 204.215736 
+L 134.572114 204.215736 
+z
+" clip-path="url(#p2cfe49f7fa)" style="fill: #97a3ea"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 177.5664 165.090462 
+L 204.222857 165.090462 
+L 204.222857 183.611302 
+L 177.5664 183.611302 
+z
+" clip-path="url(#p2cfe49f7fa)" style="fill: #5fb3ab"/>
+   </g>
+   <g id="line2d_7">
+    <path d="M 36.1152 165.090462 
+L 216.6912 165.090462 
+" clip-path="url(#p2cfe49f7fa)" style="fill: none; stroke: #1f2a37; stroke-width: 0.8; stroke-linecap: square"/>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="61.911771" y="145.162516" transform="rotate(-0 61.911771 145.162516)">0.512</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(45.016029 254.56304)">Put bias</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(53.799584 264.764701)">847</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="104.906057" y="186.718889" transform="rotate(-0 104.906057 186.718889)">0.490</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(87.149026 254.56304)">No edge</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(96.79387 264.764701)">312</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="147.900343" y="215.055775" transform="rotate(-0 147.900343 215.055775)">0.464</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(129.992569 254.56304)">Straddle</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(139.788155 264.764701)">180</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="190.894629" y="194.45134" transform="rotate(-0 190.894629 194.45134)">0.483</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(172.913144 254.56304)">Call bias</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(185.486504 264.764701)">26</text>
+   </g>
+  </g>
+  <g id="axes_3">
+   <g id="patch_7">
+    <path d="M 252.8064 241.776 
+L 433.3824 241.776 
+L 433.3824 99.36 
+L 252.8064 99.36 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3"/>
+   <g id="matplotlib.axis_4"/>
+   <g id="patch_8">
+    <path d="M 265.274743 165.090462 
+L 291.9312 165.090462 
+L 291.9312 158.776502 
+L 265.274743 158.776502 
+z
+" clip-path="url(#p98b8193569)" style="fill: #f2a29d"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 308.269029 165.090462 
+L 334.925486 165.090462 
+L 334.925486 199.202248 
+L 308.269029 199.202248 
+z
+" clip-path="url(#p98b8193569)" style="fill: #e8ecef"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 351.263314 165.090462 
+L 377.919771 165.090462 
+L 377.919771 136.750832 
+L 351.263314 136.750832 
+z
+" clip-path="url(#p98b8193569)" style="fill: #97a3ea"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 394.2576 165.090462 
+L 420.914057 165.090462 
+L 420.914057 136.568368 
+L 394.2576 136.568368 
+z
+" clip-path="url(#p98b8193569)" style="fill: #5fb3ab"/>
+   </g>
+   <g id="line2d_8">
+    <path d="M 252.8064 165.090462 
+L 433.3824 165.090462 
+" clip-path="url(#p98b8193569)" style="fill: none; stroke: #1f2a37; stroke-width: 0.8; stroke-linecap: square"/>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="278.602971" y="152.352479" transform="rotate(-0 278.602971 152.352479)">0.506</text>
+   </g>
+   <g id="text_23">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(261.707229 254.56304)">Put bias</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(270.490784 264.764701)">847</text>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="321.597257" y="210.042286" transform="rotate(-0 321.597257 210.042286)">0.469</text>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(303.840226 254.56304)">No edge</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(313.48507 264.764701)">312</text>
+   </g>
+   <g id="text_26">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="364.591543" y="130.326809" transform="rotate(-0 364.591543 130.326809)">0.526</text>
+   </g>
+   <g id="text_27">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(346.683769 254.56304)">Straddle</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(356.479355 264.764701)">180</text>
+   </g>
+   <g id="text_28">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="407.585829" y="130.144345" transform="rotate(-0 407.585829 130.144345)">0.526</text>
+   </g>
+   <g id="text_29">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(389.604344 254.56304)">Call bias</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(402.177704 264.764701)">26</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p2cfe49f7fa">
+   <rect x="36.1152" y="99.36" width="180.576" height="142.416"/>
+  </clipPath>
+  <clipPath id="p98b8193569">
+   <rect x="252.8064" y="99.36" width="180.576" height="142.416"/>
+  </clipPath>
+ </defs>
+</svg>

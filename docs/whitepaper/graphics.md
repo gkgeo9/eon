@@ -1,13 +1,50 @@
-# Illustration brief: *Tomorrow's Newspaper*
+# Graphics and illustrations: *Tomorrow's Newspaper*
 
-For the illustrator. This paper already has 17 data figures and diagrams,
-generated from code; they carry the evidence and must not be redrawn. What it
-lacks is pictures that make a reader *feel* the story before they read it: a
-cover, three part openers, and a handful of spot illustrations that turn the
-paper's metaphors into images.
+## Delivered illustrated revision
 
-Read this whole page first. Each brief says what the picture is for, where it
-goes, what must be in it, what must not, and a few ways it could go.
+Six generated illustrations now accompany the seventeen numbered, code-generated
+figures. The cover, the three part openers, the compass spot and the closing
+bet are integrated in the PDF; the five interior illustrations also appear in
+the canonical Markdown with alt text and unnumbered captions. Evidence figures
+keep numbers 1–17, with the revised architecture and database diagrams at 3
+and 7. All in-text references follow those numbers.
+
+The illustrations share a reading-room setting, precise ink drawing, fine paper
+grain and teal / indigo / amber accents. The cover's optical reader returns
+in the workshop; night gives way to morning at the sealed envelope. This is
+an imagined setting, not a reconstruction of the author's workspace.
+
+| Delivered asset | Placement | Editorial purpose |
+|---|---|---|
+| `figures/art/art-cover.png` | Full-page PDF cover | The optical reader and tomorrow's newspaper |
+| `figures/art/art-part1-workshop.png` | Part I opener | The infrastructure as a working place |
+| `figures/art/art-part2-three-dates.png` | Part II opener | Archive, filing and verdict as different records |
+| `figures/art/art-part3-narrator.png` | Part III opener | Fluency alongside stale dates and selective attention |
+| `figures/art/art-spot-compass.png` | End of §8.5 | Movement size versus direction; refers to Figure 15 |
+| `figures/art/art-closing-bet.png` | Conclusion | A verdict left for the future to judge |
+
+Built with the **built-in image generation tool**. Full prompts, selected
+source paths, revision prompts, pixel dimensions and SHA-256 hashes are in
+`figures/art/manifest.json`. The PNGs are preserved at native resolution, not
+upscaled to imply added detail. They are raster masters, not layered artist
+source or vector files. PDF titles, explanatory captions and the ledger hash
+are typeset separately so they remain exact, searchable text. The closing
+card's date is also checked visually.
+
+### Selection and iterations
+
+The workshop was refined to show a five-by-five pegboard and a clock near
+midnight. The closing illustration was refined to carry the exact opening
+date. The part-II concept became one quiet still life: Figure 9 already does
+the precise chronology, and an invented pictorial timeline would confuse
+rather than clarify it. Numerical labels stay in the evidence figures.
+
+The keys, funnel, ledger, trader and coin spots, optional section icons, and
+social cover crop remain **uncommissioned alternatives**, not missing figure
+references. Their ideas are already carried by the workshop, the existing
+diagrams, the cover and the company grid. Adding all of them would lengthen
+the paper and weaken the few images that matter. Original briefs follow for
+future use; where they differ, the delivered revision above governs this PDF.
 
 ---
 
@@ -282,6 +319,6 @@ with a seal (the bet).
 | `art-part3-narrator` | Before Section 9 | full width |
 | `art-closing-bet` | Section 11 or after the conclusion | full width |
 
-When the files arrive, they will be placed with alt text and no caption
-numbers: illustrations are not evidence, and the paper keeps them visibly
-separate from its figures.
+The selected assets above are now placed with alt text and unnumbered
+illustration captions. The other briefs remain optional. Illustrations are
+metaphors; numbered figures carry the observations and system details.

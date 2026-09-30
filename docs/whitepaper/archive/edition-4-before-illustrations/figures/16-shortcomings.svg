@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="451.44pt" height="446.4pt" viewBox="0 0 451.44 446.4" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>EON paper renderer</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 446.4 
+L 451.44 446.4 
+L 451.44 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 12.18888 151.776 
+L 215.78832 151.776 
+Q 221.2056 151.776 221.2056 146.4192 
+L 221.2056 83.4768 
+Q 221.2056 78.12 215.78832 78.12 
+L 12.18888 78.12 
+Q 6.7716 78.12 6.7716 83.4768 
+L 6.7716 146.4192 
+Q 6.7716 151.776 12.18888 151.776 
+z
+" clip-path="url(#pde498581d6)" style="fill: #f7f8fa"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 6.7716 151.776 
+L 12.18888 151.776 
+L 12.18888 78.12 
+L 6.7716 78.12 
+z
+" clip-path="url(#pde498581d6)" style="fill: #e8a33d"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 233.39448 151.776 
+L 436.99392 151.776 
+Q 442.4112 151.776 442.4112 146.4192 
+L 442.4112 83.4768 
+Q 442.4112 78.12 436.99392 78.12 
+L 233.39448 78.12 
+Q 227.9772 78.12 227.9772 83.4768 
+L 227.9772 146.4192 
+Q 227.9772 151.776 233.39448 151.776 
+z
+" clip-path="url(#pde498581d6)" style="fill: #f7f8fa"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 227.9772 151.776 
+L 233.39448 151.776 
+L 233.39448 78.12 
+L 227.9772 78.12 
+z
+" clip-path="url(#pde498581d6)" style="fill: #e8a33d"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 12.18888 236.592 
+L 215.78832 236.592 
+Q 221.2056 236.592 221.2056 231.2352 
+L 221.2056 168.2928 
+Q 221.2056 162.936 215.78832 162.936 
+L 12.18888 162.936 
+Q 6.7716 162.936 6.7716 168.2928 
+L 6.7716 231.2352 
+Q 6.7716 236.592 12.18888 236.592 
+z
+" clip-path="url(#pde498581d6)" style="fill: #f7f8fa"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 6.7716 236.592 
+L 12.18888 236.592 
+L 12.18888 162.936 
+L 6.7716 162.936 
+z
+" clip-path="url(#pde498581d6)" style="fill: #4c5fd5"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 233.39448 236.592 
+L 436.99392 236.592 
+Q 442.4112 236.592 442.4112 231.2352 
+L 442.4112 168.2928 
+Q 442.4112 162.936 436.99392 162.936 
+L 233.39448 162.936 
+Q 227.9772 162.936 227.9772 168.2928 
+L 227.9772 231.2352 
+Q 227.9772 236.592 233.39448 236.592 
+z
+" clip-path="url(#pde498581d6)" style="fill: #f7f8fa"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 227.9772 236.592 
+L 233.39448 236.592 
+L 233.39448 162.936 
+L 227.9772 162.936 
+z
+" clip-path="url(#pde498581d6)" style="fill: #e0605a"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 12.18888 321.408 
+L 215.78832 321.408 
+Q 221.2056 321.408 221.2056 316.0512 
+L 221.2056 253.1088 
+Q 221.2056 247.752 215.78832 247.752 
+L 12.18888 247.752 
+Q 6.7716 247.752 6.7716 253.1088 
+L 6.7716 316.0512 
+Q 6.7716 321.408 12.18888 321.408 
+z
+" clip-path="url(#pde498581d6)" style="fill: #f7f8fa"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 6.7716 321.408 
+L 12.18888 321.408 
+L 12.18888 247.752 
+L 6.7716 247.752 
+z
+" clip-path="url(#pde498581d6)" style="fill: #6b7280"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 233.39448 321.408 
+L 436.99392 321.408 
+Q 442.4112 321.408 442.4112 316.0512 
+L 442.4112 253.1088 
+Q 442.4112 247.752 436.99392 247.752 
+L 233.39448 247.752 
+Q 227.9772 247.752 227.9772 253.1088 
+L 227.9772 316.0512 
+Q 227.9772 321.408 233.39448 321.408 
+z
+" clip-path="url(#pde498581d6)" style="fill: #f7f8fa"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 227.9772 321.408 
+L 233.39448 321.408 
+L 233.39448 247.752 
+L 227.9772 247.752 
+z
+" clip-path="url(#pde498581d6)" style="fill: #4c5fd5"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 12.18888 406.224 
+L 215.78832 406.224 
+Q 221.2056 406.224 221.2056 400.8672 
+L 221.2056 337.9248 
+Q 221.2056 332.568 215.78832 332.568 
+L 12.18888 332.568 
+Q 6.7716 332.568 6.7716 337.9248 
+L 6.7716 400.8672 
+Q 6.7716 406.224 12.18888 406.224 
+z
+" clip-path="url(#pde498581d6)" style="fill: #f7f8fa"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 6.7716 406.224 
+L 12.18888 406.224 
+L 12.18888 332.568 
+L 6.7716 332.568 
+z
+" clip-path="url(#pde498581d6)" style="fill: #6b7280"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 233.39448 406.224 
+L 436.99392 406.224 
+Q 442.4112 406.224 442.4112 400.8672 
+L 442.4112 337.9248 
+Q 442.4112 332.568 436.99392 332.568 
+L 233.39448 332.568 
+Q 227.9772 332.568 227.9772 337.9248 
+L 227.9772 400.8672 
+Q 227.9772 406.224 233.39448 406.224 
+z
+" clip-path="url(#pde498581d6)" style="fill: #f7f8fa"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 227.9772 406.224 
+L 233.39448 406.224 
+L 233.39448 332.568 
+L 227.9772 332.568 
+z
+" clip-path="url(#pde498581d6)" style="fill: #e0605a"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597813" transform="rotate(-0 6.7716 23.597813)">Eight ways a fluent model went wrong</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">Measured in the project's own outputs, 2025–2026</text>
+   </g>
+   <g id="text_3">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #e8a33d" x="20.3148" y="119.10425" transform="rotate(-0 20.3148 119.10425)">99.8%</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(83.5164 111.555969)">of May 2025 analyses dated</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(83.5164 123.354367)">themselves 2024 (1,916 of 1,919)</text>
+   </g>
+   <g id="text_5">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #e8a33d" x="241.5204" y="119.10425" transform="rotate(-0 241.5204 119.10425)">91</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(304.722 111.555969)">options ideas with expiry</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(304.722 123.030969)">dates already in the past</text>
+   </g>
+   <g id="text_7">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #4c5fd5" x="20.3148" y="203.92025" transform="rotate(-0 20.3148 203.92025)">24%</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(83.5164 196.371969)">of all 'compounder' scores</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(83.5164 207.846969)">were exactly 68</text>
+   </g>
+   <g id="text_9">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #e0605a" x="241.5204" y="203.92025" transform="rotate(-0 241.5204 203.92025)">62%</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(304.722 196.371969)">of companies given a put bias;</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(304.722 207.846969)">only 2% a call bias</text>
+   </g>
+   <g id="text_11">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="20.3148" y="288.73625" transform="rotate(-0 20.3148 288.73625)">51%</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(83.5164 282.011406)">of three-lens verdicts</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(83.5164 293.411367)">were HOLD</text>
+   </g>
+   <g id="text_13">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #4c5fd5" x="241.5204" y="288.73625" transform="rotate(-0 241.5204 288.73625)">~130</text>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(304.722 281.187969)">spellings of six 'success</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(304.722 293.486406)">factors' before schemas</text>
+   </g>
+   <g id="text_15">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="20.3148" y="373.55225" transform="rotate(-0 20.3148 373.55225)">462</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(83.5164 366.003969)">verdicts that opened with a</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(83.5164 378.302406)">label instead of the answer</text>
+   </g>
+   <g id="text_17">
+    <text style="font-weight: 700; font-size: 16px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #e0605a" x="241.5204" y="373.55225" transform="rotate(-0 241.5204 373.55225)">100%</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(304.722 366.003969)">of great companies credited</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; fill: #1f2a37" transform="translate(304.722 378.302406)">with 'continuous innovation'</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="428.613891" transform="rotate(-0 6.7716 428.613891)">Sources: origin files; evaluation outputs; data/eon.db; the flattening script's notes (~130).</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pde498581d6">
+   <rect x="0" y="0" width="451.44" height="446.4"/>
+  </clipPath>
+ </defs>
+</svg>

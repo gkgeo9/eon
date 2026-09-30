@@ -1,0 +1,78 @@
+{
+  "markdown_sha256": "408ef81e7098b9e13c47593d88fefb01e86185398f026198d4690d8860edec19",
+  "latex_sha256": "e0db7fde06edf5b3ddd18ad0ef09f5cf6c23335488f3bc90b31a57a0ea4252c0",
+  "preamble_sha256": "00682517517b7546cd3f5d47c40d1043e3bd2fa9e6c09bf6651070ed656c0f29",
+  "generator_sha256": "16e70421dc8c9cfb2fac9bca4cd3987d42588fd5595149a5cee6b72d5ad404b8",
+  "pandoc": "pandoc 3.12",
+  "figures": [
+    {
+      "number": 1,
+      "asset": "figures/01-one-reading.pdf"
+    },
+    {
+      "number": 2,
+      "asset": "figures/02-lineage.pdf"
+    },
+    {
+      "number": 3,
+      "asset": "figures/03-architecture.pdf"
+    },
+    {
+      "number": 4,
+      "asset": "figures/04-life-of-a-filing.pdf"
+    },
+    {
+      "number": 5,
+      "asset": "figures/05-execution.pdf"
+    },
+    {
+      "number": 6,
+      "asset": "figures/06-quota-clock.pdf"
+    },
+    {
+      "number": 7,
+      "asset": "figures/07-database.pdf"
+    },
+    {
+      "number": 8,
+      "asset": "figures/08-catalogue.pdf"
+    },
+    {
+      "number": 9,
+      "asset": "figures/09-three-clocks.pdf"
+    },
+    {
+      "number": 10,
+      "asset": "figures/10-before-after.pdf"
+    },
+    {
+      "number": 11,
+      "asset": "figures/11-verdict-ladder.pdf"
+    },
+    {
+      "number": 12,
+      "asset": "figures/12-tails.pdf"
+    },
+    {
+      "number": 13,
+      "asset": "figures/13-company-grid.pdf"
+    },
+    {
+      "number": 14,
+      "asset": "figures/14-dated-ledger.pdf"
+    },
+    {
+      "number": 15,
+      "asset": "figures/15-options-ledger.pdf"
+    },
+    {
+      "number": 16,
+      "asset": "figures/16-shortcomings.pdf"
+    },
+    {
+      "number": 17,
+      "asset": "figures/17-sealed-bet.pdf"
+    }
+  ],
+  "editorial_source": "eon-whitepaper.md"
+}

@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="451.44pt" height="345.6pt" viewBox="0 0 451.44 345.6" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>EON paper renderer</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 345.6 
+L 451.44 345.6 
+L 451.44 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="line2d_1">
+    <path d="M 54.1728 93.312 
+L 385.9812 93.312 
+" clip-path="url(#p0af8cdb692)" style="fill: none; stroke: #6b7280; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_2">
+    <path d="M 54.1728 176.256 
+L 385.9812 176.256 
+" clip-path="url(#p0af8cdb692)" style="fill: none; stroke: #0f766e; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_3">
+    <path d="M 54.1728 259.2 
+L 385.9812 259.2 
+" clip-path="url(#p0af8cdb692)" style="fill: none; stroke: #e0605a; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597812" transform="rotate(-0 6.7716 23.597812)">Three dates decide what a test can prove</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">When the filing appeared, where the model's knowledge ends, and when the verdict was written</text>
+   </g>
+   <g id="text_3">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="61.089891" transform="rotate(-0 6.7716 61.089891)">WITH HINDSIGHT</text>
+   </g>
+   <g id="PathCollection_1">
+    <defs>
+     <path id="m4e24a8def1" d="M 0 2.645751 
+C 0.701661 2.645751 1.374679 2.366978 1.870829 1.870829 
+C 2.366978 1.374679 2.645751 0.701661 2.645751 0 
+C 2.645751 -0.701661 2.366978 -1.374679 1.870829 -1.870829 
+C 1.374679 -2.366978 0.701661 -2.645751 0 -2.645751 
+C -0.701661 -2.645751 -1.374679 -2.366978 -1.870829 -1.870829 
+C -2.366978 -1.374679 -2.645751 -0.701661 -2.645751 0 
+C -2.645751 0.701661 -2.366978 1.374679 -1.870829 1.870829 
+C -1.374679 2.366978 -0.701661 2.645751 0 2.645751 
+z
+" style="stroke: #6b7280"/>
+    </defs>
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#m4e24a8def1" x="54.1728" y="93.312" style="fill: #6b7280; stroke: #6b7280"/>
+    </g>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="54.1728" y="79.053891" transform="rotate(-0 54.1728 79.053891)">Filing</text>
+   </g>
+   <g id="PathCollection_2">
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#m4e24a8def1" x="164.7756" y="93.312" style="fill: #6b7280; stroke: #6b7280"/>
+    </g>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="164.7756" y="79.053891" transform="rotate(-0 164.7756 79.053891)">Outcome</text>
+   </g>
+   <g id="PathCollection_3">
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#m4e24a8def1" x="275.3784" y="93.312" style="fill: #6b7280; stroke: #6b7280"/>
+    </g>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="275.3784" y="79.053891" transform="rotate(-0 275.3784 79.053891)">Model cutoff</text>
+   </g>
+   <g id="PathCollection_4">
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#m4e24a8def1" x="385.9812" y="93.312" style="fill: #6b7280; stroke: #6b7280"/>
+    </g>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="385.9812" y="79.053891" transform="rotate(-0 385.9812 79.053891)">Reading</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="119.842242" transform="rotate(-0 6.7716 119.842242)">The model may already know how the story ended.</text>
+   </g>
+   <g id="text_9">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="6.7716" y="144.033891" transform="rotate(-0 6.7716 144.033891)">AFTER THE CUTOFF</text>
+   </g>
+   <g id="PathCollection_5">
+    <defs>
+     <path id="mc0d62f0a93" d="M 0 2.645751 
+C 0.701661 2.645751 1.374679 2.366978 1.870829 1.870829 
+C 2.366978 1.374679 2.645751 0.701661 2.645751 0 
+C 2.645751 -0.701661 2.366978 -1.374679 1.870829 -1.870829 
+C 1.374679 -2.366978 0.701661 -2.645751 0 -2.645751 
+C -0.701661 -2.645751 -1.374679 -2.366978 -1.870829 -1.870829 
+C -2.366978 -1.374679 -2.645751 -0.701661 -2.645751 0 
+C -2.645751 0.701661 -2.366978 1.374679 -1.870829 1.870829 
+C -1.374679 2.366978 -0.701661 2.645751 0 2.645751 
+z
+" style="stroke: #0f766e"/>
+    </defs>
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#mc0d62f0a93" x="54.1728" y="176.256" style="fill: #0f766e; stroke: #0f766e"/>
+    </g>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="54.1728" y="161.997891" transform="rotate(-0 54.1728 161.997891)">Model cutoff</text>
+   </g>
+   <g id="PathCollection_6">
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#mc0d62f0a93" x="164.7756" y="176.256" style="fill: #0f766e; stroke: #0f766e"/>
+    </g>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="164.7756" y="161.997891" transform="rotate(-0 164.7756 161.997891)">Filing</text>
+   </g>
+   <g id="PathCollection_7">
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#mc0d62f0a93" x="275.3784" y="176.256" style="fill: #0f766e; stroke: #0f766e"/>
+    </g>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="275.3784" y="161.997891" transform="rotate(-0 275.3784 161.997891)">Outcome begins</text>
+   </g>
+   <g id="PathCollection_8">
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#mc0d62f0a93" x="385.9812" y="176.256" style="fill: #0f766e; stroke: #0f766e"/>
+    </g>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="385.9812" y="161.997891" transform="rotate(-0 385.9812 161.997891)">Reading</text>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="202.786242" transform="rotate(-0 6.7716 202.786242)">The model cannot have read the filing, but the verdict came late.</text>
+   </g>
+   <g id="text_15">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #e0605a" x="6.7716" y="226.977891" transform="rotate(-0 6.7716 226.977891)">WRITTEN IN ADVANCE</text>
+   </g>
+   <g id="PathCollection_9">
+    <defs>
+     <path id="m2c79e6c182" d="M 0 2.645751 
+C 0.701661 2.645751 1.374679 2.366978 1.870829 1.870829 
+C 2.366978 1.374679 2.645751 0.701661 2.645751 0 
+C 2.645751 -0.701661 2.366978 -1.374679 1.870829 -1.870829 
+C 1.374679 -2.366978 0.701661 -2.645751 0 -2.645751 
+C -0.701661 -2.645751 -1.374679 -2.366978 -1.870829 -1.870829 
+C -2.366978 -1.374679 -2.645751 -0.701661 -2.645751 0 
+C -2.645751 0.701661 -2.366978 1.374679 -1.870829 1.870829 
+C -1.374679 2.366978 -0.701661 2.645751 0 2.645751 
+z
+" style="stroke: #e0605a"/>
+    </defs>
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#m2c79e6c182" x="54.1728" y="259.2" style="fill: #e0605a; stroke: #e0605a"/>
+    </g>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="54.1728" y="244.941891" transform="rotate(-0 54.1728 244.941891)">Filing</text>
+   </g>
+   <g id="PathCollection_10">
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#m2c79e6c182" x="164.7756" y="259.2" style="fill: #e0605a; stroke: #e0605a"/>
+    </g>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="164.7756" y="244.941891" transform="rotate(-0 164.7756 244.941891)">Reading</text>
+   </g>
+   <g id="PathCollection_11">
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#m2c79e6c182" x="275.3784" y="259.2" style="fill: #e0605a; stroke: #e0605a"/>
+    </g>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="275.3784" y="244.941891" transform="rotate(-0 275.3784 244.941891)">Record frozen</text>
+   </g>
+   <g id="PathCollection_12">
+    <g clip-path="url(#p0af8cdb692)">
+     <use xlink:href="#m2c79e6c182" x="385.9812" y="259.2" style="fill: #e0605a; stroke: #e0605a"/>
+    </g>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="385.9812" y="244.941891" transform="rotate(-0 385.9812 244.941891)">Outcome</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="285.730242" transform="rotate(-0 6.7716 285.730242)">The verdict exists before anything it predicts. Only this is a forecast.</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="331.341891" transform="rotate(-0 6.7716 331.341891)">Event order is schematic; spacing is not elapsed time. Source: the evaluation protocols.</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p0af8cdb692">
+   <rect x="0" y="0" width="451.44" height="345.6"/>
+  </clipPath>
+ </defs>
+</svg>

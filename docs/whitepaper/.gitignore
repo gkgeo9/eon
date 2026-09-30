@@ -13,3 +13,7 @@ evaluation/prices/*.parquet
 *.toc
 *.synctex.gz
 __pycache__/
+
+# Generated editorial artwork is a publication input.
+!figures/art/*.png
+!figures/art/manifest.json

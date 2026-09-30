@@ -10,6 +10,7 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{microtype}
 \usepackage{graphicx}
+\usepackage{eso-pic}
 \makeatletter
 \define@key{Gin}{alt}{}
 \makeatother
@@ -67,31 +68,16 @@
 \begin{document}
 \hypersetup{pageanchor=false}
 \begin{titlepage}
+\AddToShipoutPictureBG*{\AtPageLowerLeft{\includegraphics[width=\paperwidth,height=\paperheight,keepaspectratio]{figures/art/art-cover.png}}}
+\AddToShipoutPictureFG*{\AtPageLowerLeft{\put(72,23){\parbox{\textwidth}{\small\textbf{PAPER_AUTHOR}\hfill Technical white paper · Edition 4\\[2pt]\footnotesize 30 September 2026 · Illustrated revision}}}}
 \raggedright
 \hyphenpenalty=10000
-\vspace*{1.5cm}
+\vspace*{-10mm}
 {\color{accent}\small EREBUS OBSERVATORY NETWORK / EON\par}
-\vspace{1cm}
+\vspace{6mm}
 {\fontsize{36}{40}\selectfont\bfseries PAPER_TITLE\par}
-\vspace{.8cm}
-{\Large PAPER_SUBTITLE\par}
-\vspace{1.3cm}
-{\large PAPER_AUTHOR\par}
-\vspace{.5cm}
-{\large Technical white paper\par}
-30 September 2026 · Edition 4\par
-\vspace{1.3cm}
-{\renewcommand{\arraystretch}{1.5}
-\begin{tabular}{@{}r@{\hspace{1.2em}}l@{}}
-{\color{warn!80!black}\Large\bfseries 5} & {\small versions, from a folder of scripts to a system}\\
-{\color{accent}\Large\bfseries 29,375} & {\small answers from a language model, each one dated}\\
-{\color{ink!70}\Large\bfseries 1} & {\small question: could it see ahead?}\\
-\end{tabular}\par}
-\vfill
-\noindent\textcolor{accent}{\rule{\textwidth}{1pt}}
-\vspace{.5cm}
-{\small I built a machine to read every annual report in the market. This is how it was built,\par
-what it read, and whether it had simply read tomorrow's newspaper.}
+\vspace{5mm}
+{\fontsize{16}{20}\selectfont PAPER_SUBTITLE\par}
 \end{titlepage}
 \hypersetup{pageanchor=true}
 \pagenumbering{roman}

@@ -1,0 +1,306 @@
+{
+  "stage": "whitepaper-sealed-ledger",
+  "frozen_at": "2026-09-29T19:34:07.208762+00:00",
+  "config": {
+    "version": 1,
+    "trades": "evaluation/trades.csv",
+    "prices": "evaluation/prices/closes.parquet",
+    "knowledge_cutoff": "2025-01-31",
+    "latest_per_company": true,
+    "exclude_read_before_filed": true,
+    "live_price_window": [
+      "2026-09-21",
+      "2026-09-28"
+    ],
+    "freeze_date": "2026-09-28",
+    "grading": {
+      "start": "first close after 2026-09-30",
+      "horizon_trading_days": 252,
+      "benchmark": "SPY",
+      "primary": "buy_minus_sell_rank_spread",
+      "permutations": 10000
+    },
+    "publish_in_paper": [
+      "STRONG BUY",
+      "STRONG SELL"
+    ]
+  },
+  "config_sha256": "8f72b58fde5fc2296252a03d386c3328511b823a013d9f809ca66daaa6d30e70",
+  "inputs": {
+    "evaluation/trades.csv": "f46a26d2d5140a8fc83868905a093989d0745ce2b13c65c18249d0dbd3cce96e",
+    "evaluation/prices/closes.parquet": "e62c3ab6c24a350729fca385c58331601f660ca0521254e1334466b150a0851d"
+  },
+  "ledger_sha256": "b5a03624d885c0c93a16a2aade915b545cfc802eafcffdb027d696146cc28dc9",
+  "companies": 1257,
+  "verdicts": {
+    "HOLD": 634,
+    "BUY": 341,
+    "SELL": 233,
+    "STRONG BUY": 30,
+    "STRONG SELL": 19
+  },
+  "spy_close_at_freeze": 765.61,
+  "filing_quarters": {
+    "2025-02": 723,
+    "2025-03": 152,
+    "2025-04": 11,
+    "2025-05": 37,
+    "2025-06": 12,
+    "2025-07": 13,
+    "2025-08": 38,
+    "2025-09": 12,
+    "2025-10": 14,
+    "2025-11": 51,
+    "2025-12": 16,
+    "2026-01": 13,
+    "2026-02": 162,
+    "2026-03": 3
+  },
+  "published_calls": [
+    {
+      "ticker": "AD",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-21"
+    },
+    {
+      "ticker": "AMG",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-14"
+    },
+    {
+      "ticker": "AMPH",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-03-03"
+    },
+    {
+      "ticker": "BBW",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-04-17"
+    },
+    {
+      "ticker": "BCRX",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-25"
+    },
+    {
+      "ticker": "CB",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-27"
+    },
+    {
+      "ticker": "CNK",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-19"
+    },
+    {
+      "ticker": "CRK",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-21"
+    },
+    {
+      "ticker": "EME",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-26"
+    },
+    {
+      "ticker": "GRBK",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-26"
+    },
+    {
+      "ticker": "IBKR",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-27"
+    },
+    {
+      "ticker": "INVA",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-26"
+    },
+    {
+      "ticker": "IRDM",
+      "verdict": "STRONG BUY",
+      "filing_date": "2026-02-12"
+    },
+    {
+      "ticker": "KFY",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-06-27"
+    },
+    {
+      "ticker": "LNG",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-20"
+    },
+    {
+      "ticker": "NEU",
+      "verdict": "STRONG BUY",
+      "filing_date": "2026-02-12"
+    },
+    {
+      "ticker": "NXST",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-27"
+    },
+    {
+      "ticker": "PEGA",
+      "verdict": "STRONG BUY",
+      "filing_date": "2026-02-10"
+    },
+    {
+      "ticker": "PFS",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-28"
+    },
+    {
+      "ticker": "POWL",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-11-19"
+    },
+    {
+      "ticker": "QCRH",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-28"
+    },
+    {
+      "ticker": "RNR",
+      "verdict": "STRONG BUY",
+      "filing_date": "2026-02-11"
+    },
+    {
+      "ticker": "SBH",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-11-13"
+    },
+    {
+      "ticker": "SCSC",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-08-21"
+    },
+    {
+      "ticker": "SRCE",
+      "verdict": "STRONG BUY",
+      "filing_date": "2026-02-17"
+    },
+    {
+      "ticker": "SYF",
+      "verdict": "STRONG BUY",
+      "filing_date": "2026-02-06"
+    },
+    {
+      "ticker": "USLM",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-27"
+    },
+    {
+      "ticker": "VSH",
+      "verdict": "STRONG BUY",
+      "filing_date": "2026-02-13"
+    },
+    {
+      "ticker": "WINA",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-02-26"
+    },
+    {
+      "ticker": "WLKP",
+      "verdict": "STRONG BUY",
+      "filing_date": "2025-03-05"
+    },
+    {
+      "ticker": "AAOI",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-02-28"
+    },
+    {
+      "ticker": "ALX",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-02-10"
+    },
+    {
+      "ticker": "ARDX",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-02-20"
+    },
+    {
+      "ticker": "AVAV",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-06-25"
+    },
+    {
+      "ticker": "CELH",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-03-03"
+    },
+    {
+      "ticker": "CSR",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-02-18"
+    },
+    {
+      "ticker": "CWST",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-02-18"
+    },
+    {
+      "ticker": "DCOM",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-02-20"
+    },
+    {
+      "ticker": "INDV",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-03-03"
+    },
+    {
+      "ticker": "NUTX",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-03-31"
+    },
+    {
+      "ticker": "OGS",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-02-20"
+    },
+    {
+      "ticker": "ORC",
+      "verdict": "STRONG SELL",
+      "filing_date": "2026-02-20"
+    },
+    {
+      "ticker": "PLUG",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-03-03"
+    },
+    {
+      "ticker": "RGEN",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-03-14"
+    },
+    {
+      "ticker": "RIG",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-02-18"
+    },
+    {
+      "ticker": "SMR",
+      "verdict": "STRONG SELL",
+      "filing_date": "2026-02-26"
+    },
+    {
+      "ticker": "UHAL",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-05-29"
+    },
+    {
+      "ticker": "UNIT",
+      "verdict": "STRONG SELL",
+      "filing_date": "2025-03-24"
+    },
+    {
+      "ticker": "ZBRA",
+      "verdict": "STRONG SELL",
+      "filing_date": "2026-02-12"
+    }
+  ]
+}

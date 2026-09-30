@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
   "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="451.44pt" height="446.4pt" viewBox="0 0 451.44 446.4" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="451.44pt" height="432pt" viewBox="0 0 451.44 432" xmlns="http://www.w3.org/2000/svg" version="1.1">
  <metadata>
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
@@ -20,8 +20,8 @@
  </defs>
  <g id="figure_1">
   <g id="patch_1">
-   <path d="M 0 446.4 
-L 451.44 446.4 
+   <path d="M 0 432 
+L 451.44 432 
 L 451.44 0 
 L 0 0 
 z
@@ -29,383 +29,304 @@ z
   </g>
   <g id="axes_1">
    <g id="patch_2">
-    <path d="M 58.6872 207.341684 
-Q 58.6872 218.734857 58.6872 229.009996 
+    <path d="M 135.177128 104.976 
+Q 147.848166 104.976 159.401169 104.976 
 " style="fill: none; stroke: #4c5fd5; stroke-linecap: round"/>
-    <path d="M 60.6872 225.009996 
-L 58.6872 229.009996 
-L 56.6872 225.009996 
+    <path d="M 155.401169 102.976 
+L 159.401169 104.976 
+L 155.401169 106.976 
 z
 " style="fill: #4c5fd5; stroke: #4c5fd5; stroke-linecap: round"/>
    </g>
    <g id="patch_3">
-    <path d="M 171.5472 207.346588 
-Q 171.5472 213.157969 171.5472 217.851316 
+    <path d="M 290.923928 104.976 
+Q 303.594966 104.976 315.147969 104.976 
 " style="fill: none; stroke: #0f766e; stroke-linecap: round"/>
-    <path d="M 173.5472 213.851316 
-L 171.5472 217.851316 
-L 169.5472 213.851316 
+    <path d="M 311.147969 102.976 
+L 315.147969 104.976 
+L 311.147969 106.976 
 z
 " style="fill: #0f766e; stroke: #0f766e; stroke-linecap: round"/>
    </g>
    <g id="patch_4">
-    <path d="M 112.599893 303.552 
-Q 115.114896 303.552 116.511864 303.552 
+    <path d="M 89.754285 218.097048 
+Q 108.346535 229.068552 125.975904 239.471848 
+" style="fill: none; stroke: #4c5fd5; stroke-linecap: round"/>
+    <path d="M 123.547436 235.716513 
+L 125.975904 239.471848 
+L 121.514555 239.161421 
+z
+" style="fill: #4c5fd5; stroke: #4c5fd5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 90.019627 236.742038 
+Q 108.347108 238.788168 125.563458 240.710249 
+" style="fill: none; stroke: #4c5fd5; stroke-linecap: round"/>
+    <path d="M 121.810062 238.278784 
+L 125.563458 240.710249 
+L 121.366249 242.254086 
+z
+" style="fill: #4c5fd5; stroke: #4c5fd5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 89.908034 255.271381 
+Q 108.346393 248.507709 125.73511 242.129073 
+" style="fill: none; stroke: #4c5fd5; stroke-linecap: round"/>
+    <path d="M 121.291025 241.628964 
+L 125.73511 242.129073 
+L 122.668572 245.384275 
+z
+" style="fill: #4c5fd5; stroke: #4c5fd5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 234.491724 238.896 
+Q 251.676648 238.896 267.743537 238.896 
+" style="fill: none; stroke: #0f766e; stroke-linecap: round"/>
+    <path d="M 263.743537 236.896 
+L 267.743537 238.896 
+L 263.743537 240.896 
+z
+" style="fill: #0f766e; stroke: #0f766e; stroke-linecap: round"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 360.896853 238.896 
+Q 366.797196 238.896 371.579505 238.896 
 " style="fill: none; stroke: #6b7280; stroke-linecap: round"/>
-    <path d="M 112.511864 301.552 
-L 116.511864 303.552 
-L 112.511864 305.552 
+    <path d="M 367.579505 236.896 
+L 371.579505 238.896 
+L 367.579505 240.896 
 z
 " style="fill: #6b7280; stroke: #6b7280; stroke-linecap: round"/>
    </g>
-   <g id="patch_5">
-    <path d="M 12.18888 205.344 
-L 105.18552 205.344 
-Q 110.6028 205.344 110.6028 199.9872 
-L 110.6028 104.4576 
-Q 110.6028 99.1008 105.18552 99.1008 
-L 12.18888 99.1008 
-Q 6.7716 99.1008 6.7716 104.4576 
-L 6.7716 199.9872 
-Q 6.7716 205.344 12.18888 205.344 
-z
-" clip-path="url(#pde498581d6)" style="fill: #ffffff; stroke: #4c5fd5; stroke-width: 1.1; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_6">
-    <path d="M 12.18888 121.4208 
-L 105.18552 121.4208 
-Q 110.6028 121.4208 110.6028 116.064 
-L 110.6028 104.4576 
-Q 110.6028 99.1008 105.18552 99.1008 
-L 12.18888 99.1008 
-Q 6.7716 99.1008 6.7716 104.4576 
-L 6.7716 116.064 
-Q 6.7716 121.4208 12.18888 121.4208 
-z
-" clip-path="url(#pde498581d6)" style="fill: #4c5fd5"/>
-   </g>
-   <g id="patch_7">
-    <path d="M 12.18888 357.12 
-L 105.18552 357.12 
-Q 110.6028 357.12 110.6028 351.7632 
-L 110.6028 218.736 
-Q 110.6028 213.3792 105.18552 213.3792 
-L 12.18888 213.3792 
-Q 6.7716 213.3792 6.7716 218.736 
-L 6.7716 351.7632 
-Q 6.7716 357.12 12.18888 357.12 
-z
-" clip-path="url(#pde498581d6)" style="fill: #ffffff; stroke: #4c5fd5; stroke-width: 1.1; stroke-linejoin: miter"/>
-   </g>
-   <g id="patch_8">
-    <path d="M 12.18888 235.6992 
-L 105.18552 235.6992 
-Q 110.6028 235.6992 110.6028 230.3424 
-L 110.6028 218.736 
-Q 110.6028 213.3792 105.18552 213.3792 
-L 12.18888 213.3792 
-Q 6.7716 213.3792 6.7716 218.736 
-L 6.7716 230.3424 
-Q 6.7716 235.6992 12.18888 235.6992 
-z
-" clip-path="url(#pde498581d6)" style="fill: #4c5fd5"/>
-   </g>
    <g id="patch_9">
-    <path d="M 125.04888 205.344 
-L 218.04552 205.344 
-Q 223.4628 205.344 223.4628 199.9872 
-L 223.4628 104.4576 
-Q 223.4628 99.1008 218.04552 99.1008 
-L 125.04888 99.1008 
-Q 119.6316 99.1008 119.6316 104.4576 
-L 119.6316 199.9872 
-Q 119.6316 205.344 125.04888 205.344 
+    <path d="M 12.18888 120.96 
+L 127.75752 120.96 
+Q 133.1748 120.96 133.1748 115.776 
+L 133.1748 93.744 
+Q 133.1748 88.56 127.75752 88.56 
+L 12.18888 88.56 
+Q 6.7716 88.56 6.7716 93.744 
+L 6.7716 115.776 
+Q 6.7716 120.96 12.18888 120.96 
 z
-" clip-path="url(#pde498581d6)" style="fill: #ffffff; stroke: #0f766e; stroke-width: 1.1; stroke-linejoin: miter"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #e8ecef"/>
    </g>
    <g id="patch_10">
-    <path d="M 125.04888 121.4208 
-L 218.04552 121.4208 
-Q 223.4628 121.4208 223.4628 116.064 
-L 223.4628 104.4576 
-Q 223.4628 99.1008 218.04552 99.1008 
-L 125.04888 99.1008 
-Q 119.6316 99.1008 119.6316 104.4576 
-L 119.6316 116.064 
-Q 119.6316 121.4208 125.04888 121.4208 
+    <path d="M 167.93568 120.96 
+L 283.50432 120.96 
+Q 288.9216 120.96 288.9216 115.776 
+L 288.9216 93.744 
+Q 288.9216 88.56 283.50432 88.56 
+L 167.93568 88.56 
+Q 162.5184 88.56 162.5184 93.744 
+L 162.5184 115.776 
+Q 162.5184 120.96 167.93568 120.96 
 z
-" clip-path="url(#pde498581d6)" style="fill: #0f766e"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #e6e9fb"/>
    </g>
    <g id="patch_11">
-    <path d="M 125.04888 357.12 
-L 218.04552 357.12 
-Q 223.4628 357.12 223.4628 351.7632 
-L 223.4628 218.736 
-Q 223.4628 213.3792 218.04552 213.3792 
-L 125.04888 213.3792 
-Q 119.6316 213.3792 119.6316 218.736 
-L 119.6316 351.7632 
-Q 119.6316 357.12 125.04888 357.12 
+    <path d="M 323.68248 120.96 
+L 439.25112 120.96 
+Q 444.6684 120.96 444.6684 115.776 
+L 444.6684 93.744 
+Q 444.6684 88.56 439.25112 88.56 
+L 323.68248 88.56 
+Q 318.2652 88.56 318.2652 93.744 
+L 318.2652 115.776 
+Q 318.2652 120.96 323.68248 120.96 
 z
-" clip-path="url(#pde498581d6)" style="fill: #ffffff; stroke: #0f766e; stroke-width: 1.1; stroke-linejoin: miter"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #ddf1ee"/>
    </g>
    <g id="patch_12">
-    <path d="M 125.04888 235.6992 
-L 218.04552 235.6992 
-Q 223.4628 235.6992 223.4628 230.3424 
-L 223.4628 218.736 
-Q 223.4628 213.3792 218.04552 213.3792 
-L 125.04888 213.3792 
-Q 119.6316 213.3792 119.6316 218.736 
-L 119.6316 230.3424 
-Q 119.6316 235.6992 125.04888 235.6992 
+    <path d="M 12.18888 224.64 
+L 82.61352 224.64 
+Q 88.0308 224.64 88.0308 219.456 
+L 88.0308 214.704 
+Q 88.0308 209.52 82.61352 209.52 
+L 12.18888 209.52 
+Q 6.7716 209.52 6.7716 214.704 
+L 6.7716 219.456 
+Q 6.7716 224.64 12.18888 224.64 
 z
-" clip-path="url(#pde498581d6)" style="fill: #0f766e"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #e6e9fb"/>
    </g>
    <g id="patch_13">
-    <path d="M 244.68048 123.6528 
-L 439.25112 123.6528 
-Q 444.6684 123.6528 444.6684 118.296 
-L 444.6684 104.4576 
-Q 444.6684 99.1008 439.25112 99.1008 
-L 244.68048 99.1008 
-Q 239.2632 99.1008 239.2632 104.4576 
-L 239.2632 118.296 
-Q 239.2632 123.6528 244.68048 123.6528 
+    <path d="M 12.18888 244.08 
+L 82.61352 244.08 
+Q 88.0308 244.08 88.0308 238.896 
+L 88.0308 234.144 
+Q 88.0308 228.96 82.61352 228.96 
+L 12.18888 228.96 
+Q 6.7716 228.96 6.7716 234.144 
+L 6.7716 238.896 
+Q 6.7716 244.08 12.18888 244.08 
 z
-" clip-path="url(#pde498581d6)" style="fill: #fcf0dc"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #e6e9fb"/>
    </g>
    <g id="patch_14">
-    <path d="M 244.68048 154.9008 
-L 439.25112 154.9008 
-Q 444.6684 154.9008 444.6684 149.544 
-L 444.6684 135.7056 
-Q 444.6684 130.3488 439.25112 130.3488 
-L 244.68048 130.3488 
-Q 239.2632 130.3488 239.2632 135.7056 
-L 239.2632 149.544 
-Q 239.2632 154.9008 244.68048 154.9008 
+    <path d="M 12.18888 263.52 
+L 82.61352 263.52 
+Q 88.0308 263.52 88.0308 258.336 
+L 88.0308 253.584 
+Q 88.0308 248.4 82.61352 248.4 
+L 12.18888 248.4 
+Q 6.7716 248.4 6.7716 253.584 
+L 6.7716 258.336 
+Q 6.7716 263.52 12.18888 263.52 
 z
-" clip-path="url(#pde498581d6)" style="fill: #fcf0dc"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #e6e9fb"/>
    </g>
    <g id="patch_15">
-    <path d="M 244.68048 186.1488 
-L 439.25112 186.1488 
-Q 444.6684 186.1488 444.6684 180.792 
-L 444.6684 166.9536 
-Q 444.6684 161.5968 439.25112 161.5968 
-L 244.68048 161.5968 
-Q 239.2632 161.5968 239.2632 166.9536 
-L 239.2632 180.792 
-Q 239.2632 186.1488 244.68048 186.1488 
+    <path d="M 134.07768 259.2 
+L 227.07432 259.2 
+Q 232.4916 259.2 232.4916 254.016 
+L 232.4916 223.344 
+Q 232.4916 218.16 227.07432 218.16 
+L 134.07768 218.16 
+Q 128.6604 218.16 128.6604 223.344 
+L 128.6604 254.016 
+Q 128.6604 259.2 134.07768 259.2 
 z
-" clip-path="url(#pde498581d6)" style="fill: #fcf0dc"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #ddf1ee"/>
    </g>
    <g id="patch_16">
-    <path d="M 244.68048 217.3968 
-L 439.25112 217.3968 
-Q 444.6684 217.3968 444.6684 212.04 
-L 444.6684 198.2016 
-Q 444.6684 192.8448 439.25112 192.8448 
-L 244.68048 192.8448 
-Q 239.2632 192.8448 239.2632 198.2016 
-L 239.2632 212.04 
-Q 239.2632 217.3968 244.68048 217.3968 
+    <path d="M 276.28128 259.2 
+L 353.47752 259.2 
+Q 358.8948 259.2 358.8948 254.016 
+L 358.8948 223.344 
+Q 358.8948 218.16 353.47752 218.16 
+L 276.28128 218.16 
+Q 270.864 218.16 270.864 223.344 
+L 270.864 254.016 
+Q 270.864 259.2 276.28128 259.2 
 z
-" clip-path="url(#pde498581d6)" style="fill: #fcf0dc"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #f7f8fa; stroke: #0f766e; stroke-width: 0.8; stroke-linejoin: miter"/>
    </g>
    <g id="patch_17">
-    <path d="M 244.68048 248.6448 
-L 439.25112 248.6448 
-Q 444.6684 248.6448 444.6684 243.288 
-L 444.6684 229.4496 
-Q 444.6684 224.0928 439.25112 224.0928 
-L 244.68048 224.0928 
-Q 239.2632 224.0928 239.2632 229.4496 
-L 239.2632 243.288 
-Q 239.2632 248.6448 244.68048 248.6448 
+    <path d="M 380.11248 259.2 
+L 439.25112 259.2 
+Q 444.6684 259.2 444.6684 254.016 
+L 444.6684 223.344 
+Q 444.6684 218.16 439.25112 218.16 
+L 380.11248 218.16 
+Q 374.6952 218.16 374.6952 223.344 
+L 374.6952 254.016 
+Q 374.6952 259.2 380.11248 259.2 
 z
-" clip-path="url(#pde498581d6)" style="fill: #fcf0dc"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #e8ecef"/>
    </g>
    <g id="patch_18">
-    <path d="M 244.68048 279.8928 
-L 439.25112 279.8928 
-Q 444.6684 279.8928 444.6684 274.536 
-L 444.6684 260.6976 
-Q 444.6684 255.3408 439.25112 255.3408 
-L 244.68048 255.3408 
-Q 239.2632 255.3408 239.2632 260.6976 
-L 239.2632 274.536 
-Q 239.2632 279.8928 244.68048 279.8928 
+    <path d="M 12.18888 349.92 
+L 213.53112 349.92 
+Q 218.9484 349.92 218.9484 344.736 
+L 218.9484 316.224 
+Q 218.9484 311.04 213.53112 311.04 
+L 12.18888 311.04 
+Q 6.7716 311.04 6.7716 316.224 
+L 6.7716 344.736 
+Q 6.7716 349.92 12.18888 349.92 
 z
-" clip-path="url(#pde498581d6)" style="fill: #fcf0dc"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #e6e9fb"/>
    </g>
    <g id="patch_19">
-    <path d="M 244.68048 311.1408 
-L 439.25112 311.1408 
-Q 444.6684 311.1408 444.6684 305.784 
-L 444.6684 291.9456 
-Q 444.6684 286.5888 439.25112 286.5888 
-L 244.68048 286.5888 
-Q 239.2632 286.5888 239.2632 291.9456 
-L 239.2632 305.784 
-Q 239.2632 311.1408 244.68048 311.1408 
+    <path d="M 237.90888 349.92 
+L 439.25112 349.92 
+Q 444.6684 349.92 444.6684 344.736 
+L 444.6684 316.224 
+Q 444.6684 311.04 439.25112 311.04 
+L 237.90888 311.04 
+Q 232.4916 311.04 232.4916 316.224 
+L 232.4916 344.736 
+Q 232.4916 349.92 237.90888 349.92 
 z
-" clip-path="url(#pde498581d6)" style="fill: #fcf0dc"/>
-   </g>
-   <g id="patch_20">
-    <path d="M 244.68048 342.3888 
-L 439.25112 342.3888 
-Q 444.6684 342.3888 444.6684 337.032 
-L 444.6684 323.1936 
-Q 444.6684 317.8368 439.25112 317.8368 
-L 244.68048 317.8368 
-Q 239.2632 317.8368 239.2632 323.1936 
-L 239.2632 337.032 
-Q 239.2632 342.3888 244.68048 342.3888 
-z
-" clip-path="url(#pde498581d6)" style="fill: #fcf0dc"/>
+" clip-path="url(#pe1d05e53ac)" style="fill: #ddf1ee"/>
    </g>
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597813" transform="rotate(-0 6.7716 23.597813)">The database is the batch's memory</text>
+    <text style="font-weight: 700; font-size: 14px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="23.597813" transform="rotate(-0 6.7716 23.597813)">Many workers. One writer. A durable memory.</text>
    </g>
    <g id="text_2">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">Core tables and the mechanisms that keep many writers from colliding</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="42.118594" transform="rotate(-0 6.7716 42.118594)">SQLite on one machine  /  claiming work and saving results are separate operations</text>
    </g>
    <g id="text_3">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ffffff" x="11.286" y="112.599042" transform="rotate(-0 11.286 112.599042)">batch_jobs</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #4c5fd5" x="6.7716" y="73.617891" transform="rotate(-0 6.7716 73.617891)">A  CLAIM THE WORK</text>
    </g>
    <g id="text_4">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="12.18888" y="136.943198" transform="rotate(-0 12.18888 136.943198)">batch_id</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="69.9732" y="107.313891" transform="rotate(-0 69.9732 107.313891)">PENDING</text>
    </g>
    <g id="text_5">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="12.18888" y="155.691998" transform="rotate(-0 12.18888 155.691998)">status, priority</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="225.72" y="107.313891" transform="rotate(-0 225.72 107.313891)">RUNNING</text>
    </g>
    <g id="text_6">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="12.18888" y="174.440798" transform="rotate(-0 12.18888 174.440798)">totals: done / failed</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="381.4668" y="107.313891" transform="rotate(-0 381.4668 107.313891)">COMPLETE</text>
    </g>
    <g id="text_7">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="12.18888" y="193.189598" transform="rotate(-0 12.18888 193.189598)">last_activity_at</text>
+    <text style="font-size: 8.7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="139.204301" transform="rotate(-0 6.7716 139.204301)">Conditional UPDATE: only a pending item can be claimed.</text>
    </g>
    <g id="text_8">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ffffff" x="11.286" y="226.877442" transform="rotate(-0 11.286 226.877442)">batch_items</text>
+    <text style="font-size: 8.7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="153.460301" transform="rotate(-0 6.7716 153.460301)">Heartbeat renews a 3 h lease every 5 min; stale work returns to pending.</text>
    </g>
    <g id="text_9">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="12.18888" y="251.221598" transform="rotate(-0 12.18888 251.221598)">batch_id → batch_jobs</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #0f766e" x="6.7716" y="179.025891" transform="rotate(-0 6.7716 179.025891)">B  SERIALIZE THE WRITES</text>
    </g>
    <g id="text_10">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="12.18888" y="269.970398" transform="rotate(-0 12.18888 269.970398)">ticker, status</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="47.4012" y="219.28834" transform="rotate(-0 47.4012 219.28834)">worker 1</text>
    </g>
    <g id="text_11">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="12.18888" y="288.719198" transform="rotate(-0 12.18888 288.719198)">lease_owner</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="47.4012" y="238.72834" transform="rotate(-0 47.4012 238.72834)">worker 2</text>
    </g>
    <g id="text_12">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="12.18888" y="307.467998" transform="rotate(-0 12.18888 307.467998)">lease_expires_at</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="47.4012" y="258.16834" transform="rotate(-0 47.4012 258.16834)">worker 3</text>
    </g>
    <g id="text_13">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="12.18888" y="326.216798" transform="rotate(-0 12.18888 326.216798)">last_heartbeat_at</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #0f766e" x="180.576" y="235.617891" transform="rotate(-0 180.576 235.617891)">ONE WRITER</text>
    </g>
    <g id="text_14">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="12.18888" y="344.965598" transform="rotate(-0 12.18888 344.965598)">completed_years_list</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="180.576" y="250.098398" transform="rotate(-0 180.576 250.098398)">short transactions</text>
    </g>
    <g id="text_15">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ffffff" x="124.146" y="112.599042" transform="rotate(-0 124.146 112.599042)">analysis_runs</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="314.65368" y="235.618242" transform="rotate(-0 314.65368 235.618242)">SQLite + WAL</text>
    </g>
    <g id="text_16">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="125.04888" y="136.943198" transform="rotate(-0 125.04888 136.943198)">run_id</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="314.65368" y="250.098398" transform="rotate(-0 314.65368 250.098398)">committed results</text>
    </g>
    <g id="text_17">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="125.04888" y="155.691998" transform="rotate(-0 125.04888 155.691998)">ticker, analysis_type</text>
+    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="409.45608" y="235.488008" transform="rotate(-0 409.45608 235.488008)">UI / CLI</text>
    </g>
    <g id="text_18">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="125.04888" y="174.440798" transform="rotate(-0 125.04888 174.440798)">config_json</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #1f2a37" x="409.45608" y="250.098398" transform="rotate(-0 409.45608 250.098398)">readers</text>
    </g>
    <g id="text_19">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="125.04888" y="193.189598" transform="rotate(-0 125.04888 193.189598)">completed_years</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="281.71234" transform="rotate(-0 6.7716 281.71234)">Busy writer? Wait up to 30 s; retry with backoff and jitter (10 attempts total).</text>
    </g>
    <g id="text_20">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #ffffff" x="124.146" y="226.877442" transform="rotate(-0 124.146 226.877442)">analysis_results</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="299.121891" transform="rotate(-0 6.7716 299.121891)">C  KEEP TWO KINDS OF MEMORY</text>
    </g>
    <g id="text_21">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="125.04888" y="251.221598" transform="rotate(-0 125.04888 251.221598)">run_id → analysis_runs</text>
+    <text style="font-weight: 700; font-size: 8.7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="327.124301" transform="rotate(-0 13.5432 327.124301)">batch_jobs → batch_items</text>
    </g>
    <g id="text_22">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="125.04888" y="269.970398" transform="rotate(-0 125.04888 269.970398)">ticker, fiscal_year</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="13.5432" y="340.818398" transform="rotate(-0 13.5432 340.818398)">queue state · owner · lease · progress</text>
    </g>
    <g id="text_23">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="125.04888" y="288.719198" transform="rotate(-0 125.04888 288.719198)">result_type</text>
+    <text style="font-weight: 700; font-size: 8.7px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="239.2632" y="327.124301" transform="rotate(-0 239.2632 327.124301)">analysis_runs → analysis_results</text>
    </g>
    <g id="text_24">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="125.04888" y="307.467998" transform="rotate(-0 125.04888 307.467998)">result_json (35 fields)</text>
+    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="239.2632" y="340.818398" transform="rotate(-0 239.2632 340.818398)">run config · year · validated answer</text>
    </g>
    <g id="text_25">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="125.04888" y="326.216798" transform="rotate(-0 125.04888 326.216798)">UNIQUE(run, ticker, year,</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="376.75234" transform="rotate(-0 6.7716 376.75234)">Per-year checkpoints reduce repeated work. A unique index rejects duplicate rows.</text>
    </g>
    <g id="text_26">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="125.04888" y="344.965598" transform="rotate(-0 125.04888 344.965598)">   filing, type)</text>
+    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="6.7716" y="391.87234" transform="rotate(-0 6.7716 391.87234)">SQLite backup API keeps five copies. Leases are not an exactly-once guarantee.</text>
    </g>
    <g id="text_27">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #e8a33d" x="239.2632" y="89.385891" transform="rotate(-0 239.2632 89.385891)">HOW CONCURRENT WRITES STAY SAFE</text>
-   </g>
-   <g id="text_28">
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="110.23714" transform="rotate(-0 245.13192 110.23714)">WAL journal</text>
-   </g>
-   <g id="text_29">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="119.979998" transform="rotate(-0 245.13192 119.979998)">readers never block the one writer</text>
-   </g>
-   <g id="text_30">
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="141.48514" transform="rotate(-0 245.13192 141.48514)">busy_timeout 30 s</text>
-   </g>
-   <g id="text_31">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="151.227998" transform="rotate(-0 245.13192 151.227998)">then up to 10 retries, jittered backoff</text>
-   </g>
-   <g id="text_32">
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="172.73314" transform="rotate(-0 245.13192 172.73314)">Claim a company</text>
-   </g>
-   <g id="text_33">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="182.475998" transform="rotate(-0 245.13192 182.475998)">UPDATE … WHERE pending: one winner</text>
-   </g>
-   <g id="text_34">
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="203.98114" transform="rotate(-0 245.13192 203.98114)">Heartbeat</text>
-   </g>
-   <g id="text_35">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="213.723998" transform="rotate(-0 245.13192 213.723998)">renews the lease; silence lets it expire</text>
-   </g>
-   <g id="text_36">
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="235.22914" transform="rotate(-0 245.13192 235.22914)">Crash recovery</text>
-   </g>
-   <g id="text_37">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="244.971998" transform="rotate(-0 245.13192 244.971998)">dead worker's items return to pending</text>
-   </g>
-   <g id="text_38">
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="266.47714" transform="rotate(-0 245.13192 266.47714)">Save each year</text>
-   </g>
-   <g id="text_39">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="276.219998" transform="rotate(-0 245.13192 276.219998)">resume from the last completed fiscal year</text>
-   </g>
-   <g id="text_40">
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="297.72514" transform="rotate(-0 245.13192 297.72514)">v014 unique index</text>
-   </g>
-   <g id="text_41">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="307.467998" transform="rotate(-0 245.13192 307.467998)">ended a double-save that duplicated rows</text>
-   </g>
-   <g id="text_42">
-    <text style="font-weight: 700; font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="328.97314" transform="rotate(-0 245.13192 328.97314)">Backups</text>
-   </g>
-   <g id="text_43">
-    <text style="font-size: 8.2px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #1f2a37" x="245.13192" y="338.715998" transform="rotate(-0 245.13192 338.715998)">SQLite backup API; the last five kept</text>
-   </g>
-   <g id="text_44">
-    <text style="font-size: 8.5px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="386.11234" transform="rotate(-0 6.7716 386.11234)">Also: file_cache, year checkpoints, custom prompts; 14 migrations.</text>
-   </g>
-   <g id="text_45">
-    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="428.613891" transform="rotate(-0 6.7716 428.613891)">Source: eon/ui/database/repository.py and migrations; eon/ui/services/batch_queue.py.</text>
+    <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #6b7280" x="6.7716" y="414.717891" transform="rotate(-0 6.7716 414.717891)">Source: repository.py, migrations v001–v014, batch_queue.py. WAL lets reads overlap writes.</text>
    </g>
   </g>
  </g>
  <defs>
-  <clipPath id="pde498581d6">
-   <rect x="0" y="0" width="451.44" height="446.4"/>
+  <clipPath id="pe1d05e53ac">
+   <rect x="0" y="0" width="451.44" height="432"/>
   </clipPath>
  </defs>
 </svg>

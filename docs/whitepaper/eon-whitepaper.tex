@@ -12,6 +12,7 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{microtype}
 \usepackage{graphicx}
+\usepackage{eso-pic}
 \makeatletter
 \define@key{Gin}{alt}{}
 \makeatother
@@ -69,31 +70,16 @@
 \begin{document}
 \hypersetup{pageanchor=false}
 \begin{titlepage}
+\AddToShipoutPictureBG*{\AtPageLowerLeft{\includegraphics[width=\paperwidth,height=\paperheight,keepaspectratio]{figures/art/art-cover.png}}}
+\AddToShipoutPictureFG*{\AtPageLowerLeft{\put(72,23){\parbox{\textwidth}{\small\textbf{Gabriel George}\hfill Technical white paper · Edition 4\\[2pt]\footnotesize 30 September 2026 · Illustrated revision}}}}
 \raggedright
 \hyphenpenalty=10000
-\vspace*{1.5cm}
+\vspace*{-10mm}
 {\color{accent}\small EREBUS OBSERVATORY NETWORK / EON\par}
-\vspace{1cm}
+\vspace{6mm}
 {\fontsize{36}{40}\selectfont\bfseries Tomorrow's Newspaper\par}
-\vspace{.8cm}
-{\Large The making of EON, a machine that reads annual reports, and an honest test of what it could see\par}
-\vspace{1.3cm}
-{\large Gabriel George\par}
-\vspace{.5cm}
-{\large Technical white paper\par}
-30 September 2026 · Edition 4\par
-\vspace{1.3cm}
-{\renewcommand{\arraystretch}{1.5}
-\begin{tabular}{@{}r@{\hspace{1.2em}}l@{}}
-{\color{warn!80!black}\Large\bfseries 5} & {\small versions, from a folder of scripts to a system}\\
-{\color{accent}\Large\bfseries 29,375} & {\small answers from a language model, each one dated}\\
-{\color{ink!70}\Large\bfseries 1} & {\small question: could it see ahead?}\\
-\end{tabular}\par}
-\vfill
-\noindent\textcolor{accent}{\rule{\textwidth}{1pt}}
-\vspace{.5cm}
-{\small I built a machine to read every annual report in the market. This is how it was built,\par
-what it read, and whether it had simply read tomorrow's newspaper.}
+\vspace{5mm}
+{\fontsize{16}{20}\selectfont The making of EON, a machine that reads annual reports, and an honest test of what it could see\par}
 \end{titlepage}
 \hypersetup{pageanchor=true}
 \pagenumbering{roman}
@@ -114,10 +100,10 @@ model, including 6,973 three-lens readings of 10-K filings, each ending in a sin
 This paper is mostly about how that machine was built and why it needed every part. It is also
 about what the machine read, and whether it was right. Graded naively, its BUY calls beat its
 SELL calls by 13 percentage points a year. But the model had been trained on the years it was
-being graded on: it may have read tomorrow's newspaper. Graded only on what it could not have
-known, the edge shrinks; its SELL calls stop working; a score written down in advance pointed
-the wrong way; and an options scan turned out to see how far a stock would move, but not which
-way.
+being graded on: it may have read tomorrow's newspaper. Tested on filings after the stated
+training cutoff, the rank spread shrinks; its SELL calls stop working; a score written down in
+advance pointed the wrong way; and an options scan turned out to see how far a stock would
+move, but not which way.
 
 It was never going to rival Citadel, Point72 or the Medallion Fund. It was worth building
 anyway, as a finance project, an AI project and a systems project at once. The paper ends with
@@ -137,16 +123,16 @@ the same careful questions every time, and write down what it concluded, so that
 back a year later and see whether it had been right. A language model can now read 141 pages in
 a minute. The hard part is everything around that minute.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={An Apple 10-K enters one Gemini 2.5 Flash call and returns 35 structured fields: three lenses of eleven, a synthesis, and a final verdict of SELL with high conviction.}]{figures/01-one-reading.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/01-one-reading.pdf}
 \caption{One filing becomes one countable verdict. EON's first stored reading: Apple's 10-K for
 fiscal 2025, filed 31 October 2025. The model reads the filing as Warren Buffett, Nassim Taleb
 and a contrarian would, then gives one verdict. Six months later Apple had trailed the S\&P 500
 by 0.9 points: a draw. Sources: data/eon.db; evaluation/trades.csv.}\label{fig:01-one-reading}
 \end{figure}
 
-Figure 1 is what the finished machine produces. Its verdict on Apple reads: ``SELL. Conviction:
+\hyperref[fig:01-one-reading]{Figure~1} is what the finished machine produces. Its verdict on Apple reads: ``SELL. Conviction:
 High. Apple is an undeniably excellent company, but a high conviction SELL rating is warranted
 given the significant disconnect between its robust fundamentals and its highly stretched
 valuation.'' It is specific, fluent and confident. Whether it is right is a separate question,
@@ -161,12 +147,17 @@ whole thing was worth doing.
 \clearpage
 \section{Part I · Building the reader}\label{part-i-building-the-reader}
 
+\par\addvspace{7pt}\noindent\begin{minipage}{\linewidth}\centering
+\includegraphics[width=1.00\linewidth]{figures/art/art-part1-workshop.png}
+\par\vspace{4pt}{\footnotesize\raggedright \emph{Illustration --- The workshop. A metaphor for the system in \hyperref[fig:03-architecture]{Figure~3}: the machinery matters because the reader cannot run alone.}\par}
+\end{minipage}\par\addvspace{7pt}
+
 EON was built five times. Each version answered a failure of the last and kept what worked
-(Figure 2).
+(\hyperref[fig:02-lineage]{Figure~2}).
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Five stacked stages from May 2025 to June 2026: 10K\_automator, standardized\_sec\_ai, Fintel, EON and custom workflows, each with what it carried forward.}]{figures/02-lineage.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/02-lineage.pdf}
 \caption{Five versions, one idea carried forward. From scripts studying great companies to an
 application that reads every filing. Dates come from the origin project's files and the
 repository's git history. Sources: the origin project; git history; data/archive/fintel.db;
@@ -205,9 +196,11 @@ market. So did two problems. The outputs had no fixed format; a script written l
 them found the six success factors spelled about 130 different ways. And the model did not know
 what day it was: of 1,919 comparative analyses run in May 2025, 1,916 dated themselves 2024.
 
-The outputs were saved and never changed. More than a year later, that turned out to be their
-most valuable property (Section 8.4).
+The saved outputs survived. More than a year later, their recorded dates made a different kind
+of test possible (Section 8.4), although local file timestamps are not proof of an unchanged
+archive.
 
+\FloatBarrier
 \section{3. From scripts to a processor}\label{from-scripts-to-a-processor}
 
 In October 2025 the scripts became a single reusable module,
@@ -254,19 +247,21 @@ of every company: the three-lens prompt, with a 35-field schema, applied to ever
 company's recent 10-Ks. Essays became a panel, the same measurement taken across 1,358
 companies and six fiscal years. Everything in Part II depends on that.
 
-Asking one question of every filing is easy to say. Figure 3 shows what it took.
+Asking one question of every filing is easy to say. \hyperref[fig:03-architecture]{Figure~3} follows the request from two front
+doors through a shared service to a stored answer.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={A layered architecture diagram: sources, acquisition, reasoning, storage and operation layers, with the modules in each.}]{figures/03-architecture.pdf}
-\caption{Five layers between a filing and a verdict. Each box is a module in the repository.
-Arrows trace one filing: fetched from EDGAR under the SEC's rate policy, printed to PDF by
-headless Chrome, extracted to text, sent with the schema through the key manager and request
-queue to Gemini, validated, and stored. Source: the eon/ package.}\label{fig:03-architecture}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/03-architecture.pdf}
+\caption{One reading, supported by a whole system. The CLI and web interface use shared
+services. Arrows trace the filing through acquisition, model reading and durable storage. The
+SEC queue, key locks, leases, backups and alerts support execution around that path. This is a
+schematic of responsibilities, not a literal call graph. Source: the eon/
+package.}\label{fig:03-architecture}
 \end{figure}
 
-Each layer exists because something failed without it. The rest of this section takes them in
-turn.
+Each supporting component answers an operational constraint. The rest of this section takes
+them in turn.
 
 \subsection{5.1 Getting the words: why a PDF, and not XML?}\label{getting-the-words-why-a-pdf-and-not-xml}
 
@@ -278,11 +273,11 @@ filing is cached by ticker and year and never fetched twice; the cache now holds
 PDFs.
 
 Why not simply read the HTML, or use the SEC's machine-readable XBRL data? The measurements
-answer both (Figure 4).
+answer both (\hyperref[fig:04-life-of-a-filing]{Figure~4}).
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={A logarithmic bar chart of characters at each stage: 5.3 million in the EDGAR HTML, 620,000 visible, 394,000 sent to the model, 30,000 in the reading, and 4 in the verdict.}]{figures/04-life-of-a-filing.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/04-life-of-a-filing.pdf}
 \caption{A 141-page filing becomes one word. Characters at each stage for the median 10-K: raw
 EDGAR HTML across 17 sampled filings, their visible text, the text EON extracts from its PDF
 (40 sampled filings), the stored reading, and the verdict. Sources:
@@ -319,7 +314,7 @@ page like a person was the simplest reliable answer.
 The median filing arrives as about 394,000 characters, roughly 100,000 tokens. EON appends all
 of it to the three-lens prompt and sends one request to Gemini 2.5 Flash, with the 35-field
 schema attached. The model returns about 30,000 characters, 5,000 words of analysis, and one
-verdict (Figure 4).
+verdict (\hyperref[fig:04-life-of-a-filing]{Figure~4}).
 
 Pydantic validates every response before it is stored. A response that does not fit is not a
 reading. Failures are sorted by cause before they are retried: a rate limit waits for exactly
@@ -339,10 +334,10 @@ attempts.
 The first, in Fintel, was the in-process lock that different processes could not see. The
 second was the file lock that fixed it: one lock for the whole machine, held through each
 request and its 65-second pause. It worked, and it made 25 keys exactly as slow as one. The
-third, in EON, gave every key its own lock file and put a 25-slot semaphore across all of them,
-so that 25 requests could run at once while no single key was ever used twice at the same
-moment. The pause adapts: it shrinks after a run of successes, down to about 21 seconds, and
-grows by half after a rate-limit error.
+third, in EON, gave every key its own lock file and added a 25-slot semaphore within each
+process. Requests on different keys could overlap; each key's file lock coordinated its use
+across processes on the same machine. The pause adapts: it shrinks after a run of successes,
+down to about 21 seconds, and grows by half after a rate-limit error.
 
 A fourth bug was quieter. On 6 February 2026 a commit titled ``Remove double-counting of API
 key usage that halved effective capacity'' found that every request was recorded twice, once by
@@ -350,12 +345,12 @@ the model provider and again by seven of its callers, so each key reached its li
 10 real requests. For a while the machine had been running at half speed and reporting itself
 full.
 
-Parallelism is what turned 25 keys into 500 readings a day. Figure 5 shows the difference
+Parallelism is what turned 25 keys into 500 readings a day. \hyperref[fig:05-execution]{Figure~5} shows the difference
 between the two ways the command line runs.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Two schematic timelines: a single company analysed year by year in one line, and a batch of five workers running staggered in parallel lanes until the daily quota is spent, then waiting for midnight Pacific.}]{figures/05-execution.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/05-execution.pdf}
 \caption{One company runs in a line; a batch runs in lanes. A single analysis downloads,
 prints, extracts, asks and saves one fiscal year after another. A batch starts up to 25 workers
 with staggered starts; each leases one company, reserves one key, and renews its lease with a
@@ -365,13 +360,13 @@ eon/ai/request\_queue.py.}\label{fig:05-execution}
 \end{figure}
 
 The market-wide batch ran from 8 to 21 February 2026 and read 6,568 filings from 1,327
-companies (Figure 6). At its busiest it finished 189 readings in an hour, one every 19 seconds
+companies (\hyperref[fig:06-quota-clock]{Figure~6}). At its busiest it finished 189 readings in an hour, one every 19 seconds
 across all workers. But it was active for only 62 of the thirteen days' hours. For about 80\%
 of its life, the fastest part of the machine was waiting for midnight.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Hourly readings over fourteen days show a burst after each daily quota reset and near silence in between.}]{figures/06-quota-clock.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/06-quota-clock.pdf}
 \caption{The quota is the clock. Readings per hour during the February batch, with approximate
 quota-day totals of 472 to 506 above the bars. The reset boundary is reconstructed, so a day
 can slightly exceed 500. Source: data/eon.db, frozen in
@@ -384,15 +379,17 @@ after the model call failed repeatedly.
 \subsection{5.4 The database is the batch's memory}\label{the-database-is-the-batchs-memory}
 
 A batch that runs for two weeks will be interrupted: by a crash, a reboot, a power cut, a
-closed laptop. The database is what lets it pick up where it left off without losing or
-repeating work (Figure 7).
+closed laptop. The database is what lets it pick up where it left off, preserving completed
+years and reducing repeated work (\hyperref[fig:07-database]{Figure~7}).
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={A diagram of four core tables (batch\_jobs, batch\_items, analysis\_runs, analysis\_results) beside eight mechanisms that keep concurrent writes safe.}]{figures/07-database.pdf}
-\caption{The database is the batch's memory. Batch tables track who is working on what;
-analysis tables hold what was read. Beside them, the mechanisms that let many workers and two
-interfaces share one SQLite file. Sources: eon/ui/database/repository.py and migrations;
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/07-database.pdf}
+\caption{Many workers, one writer. A conditional update claims a pending company; heartbeats
+maintain its lease. SQLite serializes short write transactions while WAL allows readers to
+overlap the writer. Batch tables remember progress; analysis tables preserve readings.
+Checkpoints and uniqueness constraints reduce repeated work but do not promise exactly-once
+model calls. Sources: eon/ui/database/repository.py and migrations;
 eon/ui/services/batch\_queue.py.}\label{fig:07-database}
 \end{figure}
 
@@ -403,12 +400,12 @@ only one writer can write at a time. EON works with that rather than against it.
 \begin{itemize}
 \tightlist
 \item
-  \textbf{Write-ahead logging.} In WAL mode readers never block the writer, so the web
+  \textbf{Write-ahead logging.} WAL mode allows readers to overlap the writer, so the web
   interface can browse results while a batch writes new ones.
 \item
-  \textbf{Patience, then retries.} Each connection waits up to 30 seconds for the lock, then
-  retries up to ten times with exponential backoff and random jitter, so that competing workers
-  do not retry in lockstep.
+  \textbf{Patience, then retries.} Each connection waits up to 30 seconds for the lock, with up
+  to ten attempts in total and exponential backoff plus random jitter, so that competing
+  workers do not retry in lockstep.
 \item
   \textbf{Leases.} A worker claims a company with a conditional update (set it to running, but
   only if it is still pending), so exactly one worker wins. The claim carries a lease of three
@@ -470,16 +467,17 @@ processes are cleaned up with \passthrough{\lstinline!pkill!} on the Mac and
 
 It depends on what is scarce.
 
-Against the quota, EON is efficient: every request is a whole filing, nothing is sent twice,
-and nothing is lost to a crash. Against the clock, it is not: the batch spent about 80\% of its
-time waiting. Against compute, it is wasteful but cheap: a browser per filing and about 6
-seconds of extraction buy a faithful text. Against storage, it is heavy: 27.5 GB of PDFs for a
-database of 240 MB.
+Against the quota, EON aims to make every request count: each reads a whole filing, and
+checkpoints reduce repeated calls after an interruption. Against the clock, it is not: the
+batch spent about 80\% of its time waiting. Against compute, it is wasteful but cheap: a
+browser per filing and about 6 seconds of extraction buy a readable text whose fidelity still
+needs an audit. Against storage, it is heavy: 27.5 GB of PDFs for a database of 240 MB.
 
 If requests were plentiful, the design would change. Parsing HTML directly would drop the
 browser. Caching extracted text instead of PDFs would cut the disk. Sending only the sections
-each lens needs would cut tokens substantially. Every one of those trades faithfulness for
-speed, and while the quota was the constraint, there was no reason to make them.
+each lens needs would cut tokens substantially. Section selection trades coverage for speed;
+direct HTML parsing and text caching could improve efficiency without that trade, provided
+their output was checked. The quota made those optimisations less urgent.
 
 \section{6. Workflows as hypotheses}\label{workflows-as-hypotheses}
 
@@ -512,19 +510,25 @@ piece. And let the model judge while code does the counting.
 \clearpage
 \section{Part II · What it read}\label{part-ii-what-it-read}
 
+\par\addvspace{7pt}\noindent\begin{minipage}{\linewidth}\centering
+\includegraphics[width=1.00\linewidth]{figures/art/art-part2-three-dates.png}
+\par\vspace{4pt}{\footnotesize\raggedright \emph{Illustration --- Three records, different clocks. The illustration
+introduces the question; \hyperref[fig:09-three-clocks]{Figure~9} specifies the event order that each
+test requires.}\par}
+\end{minipage}\par\addvspace{7pt}
+
 \section{7. Every question it was asked}\label{every-question-it-was-asked}
 
-Across five versions, the model gave 29,375 stored answers (Figure 8).
+Across five versions, the model gave 29,375 stored answers (\hyperref[fig:08-catalogue]{Figure~8}).
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={A bubble timeline from May 2025 to June 2026 showing the answer counts of each kind of analysis: the excellence study, contrarian and options scans, three-lens verdicts, and frameworks.}]{figures/08-catalogue.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/08-catalogue.pdf}
 \caption{29,375 answers in seventeen months. Every stored model answer, grouped by the question
 it answered. Bubble area is the number of answers. Sources: the origin project's files;
 data/archive/fintel.db; data/eon\_mac.db; data/eon.db.}\label{fig:08-catalogue}
 \end{figure}
 
-{\def\LTcaptype{table} % do not increment counter
 \par\addvspace{8pt}\noindent\begin{minipage}{\linewidth}\small
 \begin{tabular}{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2200}}
@@ -556,7 +560,6 @@ CSPP and Moonshot & May--Jun 2026 & 19 & Frameworks too large for one call \\
 \bottomrule\noalign{}
 \end{tabular}
 \end{minipage}\par\addvspace{8pt}
-}
 
 Read together, the answers show a model with habits.
 
@@ -583,6 +586,7 @@ Read together, the answers show a model with habits.
 None of this says whether the answers were right. That takes a test, and the test is harder
 than it looks.
 
+\FloatBarrier
 \section{8. Was it right?}\label{was-it-right}
 
 \subsection{8.1 Three dates}\label{three-dates}
@@ -599,11 +603,11 @@ tomorrow's newspaper. Their record would be extraordinary, and it would say noth
 judgement.
 
 Every verdict therefore has three dates: when the company filed, where the model's knowledge
-ends, and when the verdict was written. Their order decides what a test can prove (Figure 9).
+ends, and when the verdict was written. Their order decides what a test can prove (\hyperref[fig:09-three-clocks]{Figure~9}).
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Three timelines: with hindsight, after the cutoff, and written in advance, showing the order of filing, cutoff, reading and outcome in each.}]{figures/09-three-clocks.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/09-three-clocks.pdf}
 \caption{Three dates decide what a test can prove. Only the third arrangement, a verdict
 recorded before anything it predicts, is a forecast in the ordinary sense. Event order is
 schematic. Source: the evaluation protocols.}\label{fig:09-three-clocks}
@@ -620,29 +624,29 @@ For one-year windows that closed before the cutoff, 1,099 BUY readings beat SPY 
 and 657 SELL readings trailed it by 10.9: a spread of 13.1 percentage points (p = 0.0001).
 About 42\% of it came from favouring the right industries.
 
-For the 1,443 filings published after the cutoff, which the model cannot have read, the same
-test gives a different picture (Figure 10). Ranked by where each stock finished within its
-year, the spread halves, from 11.1 to 6.2 percentile points. The average spread, 14.9 points,
-looks unchanged, but its uncertainty is ±23 points.
+For the 1,443 filings published after the stated cutoff, the same test gives a different
+picture (\hyperref[fig:10-before-after]{Figure~10}). Ranked by where each stock finished within its year, the spread halves,
+from 11.1 to 6.2 percentile points. The average spread, 14.9 points, looks unchanged, but its
+uncertainty is ±23 points.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Two dumbbell rows compare mean and rank spreads before and after the cutoff: the mean is similar but far less certain after; the rank spread halves.}]{figures/10-before-after.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/10-before-after.pdf}
 \caption{After the cutoff, ranks halve; averages turn to noise. The same one-year
 BUY-minus-SELL comparison on both sides of the model's knowledge cutoff, with 95\% intervals
 from independent-reading standard errors. The permutation tests in the text are the formal
 results. Source: evaluation/results.json.}\label{fig:10-before-after}
 \end{figure}
 
-Where the edge lived also changed (Figure 11). Before the cutoff, the five verdicts formed a
+Where the edge lived also changed (\hyperref[fig:11-verdict-ladder]{Figure~11}). Before the cutoff, the five verdicts formed a
 perfect staircase: STRONG SELL companies finished at the 43rd percentile of their year, SELL at
 the 43rd, HOLD at the 50th, BUY at the 54th, STRONG BUY at the 60th. After it, BUY still
 finished above the middle, but SELL rose to the 49th percentile, level with HOLD. The SELL
 calls, which had carried most of the historical spread, stopped working.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Two panels show average return percentile by verdict: a steady climb before the cutoff; after it, SELL and HOLD sit together below the middle while BUY stays above.}]{figures/11-verdict-ladder.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/11-verdict-ladder.pdf}
 \caption{After the cutoff, the SELL calls stop working. Average within-year percentile of
 one-year excess return by verdict, ±1.96 standard errors; hollow points have fewer than 60
 readings. The verdict order still correlates with outcomes after the cutoff (Spearman 0.094, p
@@ -653,39 +657,40 @@ evaluation/stories.json.}\label{fig:11-verdict-ladder}
 A model that remembered which companies collapsed would look like this. So would a model whose
 caution suited 2021 to 2024 and not 2025. The data cannot choose between them.
 
-What survives the cutoff is real but small. By rank, BUY readings beat SELL readings by
-\textbf{5.9 percentile points (p = 0.0059)} within industries. That statistic was chosen after
-the next figure was seen, and it rests largely on one filing season. By average, the result is
-inconclusive: 4.6 points at six months (p = 0.094) and 14.9 at a year (p = 0.215).
+The post-cutoff sample retains a small rank association. By rank, BUY readings beat SELL
+readings by \textbf{5.9 percentile points (p = 0.0059)} within industries. That statistic was
+chosen after the next figure was seen, and it rests largely on one filing season. By average,
+the result is inconclusive: 4.6 points at six months (p = 0.094) and 14.9 at a year (p =
+0.215).
 
 \subsection{8.3 One stock, and twenty-four}\label{one-stock-and-twenty-four}
 
-The average fails because of one company (Figure 12). Babcock \& Wilcox filed its 10-K on 31
+The average fails because of one company (\hyperref[fig:12-tails]{Figure~12}). Babcock \& Wilcox filed its 10-K on 31
 March 2025, closed at \$0.46 the next day, and stood at \$15.72 a year later: 3,314 points
 ahead of SPY. That single reading adds 10 points to the BUY group's average. The price series
 was checked against Nasdaq's independent record; there was no split. EON read the filing on 9
 February 2026, rated it BUY, and by then the stock had already risen about twentyfold. The
-model could not see that: its training ended first, and its call path has web search switched
-off.
+documented cutoff precedes that rise, and the call path has web search switched off. Those
+facts reduce one route to hindsight; they do not turn a late reading into a forecast.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Strip plot of one-year excess returns after the cutoff: one BUY-rated stock, Babcock \& Wilcox, sits far right at +3,314 points, dragging the BUY mean above its median.}]{figures/12-tails.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/12-tails.pdf}
 \caption{One stock can decide a mean. Every post-cutoff BUY and SELL reading with a one-year
 outcome. Solid lines are means, dotted lines medians; the axis is linear to ±100 points and
 logarithmic beyond. Sources: evaluation/trades.csv;
 evaluation/verification/bw-price-check.json.}\label{fig:12-tails}
 \end{figure}
 
-Averages also hide what the verdicts look like one company at a time. Figure 13 shows 24
+Averages also hide what the verdicts look like one company at a time. \hyperref[fig:13-company-grid]{Figure~13} shows 24
 companies drawn at random, with a published seed, from the 195 that EON read in every year from
 2020 to 2024 and rated both BUY and SELL at least once. Of their 70 BUY and SELL calls, 40 went
 the right way: 57\%. Read row by row, the grid looks less like foresight than a slightly loaded
 coin.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={A grid of 24 randomly drawn companies by five fiscal years, each cell coloured by verdict and labelled with the one-year excess return, with ticks and crosses for right and wrong calls.}]{figures/13-company-grid.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/13-company-grid.pdf}
 \caption{Company by company, the edge is thin. Colour is the verdict; the number is the
 one-year return over SPY in percentage points; a tick marks a BUY that beat SPY or a SELL that
 trailed it. The rule selects on verdicts, never outcomes. Because the median stock trailed SPY
@@ -697,7 +702,7 @@ evaluation/stories.json.}\label{fig:13-company-grid}
 
 The strictest evidence is the oldest. The 2025 scripts wrote their scores to disk in May and
 June 2025, after the model's cutoff and before any of the returns they might predict. They are
-a ledger, and they need no argument about training data (Figure 14). Their dates come from file
+a ledger, and they need no argument about training data (\hyperref[fig:14-dated-ledger]{Figure~14}). Their dates come from file
 timestamps, not a sealed archive, and I had looked at the first result before writing the test.
 
 \textbf{Resemblance to great companies pointed the wrong way.} Across 1,766 companies, the
@@ -711,9 +716,9 @@ cannot settle.
 for the contrarian score; calls minus puts +2.8 percentile points (p = 0.54) over six months
 for the options ideas.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Three 2025 scores against their industry-shuffle bands: compounder resemblance far below its band; contrarian and options scores inside theirs.}]{figures/14-dated-ledger.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/14-dated-ledger.pdf}
 \caption{Looking like a great company was a bad sign. Top fifth minus bottom fifth of each 2025
 score (calls minus puts for options), in percentile points of return, against the middle 95\%
 of 10,000 industry-preserving shuffles. Source:
@@ -727,11 +732,11 @@ EON's verdict are almost unrelated (Spearman 0.05).
 
 EON left a ledger of its own. The Asymmetric Options V4 scan of 25--26 February 2026 recorded,
 for 1,415 companies, a directional bias and an asymmetry score, six months before the outcomes
-it would be graded on. I wrote the test before running it (Figure 15).
+it would be graded on. I wrote the test before running it (\hyperref[fig:15-options-ledger]{Figure~15}).
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Two panels of bar charts by options bias: average return percentile, which barely differs, and average size-of-move percentile, which is higher for straddle and call-bias names.}]{figures/15-options-ledger.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/15-options-ledger.pdf}
 \caption{It saw how far a stock would move, not which way. Six-month outcomes for 1,365
 companies, by the bias the scan recorded in February 2026. Left: direction, as the average
 percentile of excess return. Right: magnitude, as the average percentile of the absolute excess
@@ -744,32 +749,45 @@ often than the rest. On magnitude, it did. Its asymmetry score correlated with t
 move, up or down (Spearman 0.12, p = 0.0001), and stocks marked ``straddle'', the model's way
 of saying something big will happen, moved more than those marked ``no edge'' (p = 0.031).
 
-This is the cleanest positive result in the project, and it is the modest kind. A model reading
-a 10-K can tell which companies are fragile, levered, dependent on a binary event, or opaque,
-and those companies move more. It cannot tell which way. That is what an options trader would
-call volatility, and it is already in the price of options.
+The useful distinction is magnitude versus direction: the recorder and unsettled compass in the
+illustration. Perhaps filings expose fragile balance sheets or binary risks; that explanation
+was not tested. The association concerns absolute excess returns, not realised volatility, and
+establishes neither profitable options trades nor an advantage over options prices.
+
+\par\addvspace{7pt}\noindent\begin{minipage}{\linewidth}\centering
+\includegraphics[width=0.42\linewidth]{figures/art/art-spot-compass.png}
+\par\vspace{4pt}{\footnotesize\raggedright \emph{Illustration --- How far, not which way. Read alongside the
+measured outcomes in \hyperref[fig:15-options-ledger]{Figure~15}.}\par}
+\end{minipage}\par\addvspace{7pt}
 
 \subsection{8.6 What the tests say together}\label{what-the-tests-say-together}
 
-Graded with hindsight, the model looked like an analyst. Graded on what it could not have
-known, it looked like a careful reader with a small, fading edge, one bad idea and one modest
-talent. The evidence has limits that apply throughout: every clean result comes from roughly
-the same eighteen months; the universe was drawn from companies still listed in 2026; industry
-is controlled but size, value, quality and momentum are not; extraction and the model's facts
-are unaudited; and returns are not trades. Section 11 is what the paper does about that.
+Graded with hindsight, the model looked like an analyst. Tested on later filings and dated
+readings, it looked like a careful reader with a small rank association, one bad idea and one
+modest talent. The evidence has limits that apply throughout: the later tests cover roughly the
+same eighteen months; the universe was drawn from companies still listed in 2026; industry is
+controlled but size, value, quality and momentum are not; extraction and the model's facts are
+unaudited; and returns are not trades. Section 11 is what the paper does about that.
 
 \FloatBarrier
 \clearpage
 \section{Part III · What it taught}\label{part-iii-what-it-taught}
 
+\par\addvspace{7pt}\noindent\begin{minipage}{\linewidth}\centering
+\includegraphics[width=1.00\linewidth]{figures/art/art-part3-narrator.png}
+\par\vspace{4pt}{\footnotesize\raggedright \emph{Illustration --- The confident narrator. Stale dates, repeated
+answers and selective attention can hide behind fluent prose; \hyperref[fig:16-shortcomings]{Figure~16}
+records the observed patterns.}\par}
+\end{minipage}\par\addvspace{7pt}
+
 \section{9. How the model went wrong}\label{how-the-model-went-wrong}
 
 The most useful findings in this project are not about stocks. They are about how a fluent
-language model fails when it is asked to do a job thousands of times (Figure 16).
+language model fails when it is asked to do a job thousands of times (\hyperref[fig:16-shortcomings]{Figure~16}).
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Eight cards, each with a large number: 99.8\% of analyses misdated, 91 expired option dates, 24\% of scores exactly 68, 62\% put bias, 51\% HOLD, about 130 spellings, 462 mislabelled verdicts, and 100\% innovation.}]{figures/16-shortcomings.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/16-shortcomings.pdf}
 \caption{Eight ways a fluent model went wrong. Each number is measured in the project's own
 stored outputs. Sources: the origin files; evaluation outputs; data/eon.db; the flattening
 script's notes.}\label{fig:16-shortcomings}
@@ -811,6 +829,7 @@ Every call now has a watchdog.
 a 10-K contains no current share price. The model supplies one from memory, which is exactly
 the channel through which hindsight can leak.
 
+\FloatBarrier
 \section{10. Why it was worth doing}\label{why-it-was-worth-doing}
 
 EON was never going to rival Citadel, Point72 or the Medallion Fund. Those firms buy data
@@ -846,11 +865,11 @@ for testing them honestly, and a bet.
 \section{11. The bet}\label{the-bet}
 
 Every lesson in this paper points to one practice: write the verdict down, with its date,
-before the future arrives. So the paper makes a forecast of its own (Figure 17).
+before the future arrives. So the paper makes a forecast of its own (\hyperref[fig:17-sealed-bet]{Figure~17}).
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio,alt={Ticker tiles for all 30 STRONG BUY and 19 STRONG SELL verdicts frozen on 28 September 2026.}]{figures/17-sealed-bet.pdf}
+\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{figures/17-sealed-bet.pdf}
 \caption{The bet: 49 calls to check in October 2027. EON's latest verdict on each of 1,257
 companies, frozen on 28 September 2026 with their prices, and graded one year after
 publication. The tiles are every STRONG BUY and STRONG SELL, not a selection. Source:
@@ -878,12 +897,20 @@ dozen workers from colliding, and making sure nothing was lost when something br
 
 The reader works. It is specific, tireless and consistent enough to be counted. Counting it
 produced a result that looked like foresight, and arranging the evidence by what the model
-could have known took most of that away. What remains is modest and real: a small edge in its
-BUY calls, a sense of which companies will move a lot, and a clear view of how a fluent model
-goes wrong.
+could have known took most of that away. What remains is worth testing again: a small rank
+association in BUY calls, an association with the size of later moves, and a clear view of how
+a fluent model goes wrong.
 
-The newspaper the model read ends in January 2025. Everything after that has to be read the
-ordinary way, one day at a time.
+The model's documented newspaper ends in January 2025. A forecast earns its name only when it
+is recorded before the events it predicts.
+
+\par\addvspace{7pt}\noindent\begin{minipage}{\linewidth}\centering
+\includegraphics[width=0.86\linewidth]{figures/art/art-closing-bet.png}
+\par\vspace{4pt}{\footnotesize\raggedright \emph{Illustration --- Open October 2027. Ledger fingerprint:
+\texttt{b5a03624}. This seal is a metaphor; the hash identifies the
+file, while independent timestamped publication would establish when it
+was fixed.}\par}
+\end{minipage}\par\addvspace{7pt}
 
 \textbf{Write the question once. Keep the answer with its date. Let the next year answer back.}
 
@@ -903,7 +930,10 @@ reading date. Prices are a frozen Yahoo Finance snapshot through 28 September 20
 outlier was checked against Nasdaq.
 
 \textbf{Samples.} ``Before the cutoff'' means the return window closed before 31 January 2025.
-``After the cutoff'' means the filing was published after it.
+``After the cutoff'' means the filing was published after it. That is a boundary reported by
+the provider, not an independent audit of the model's knowledge. Some readings were made after
+entry or after part of the return window; these are retrospective post-cutoff tests, not
+forecasts.
 
 \textbf{Spreads and ranks.} The mean spread is the BUY-group average excess return minus the
 SELL-group average. The rank spread uses each reading's percentile within its fiscal year, so
@@ -945,7 +975,13 @@ document over a longer horizon, and its results are not a replication.
 \item
   Google. \emph{Gemini 2.5 Flash model documentation}, knowledge cutoff January
 
-  2025. ai.google.dev/gemini-api/docs/models/gemini-2.5-flash.
+  \begin{enumerate}
+  \def\labelenumi{\arabic{enumi}.}
+  \setcounter{enumi}{2024}
+  \tightlist
+  \item
+    ai.google.dev/gemini-api/docs/models/gemini-2.5-flash.
+  \end{enumerate}
 \item
   Lopez-Lira, A. and Tang, Y. (2023). \emph{Can ChatGPT Forecast Stock Price Movements? Return
   Predictability and Large Language Models.} arXiv:2304.07619.
@@ -962,10 +998,9 @@ document over a longer horizon, and its results are not a replication.
 The Markdown is the editorial source; LaTeX and PDF are generated from it.
 \passthrough{\lstinline!BRIEF.md!} sets the editorial standard,
 \passthrough{\lstinline!figures.md!} documents every figure,
-\passthrough{\lstinline!graphics.md!} briefs the commissioned illustrations, and
+\passthrough{\lstinline!graphics.md!} records the illustration brief and delivered artwork, and
 \passthrough{\lstinline!revision-notes.md!} records every change and open question.
 
-{\def\LTcaptype{table} % do not increment counter
 \par\addvspace{8pt}\noindent\begin{minipage}{\linewidth}\small
 \begin{tabular}{@{}
   >{\raggedright\arraybackslash}p{(\linewidth - 2\tabcolsep) * \real{0.5500}}
@@ -993,7 +1028,6 @@ test \\
 \bottomrule\noalign{}
 \end{tabular}
 \end{minipage}\par\addvspace{8pt}
-}
 
 \par\noindent\begin{minipage}{\linewidth}
 
@@ -1014,6 +1048,11 @@ cd docs/whitepaper && tectonic -X compile eon-whitepaper.tex
 \end{minipage}\par
 
 \end{minipage}\par
+
+Six editorial illustrations were made with the built-in image generation tool and selected for
+this edition. They depict metaphors, not observations; the seventeen numbered figures remain
+code-generated. Their prompts, asset hashes and placement notes are in
+\passthrough{\lstinline!figures/art/manifest.json!} and \passthrough{\lstinline!graphics.md!}.
 
 The evaluators open databases read-only and use saved prices; the origin evaluator reads
 \passthrough{\lstinline!stock\_stuff\_06042025/10K\_automator!} without changing it. The sealed

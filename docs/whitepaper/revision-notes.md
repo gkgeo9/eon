@@ -1,5 +1,60 @@
 # Revision notes
 
+## Edition 4 — illustrated revision (30 September 2026)
+
+**Delivered:** 30 pages, seventeen numbered evidence figures and six editorial
+illustrations. This adds one page to the collaborator's 29-page journey edition.
+The three-part structure and its emphasis on building EON are retained.
+
+**Artwork.** Generated with the built-in image generation tool: a full-page
+reading-room cover, workshop / evidence-table / narrator part openers, the
+recorder-and-compass spot, and the closing envelope. The workshop was refined
+to show 25 hooks and a near-midnight clock; the closing card was refined to
+read OPEN OCTOBER 2027. Native raster masters, full prompts, revision prompts,
+selected source paths and hashes are in `figures/art/manifest.json`. No
+numerical results are drawn by the image model. Original optional briefs
+remain in `graphics.md`, with the delivered selection clearly identified.
+
+**Diagrams and plots.** Figure 3 now traces acquisition, reading and storage
+beneath the two interfaces and their shared service. Figure 7 separates
+atomic work claims, serialized SQLite writes and the two table families.
+Figure 5 no longer draws execution bars underneath its quota-wait interval.
+Figure 15 uses compact dots and explicit percentile labels, with the same
+values; Figure 16 fits its cards more economically. Light lineage cards and
+amber/coral numeric cards use darker text for contrast.
+
+**Text and navigation.** Captions and references match the revised diagrams.
+All seventeen evidence figures have internal PDF links. Illustrations have
+alt text in the Markdown, unnumbered explanatory captions and a generation
+credit in Appendix C. They are explicitly metaphors. Figure placement now
+keeps most evidence at its argument; three opener figures may float within
+bounded sections. The ending stays together with its illustration.
+
+**Precision corrections encountered during integration.** The semaphore is
+process-local; per-key file locks coordinate processes on the same machine.
+SQLite's retry helper permits ten attempts, not ten retries after the first
+attempt. Checkpoints and leases reduce repeated work; they do not guarantee
+exactly-once calls or prove that saved files were never changed. The provider's
+stated cutoff is not an independent knowledge audit, and late readings remain
+retrospective. The options test concerns absolute excess returns, not measured
+options profitability or realised volatility. These clarifications change no
+stored observation, price, evaluation result or numerical test.
+
+**Verification.** Seven numerical check groups passed. Publication checks
+verified figure order 1–17, five interior illustration blocks plus the cover,
+all artwork hashes, matching Markdown/LaTeX provenance, 41 resolved internal
+PDF links reaching all seventeen figures, and text within page bounds.
+The final TeX log has no overfull/underfull boxes, missing glyphs or warnings.
+All pages were reviewed as contact sheets, with full-size checks of the cover,
+part openers, revised diagrams, options page and ending. See
+`publication-validation.json` and `layout-review.json`.
+
+The previous publication is preserved in `archive/edition-4-before-illustrations/`.
+Production databases and the original project were not modified. Earlier
+revision notes below describe their respective editions, not this layout.
+
+---
+
 ## Edition 4 — the journey edition (30 September 2026)
 
 At the author's request, the paper now spends about half its length on how EON

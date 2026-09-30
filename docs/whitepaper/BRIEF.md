@@ -23,7 +23,7 @@ sections below.
   never going to rival Citadel, Point72 or Medallion.
 - **Visuals must tell the story.** Diagrams of the architecture, execution and
   database; colour with purpose (teal, indigo, amber, coral; no rust brown);
-  commissioned illustrations briefed in `graphics.md`.
+  editorial illustrations made with image generation and recorded in `graphics.md`.
 - **Keep the evidence standard.** Everything above is in addition to, not
   instead of, the rules below: traceable numbers, stated scope, honest limits.
 
@@ -131,12 +131,13 @@ Every figure has a job. Its title states the finding or distinction. Its
 subtitle names the scope. The caption explains the encoding, evidence and
 material limit. A reader scanning only figures should recover the argument.
 
-Use native vector diagrams and reproducible plots. No generated decorative
-art, invented dashboards or stock-market wallpaper. The source is the data,
-not a manually entered set of convenient values.
+Use native vector diagrams and reproducible plots for evidence. Use generated
+editorial illustration for a specific metaphor or narrative transition,
+following the author's illustrated-revision direction. Keep illustrations
+unnumbered, explicitly described and separate from measured figures. Never
+invent dashboards, observations or data. Preserve prompts and asset hashes.
 
-**House style:** 6.27-inch width, DejaVu Sans for charts, teal `#126B70`, rust
-`#A5472D`, restrained greys, and readable labels at final print size. Use
+**House style:** 6.27-inch width, DejaVu Sans for charts, teal `#0F766E`, indigo `#4C5FD5`, amber `#E8A33D`, coral `#E0605A` and restrained greys, and readable labels at final print size. Use
 position, labels, shapes or hatching alongside colour. Keep the PDF's serif
 prose and generous spacing consistent with the reference paper.
 
@@ -161,10 +162,11 @@ awkward page breaks and captions detached from their figures.
 
 ## Length and acceptance
 
-Target **4,000–5,000 body words**, a **200–260-word abstract**, and **nine useful
-figures**. Aim for **18–22 PDF pages including front matter and appendices**.
-These are budgets, not quotas. A shorter clear explanation wins; shrinking
-text to hit a page target does not.
+Edition 4 follows the author's comprehensive-record direction above, replacing
+the earlier nine-figure, 18–22-page target. The illustrated revision has
+seventeen evidence figures and six editorial illustrations. Keep the middle
+results section subordinate to the wider engineering story. A shorter clear
+explanation wins; shrinking text to hit a page target does not.
 
 A release is ready for author review when:
 
